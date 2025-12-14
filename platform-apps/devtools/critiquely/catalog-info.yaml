@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: critiquely
+  description: Critiquely Helm chart for feedback collection.
+spec:
+  type: service
+  lifecycle: experimental
+  owner: devtools-team
+  system: devtools
