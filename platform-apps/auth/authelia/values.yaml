@@ -101,7 +101,9 @@ authelia:
             token_endpoint_auth_method: client_secret_basic
             access_token_signed_response_alg: none
             userinfo_signed_response_alg: none
-            client_secret: '$pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJn5KGiHrD0YKtZaR/nCb2CJPOsKaPK0hjf.9yHxzQGZziziccp6Yng'  # The digest of 'insecure_secret'.
+            client_secret:
+              secret_name: argocd-oidc-client-secret
+              path: password
 
           - client_id: argocd-cli
             client_name: Argo CD (CLI)
@@ -132,7 +134,9 @@ authelia:
             scopes: [openid, profile, email, offline_access]
             grant_types: [authorization_code, refresh_token]
             response_types: [code]
-            client_secret: '$pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJn5KGiHrD0YKtZaR/nCb2CJPOsKaPK0hjf.9yHxzQGZziziccp6Yng'  # The digest of 'insecure_secret'.
+            client_secret:
+              secret_name: backstage-oidc-client-secret
+              path: password
 
           - client_id: kargo
             client_name: Kargo
@@ -161,7 +165,9 @@ authelia:
             token_endpoint_auth_method: client_secret_basic
             access_token_signed_response_alg: none
             userinfo_signed_response_alg: none
-            client_secret: '$pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJn5KGiHrD0YKtZaR/nCb2CJPOsKaPK0hjf.9yHxzQGZziziccp6Yng'  # The digest of 'insecure_secret'.
+            client_secret:
+              secret_name: gitea-oidc-client-secret
+              path: secret
 
   pod:
     kind: Deployment

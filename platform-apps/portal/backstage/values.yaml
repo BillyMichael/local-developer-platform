@@ -18,6 +18,11 @@ backstage:
     - filename: app-config.extra.yaml
       configMapRef: extra-app-config
     extraEnvVars:
+      - name: OIDC_CLIENT_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: backstage-oidc-client-secret
+            key: password
       - name: NODE_EXTRA_CA_CERTS
         value: /etc/ssl/certs/ldp-ca.pem
         
