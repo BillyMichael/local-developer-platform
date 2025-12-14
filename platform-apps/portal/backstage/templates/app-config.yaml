@@ -28,7 +28,7 @@ data:
           production:
             metadataUrl: "https://auth-127-0-0-1.nip.io/.well-known/openid-configuration"
             clientId: backstage-client
-            clientSecret: insecure_secret
+            clientSecret: ${OIDC_CLIENT_SECRET}
             prompt: auto
             tokenEndpointAuthMethod: client_secret_post
             additionalScopes: openid profile email
