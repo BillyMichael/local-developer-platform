@@ -102,8 +102,7 @@ authelia:
             access_token_signed_response_alg: none
             userinfo_signed_response_alg: none
             client_secret:
-              secret_name: argocd-oidc-client-secret
-              path: password
+              path: /secrets/argocd-oidc-client-secret/password
 
           - client_id: argocd-cli
             client_name: Argo CD (CLI)
@@ -135,8 +134,7 @@ authelia:
             grant_types: [authorization_code, refresh_token]
             response_types: [code]
             client_secret:
-              secret_name: backstage-oidc-client-secret
-              path: password
+              path: /secrets/backstage-oidc-client-secret/password
 
           - client_id: kargo
             client_name: Kargo
@@ -166,8 +164,7 @@ authelia:
             access_token_signed_response_alg: none
             userinfo_signed_response_alg: none
             client_secret:
-              secret_name: gitea-oidc-client-secret
-              path: secret
+              path: /secrets/gitea-oidc-client-secret/password
 
   pod:
     kind: Deployment
@@ -181,3 +178,15 @@ authelia:
             path: tls.key
           - key: tls.crt
             path: tls.crt
+      argocd-oidc-client-secret:
+        items:
+          - key: password
+            path: password
+      backstage-oidc-client-secret:
+        items:
+          - key: password
+            path: password
+      gitea-oidc-client-secret:
+        items:
+          - key: password
+            path: password
