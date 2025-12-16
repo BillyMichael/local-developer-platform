@@ -1,12 +1,6 @@
 argo-cd:
   server:
     insecure: true
-    extraEnv:
-      - name: ARGOCD_OIDC_CLIENT_SECRET
-        valueFrom:
-          secretKeyRef:
-            name: argocd-oidc-client-secret
-            key: password
     ingress:
       enabled: true
       annotations:
@@ -47,6 +41,7 @@ argo-cd:
         name: 'Authelia'
         issuer: 'https://auth-127-0-0-1.nip.io'
         clientID: 'argocd'
+        clientSecret: $argocd-oidc-client-secret:password
         cliClientID: 'argocd-cli'
         requestedScopes:
           - 'openid'
