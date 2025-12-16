@@ -189,44 +189,45 @@ authelia:
             set -euo pipefail
 
             # ------------------------
-            # Hash ArgoCD client secret
+            # ArgoCD
             # ------------------------
-            echo "Hashing ArgoCD secret"
             ARGOCD_PLAIN="$(cat /secrets/argocd-oidc-client-secret/password)"
 
             authelia crypto hash generate pbkdf2 \
               --variant sha512 \
               --password "$ARGOCD_PLAIN" \
+              | sed 's/^Digest: //' \
               > /hashed-secrets/argocd-password
 
+            unset ARGOCD_PLAIN
+
             # ------------------------
-            # Hash Backstage client secret
+            # Backstage
             # ------------------------
-            echo "Hashing Backstage secret"
             BACKSTAGE_PLAIN="$(cat /secrets/backstage-oidc-client-secret/password)"
 
             authelia crypto hash generate pbkdf2 \
               --variant sha512 \
               --password "$BACKSTAGE_PLAIN" \
+              | sed 's/^Digest: //' \
               > /hashed-secrets/backstage-password
 
+            unset BACKSTAGE_PLAIN
 
             # ------------------------
-            # Hash Gitea client secret
+            # Gitea
             # ------------------------
-            echo "Hashing Gitea secret"
             GITEA_PLAIN="$(cat /secrets/gitea-oidc-client-secret/password)"
 
             authelia crypto hash generate pbkdf2 \
               --variant sha512 \
               --password "$GITEA_PLAIN" \
+              | sed 's/^Digest: //' \
               > /hashed-secrets/gitea-password
 
-            ls /hashed-secrets/
-            cat /hashed-secrets/gitea-password
+            unset GITEA_PLAIN
 
             echo "All secrets hashed successfully"
-
         volumeMounts:
           - name: secret-argocd-oidc-client-secret
             mountPath: /secrets/argocd-oidc-client-secret
