@@ -172,10 +172,16 @@ authelia:
     extraVolumes:
       - name: hashed-secrets
         emptyDir: {}
+      - name: authelia
+        emptyDir:
+          sizeLimit: 100Mi
 
     extraVolumeMounts:
       - name: hashed-secrets
         mountPath: /hashed-secrets
+      - name: authelia
+        mountPath: /config
+        readOnly: false
 
     initContainers:
       - name: hash-oidc-secrets
