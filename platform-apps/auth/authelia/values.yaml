@@ -102,7 +102,7 @@ authelia:
             access_token_signed_response_alg: none
             userinfo_signed_response_alg: none
             client_secret:
-              path: /secrets/argocd-oidc-client-secret/password
+              path: /hashed-secrets/argocd-password
 
           - client_id: argocd-cli
             client_name: Argo CD (CLI)
@@ -134,7 +134,7 @@ authelia:
             grant_types: [authorization_code, refresh_token]
             response_types: [code]
             client_secret:
-              path: /secrets/backstage-oidc-client-secret/password
+              path: /hashed-secrets/backstage-password
 
           - client_id: kargo
             client_name: Kargo
@@ -164,10 +164,53 @@ authelia:
             access_token_signed_response_alg: none
             userinfo_signed_response_alg: none
             client_secret:
-              path: /secrets/gitea-oidc-client-secret/password
+              path: /hashed-secrets/gitea-password
 
   pod:
     kind: Deployment
+
+    extraVolumes:
+      - name: hashed-secrets
+        emptyDir: {}
+
+    extraVolumeMounts:
+      - name: hashed-secrets
+        mountPath: /hashed-secrets
+
+    initContainers:
+      - name: hash-oidc-secrets
+        image: authelia/authelia:latest
+        command:
+          - sh
+          - -c
+          - |
+            echo "Hashing OIDC client secrets..."
+
+            # Hash ArgoCD client secret
+            ARGOCD_PLAIN=$(cat /secrets/argocd-oidc-client-secret/password)
+            echo "$ARGOCD_PLAIN" | authelia crypto hash generate pbkdf2 --variant sha512 > /hashed-secrets/argocd-password
+
+            # Hash Backstage client secret
+            BACKSTAGE_PLAIN=$(cat /secrets/backstage-oidc-client-secret/password)
+            echo "$BACKSTAGE_PLAIN" | authelia crypto hash generate pbkdf2 --variant sha512 > /hashed-secrets/backstage-password
+
+            # Hash Gitea client secret
+            GITEA_PLAIN=$(cat /secrets/gitea-oidc-client-secret/password)
+            echo "$GITEA_PLAIN" | authelia crypto hash generate pbkdf2 --variant sha512 > /hashed-secrets/gitea-password
+
+            echo "All secrets hashed successfully"
+        volumeMounts:
+          - name: secret-argocd-oidc-client-secret
+            mountPath: /secrets/argocd-oidc-client-secret
+            readOnly: true
+          - name: secret-backstage-oidc-client-secret
+            mountPath: /secrets/backstage-oidc-client-secret
+            readOnly: true
+          - name: secret-gitea-oidc-client-secret
+            mountPath: /secrets/gitea-oidc-client-secret
+            readOnly: true
+          - name: hashed-secrets
+            mountPath: /hashed-secrets
 
   secret:
     additionalSecrets:
