@@ -227,6 +227,8 @@ authelia:
 
             unset GITEA_PLAIN
 
+            cat /hashed-secrets/gitea-password
+
             echo "All secrets hashed successfully"
         volumeMounts:
           - name: secret-argocd-oidc-client-secret
