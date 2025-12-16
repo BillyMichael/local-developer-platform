@@ -222,6 +222,9 @@ authelia:
               --password "$GITEA_PLAIN" \
               > /hashed-secrets/gitea-password
 
+            ls /hashed-secrets/
+            cat /hashed-secrets/gitea-password
+
             echo "All secrets hashed successfully"
 
         volumeMounts:
