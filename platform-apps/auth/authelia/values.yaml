@@ -189,6 +189,9 @@ authelia:
             # Hash ArgoCD client secret
             ls -la /secrets/
             ls -la /secrets/argocd-oidc-client-secret/
+            echo "cat start"
+            cat /secrets/argocd-oidc-client-secret/password
+            echo "cat end"
             ARGOCD_PLAIN=$(cat /secrets/argocd-oidc-client-secret/password)
             echo "$ARGOCD_PLAIN" | authelia crypto hash generate pbkdf2 --variant sha512 > /hashed-secrets/argocd-password
 
