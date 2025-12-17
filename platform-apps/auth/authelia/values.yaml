@@ -102,7 +102,7 @@ authelia:
             access_token_signed_response_alg: none
             userinfo_signed_response_alg: none
             client_secret:
-              path: /hashed-secrets/argocd-passwordcat
+              path: /hashed-secrets/argocd-password
 
           - client_id: argocd-cli
             client_name: Argo CD (CLI)
