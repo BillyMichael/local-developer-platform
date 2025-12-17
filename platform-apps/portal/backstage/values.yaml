@@ -23,6 +23,11 @@ backstage:
           secretKeyRef:
             name: backstage-oidc-client-secret
             key: password
+      - name: GITEA_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: backstage-gitea-token
+            key: token
       - name: NODE_EXTRA_CA_CERTS
         value: /etc/ssl/certs/ldp-ca.pem
         

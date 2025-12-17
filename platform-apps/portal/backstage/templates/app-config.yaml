@@ -32,6 +32,10 @@ data:
             prompt: auto
             tokenEndpointAuthMethod: client_secret_post
             additionalScopes: openid profile email
+    integrations:
+      gitea:
+        - host: vcs-127-0-0-1.nip.io
+          token: ${GITEA_TOKEN}
     catalog:
       useUrlReadersSearch: true
       orphanStrategy: delete
