@@ -41,7 +41,7 @@ argo-cd:
         name: 'Authelia'
         issuer: 'https://auth-127-0-0-1.nip.io'
         clientID: 'argocd'
-        clientSecret: 'yWlvUvb-_V2fpv9D-fy3v2SZr-zyI3u-QosyDSlgRlcf2hFQzZ11n9CHCbErqZGzfQCmrA7G'
+        clientSecret: $argocd-oidc-client-secret:password
         cliClientID: 'argocd-cli'
         requestedScopes:
           - 'openid'
