@@ -46,6 +46,9 @@ data:
           ldp:
             organization: BillyMichael
             catalogPath: '/**/catalog-info.yaml'
+            filters:
+              branch: 'main'
+              repository: 'local-developer-platform'
             schedule:
               frequency: { minutes: 30 }
               timeout: { minutes: 3 }
