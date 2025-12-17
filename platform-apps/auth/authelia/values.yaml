@@ -196,7 +196,7 @@ authelia:
             echo "Hashing OIDC client secrets..."
 
             ls /
-            cat /configureation.yaml
+            cat /configuration.yaml
 
             set -euo pipefail
 
