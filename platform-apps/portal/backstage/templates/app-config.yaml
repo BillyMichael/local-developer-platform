@@ -41,17 +41,9 @@ data:
         pullRequestBranchName: backstage-integration
       rules:
         - allow: [Component, System, API, Resource, Location, Template, User, Group]
-      providers:
-        github:
-          ldp:
-            organization: BillyMichael
-            catalogPath: '/**/catalog-info.yaml'
-            filters:
-              branch: 'main'
-              repository: 'local-developer-platform'
-            schedule:
-              frequency: { minutes: 30 }
-              timeout: { minutes: 3 }
+      locations:
+        - type: url
+          target: https://github.com/BillyMichael/local-developer-platform/blob/main/**/catalog-info.yaml
     
     techdocs:
       builder: 'local'
