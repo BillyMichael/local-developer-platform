@@ -101,8 +101,7 @@ authelia:
             token_endpoint_auth_method: client_secret_basic
             access_token_signed_response_alg: none
             userinfo_signed_response_alg: none
-            client_secret:
-              path: /hashed-secrets/argocd-password
+            client_secret: $pbkdf2-sha512$310000$XiXTVVwzh9o34m5djA2TNA$60yxMKdqvLc11Yf2XKTIGa4.Vj1ckPUxE.GF.xuDPDq154l5YI9NviMGdHcLB3YGV3ZtPJtUFriPll3Xm.1JCA
 
           - client_id: argocd-cli
             client_name: Argo CD (CLI)
@@ -195,9 +194,6 @@ authelia:
           - |
             echo "Hashing OIDC client secrets..."
 
-            ls /
-            cat /configuration.yaml
-
             set -euo pipefail
 
             # ------------------------
@@ -238,8 +234,6 @@ authelia:
               > /hashed-secrets/gitea-password
 
             unset GITEA_PLAIN
-
-            cat /hashed-secrets/gitea-password
 
             echo "All secrets hashed successfully"
         volumeMounts:
