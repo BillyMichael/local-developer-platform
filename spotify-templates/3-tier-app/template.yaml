@@ -1,0 +1,67 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: 3-tier-app-template
+  title: Basic 3-Tier Application
+  description: Scaffolds a 3-tier application with Vite, Node.js, CloudNativePG, and MinIO.
+  tags:
+    - recommended
+    - nodejs
+    - vite
+    - postgres
+    - minio
+spec:
+  owner: user:guest
+  type: service
+
+  parameters:
+    - title: Provide some simple information
+      required:
+        - component_id
+        - owner
+      properties:
+        component_id:
+          title: Name
+          type: string
+          description: Unique name of the component
+          ui:autofocus: true
+        description:
+          title: Description
+          type: string
+          description: Help others understand what this website is for.
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+
+  steps:
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      input:
+        url: ./content
+        values:
+          component_id: ${{ parameters.component_id }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+
+    - id: publish
+      name: Publish
+      action: publish:github
+      input:
+        allowedHosts: ['github.com']
+        description: This is ${{ parameters.component_id }}
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: main
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

@@ -44,6 +44,8 @@ data:
       locations:
         - type: url
           target: https://github.com/BillyMichael/local-developer-platform/blob/main/**/catalog-info.yaml
+        - type: url
+          target: https://github.com/BillyMichael/local-developer-platform/blob/main/spotify-templates/3-tier-app/template.yaml
     
     techdocs:
       builder: 'local'
