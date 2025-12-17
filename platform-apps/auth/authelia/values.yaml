@@ -186,6 +186,9 @@ authelia:
     initContainers:
       - name: hash-oidc-secrets
         image: authelia/authelia:latest
+        env:
+          - name: X_AUTHELIA_CONFIG
+            value: /configuration.yaml
         command:
           - sh
           - -c
@@ -245,6 +248,13 @@ authelia:
             readOnly: true
           - name: secret-gitea-oidc-client-secret
             mountPath: /secrets/gitea-oidc-client-secret
+            readOnly: true
+          - name: secret-jwk-rsa
+            mountPath: /secrets/jwk-rsa
+            readOnly: true
+          - name: config
+            mountPath: /configuration.yaml
+            subPath: configuration.yaml
             readOnly: true
           - name: hashed-secrets
             mountPath: /hashed-secrets
