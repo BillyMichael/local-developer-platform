@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${{ values.component_id }}-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${{ values.component_id }}-backend
+  template:
+    metadata:
+      labels:
+        app: ${{ values.component_id }}-backend
+    spec:
+      containers:
+      - name: backend
+        image: node:18-alpine # Placeholder, typically you'd build and push
+        command: ["node", "/app/index.js"]
+        workingDir: /app
+        env:
+        - name: DB_HOST
+          value: ${{ values.component_id }}-db-rw
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: ${{ values.component_id }}-db-app
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ${{ values.component_id }}-db-app
+              key: password
+        - name: MINIO_ENDPOINT
+          value: minio.default.svc.cluster.local # Assuming MinIO service is named 'minio' in 'default' namespace
+        - name: MINIO_PORT
+          value: "9000" # MinIO default port
+        - name: MINIO_USE_SSL
+          value: "false" # Adjust if your MinIO setup uses SSL
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-creds # Assuming an existing secret for MinIO credentials
+              key: accesskey
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-creds # Assuming an existing secret for MinIO credentials
+              key: secretkey
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${{ values.component_id }}-backend
+spec:
+  selector:
+    app: ${{ values.component_id }}-backend
+  ports:
+  - port: 80
+    targetPort: 3000
