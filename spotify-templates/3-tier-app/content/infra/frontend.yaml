@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${{ values.component_id }}-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${{ values.component_id }}-frontend
+  template:
+    metadata:
+      labels:
+        app: ${{ values.component_id }}-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:alpine
+        # In a real scenario, you'd mount the built assets or use a custom image.
+        # For this template, we'll assume the image is built with the assets.
+        # Ideally, the scaffolded repo's CI/CD would build the React app and push an image.
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${{ values.component_id }}-frontend
+spec:
+  selector:
+    app: ${{ values.component_id }}-frontend
+  ports:
+  - port: 80
+    targetPort: 80
