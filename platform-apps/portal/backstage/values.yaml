@@ -26,7 +26,7 @@ backstage:
       - name: GITEA_TOKEN
         valueFrom:
           secretKeyRef:
-            name: backstage-gitea-token
+            name: gitea-admin-token
             key: token
       - name: NODE_EXTRA_CA_CERTS
         value: /etc/ssl/certs/ldp-ca.pem
