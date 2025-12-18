@@ -92,3 +92,60 @@ run_step() {
 step() {
   run_step "$@"
 }
+
+# ============================================================================
+# CONTAINER ENGINE DETECTION
+# ============================================================================
+
+detect_container_engine() {
+  section "Detecting Container Engine"
+
+  if [[ "${KIND_EXPERIMENTAL_PROVIDER:-}" == "podman" ]]; then
+    if command -v podman >/dev/null 2>&1; then
+      ok "Using Podman (via KIND_EXPERIMENTAL_PROVIDER)"
+      CE="podman"
+    else
+      error "KIND_EXPERIMENTAL_PROVIDER=podman is set but Podman is not installed."
+      exit 1
+    fi
+
+  elif command -v podman >/dev/null 2>&1; then
+    ok "Using Podman"
+    CE="podman"
+    export KIND_EXPERIMENTAL_PROVIDER=podman
+
+  elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    if [ "$(docker info --format '{{.OperatingSystem}}')" = "Docker Desktop" ]; then
+      error "Docker Desktop detected — not supported. Use Podman or Docker Engine."
+      exit 1
+    fi
+
+    ok "Using Docker Engine"
+    CE="docker"
+
+  else
+    error "No supported container engine found (need Docker Engine or Podman)."
+    exit 1
+  fi
+
+  export CE
+}
+
+# ============================================================================
+# REQUIRED TOOLS CHECK
+# ============================================================================
+
+check_required_tools() {
+  local tools=("$@")
+
+  section "Checking Required Tools"
+
+  for tool in "${tools[@]}"; do
+    if command -v "$tool" >/dev/null 2>&1; then
+      ok "$tool found"
+    else
+      error "$tool not found"
+      exit 1
+    fi
+  done
+}
