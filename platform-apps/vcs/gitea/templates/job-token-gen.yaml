@@ -2,15 +2,17 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: gitea-token-generator
-  namespace: vcs
+  namespace: {{ .Release.Namespace }}
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
 ---
+# Namespace-scoped Role - only has permissions within vcs namespace
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: gitea-token-generator-role
+  namespace: {{ .Release.Namespace }}
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
@@ -26,18 +28,19 @@ rules:
     verbs: ["create", "get", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: gitea-token-generator-binding
+  namespace: {{ .Release.Namespace }}
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
 subjects:
   - kind: ServiceAccount
     name: gitea-token-generator
-    namespace: vcs
+    namespace: {{ .Release.Namespace }}
 roleRef:
-  kind: ClusterRole
+  kind: Role
   name: gitea-token-generator-role
   apiGroup: rbac.authorization.k8s.io
 ---
@@ -45,7 +48,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: gitea-generate-token
-  namespace: vcs
+  namespace: {{ .Release.Namespace }}
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
@@ -60,20 +63,23 @@ spec:
             - /bin/bash
             - -c
             - |
+              set -e
+              NAMESPACE="{{ .Release.Namespace }}"
+
               echo "Waiting for Gitea pod to be ready..."
-              kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=gitea -n vcs --timeout=300s
-              
-              POD_NAME=$(kubectl get pod -l app.kubernetes.io/name=gitea -n vcs -o jsonpath="{.items[0].metadata.name}")
+              kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=gitea -n $NAMESPACE --timeout=300s
+
+              POD_NAME=$(kubectl get pod -l app.kubernetes.io/name=gitea -n $NAMESPACE -o jsonpath="{.items[0].metadata.name}")
               echo "Found Gitea pod: $POD_NAME"
 
               # Delete existing token if it exists (ignore error)
               echo "Cleaning up old token..."
-              kubectl exec -n vcs $POD_NAME -- su git -c "/usr/local/bin/gitea admin user delete-access-token --username gitea_admin --token-name backstage-token" || true
+              kubectl exec -n $NAMESPACE $POD_NAME -- su git -c "/usr/local/bin/gitea admin user delete-access-token --username gitea_admin --token-name backstage-token" || true
 
               # Generate new token
               echo "Generating new token..."
-              TOKEN=$(kubectl exec -n vcs $POD_NAME -- su git -c "/usr/local/bin/gitea admin user generate-access-token --username gitea_admin --token-name backstage-token --scopes write:repository,read:user,write:admin,write:user --raw")
-              
+              TOKEN=$(kubectl exec -n $NAMESPACE $POD_NAME -- su git -c "/usr/local/bin/gitea admin user generate-access-token --username gitea_admin --token-name backstage-token --scopes write:repository,read:user,write:admin,write:user --raw")
+
               if [ -z "$TOKEN" ]; then
                 echo "Failed to generate token"
                 exit 1
@@ -81,9 +87,9 @@ spec:
 
               echo "Token generated successfully."
 
-              # Create/Update Secret in Portal namespace
-              echo "Creating secret in portal namespace..."
-              kubectl create secret generic backstage-gitea-token --from-literal=token=$TOKEN -n portal --dry-run=client -o yaml | kubectl apply -f -
-              
-              echo "Done!"
+              # Store secret in vcs namespace (External Secrets will sync to portal)
+              echo "Creating secret in $NAMESPACE namespace..."
+              kubectl create secret generic gitea-admin-token --from-literal=token=$TOKEN -n $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+
+              echo "Done! Secret stored in $NAMESPACE namespace. External Secrets will sync to portal."
       restartPolicy: OnFailure
