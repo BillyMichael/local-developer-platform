@@ -100,21 +100,19 @@ run_step "Adding Argo CD Helm repository" \
 run_step "Updating Helm repositories" \
   helm repo update --kube-context "$CONTEXT_NAME"
 
-run_step "Installing Argo CD (core chart)" \
-  helm upgrade --install "$ARGOCD_RELEASE" argo/argo-cd \
-    --kube-context "$CONTEXT_NAME" \
-    --namespace "$ARGOCD_NS" \
-    --create-namespace \
-    --wait \
-    --timeout=5m
+helm upgrade --install "$ARGOCD_RELEASE" argo/argo-cd \
+  --kube-context "$CONTEXT_NAME" \
+  --namespace "$ARGOCD_NS" \
+  --create-namespace \
+  --wait \
+  --timeout=5m
 
-run_step "Migrating to custom Argo CD chart" \
-  helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
-    --kube-context "$CONTEXT_NAME" \
-    --namespace "$ARGOCD_NS" \
-    --wait \
-    --dependency-update \
-    --timeout=5m
+helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
+  --kube-context "$CONTEXT_NAME" \
+  --namespace "$ARGOCD_NS" \
+  --wait \
+  --dependency-update \
+  --timeout=5m
 
 # ============================================================================
 # CONFIGURE COREDNS
