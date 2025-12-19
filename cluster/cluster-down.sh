@@ -17,7 +17,6 @@ CONTEXT_NAME="kind-${CLUSTER_NAME}"
 # ============================================================================
 
 detect_container_engine
-check_required_tools kind
 
 # ============================================================================
 # DELETE CLUSTER
