@@ -23,7 +23,7 @@ APPSET_FILE="${APPSET_FILE:-${ARGOCD_CHART_DIR}/templates/applicationsets-platfo
 # ============================================================================
 
 detect_container_engine
-check_required_tools kind kubectl helm
+check_required_tools "kind" "kubectl" "helm"
 
 
 # ============================================================================
