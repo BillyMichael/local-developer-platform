@@ -74,11 +74,11 @@ spec:
 
               # Delete existing token if it exists (ignore error)
               echo "Cleaning up old token..."
-              kubectl exec -n $NAMESPACE $POD_NAME -- su git -c "/usr/local/bin/gitea admin user delete-access-token --username gitea_admin --token-name backstage-token" || true
+              kubectl exec -n $NAMESPACE $POD_NAME -- /usr/local/bin/gitea admin user delete-access-token --username gitea_admin --token-name backstage-token || true
 
               # Generate new token
               echo "Generating new token..."
-              TOKEN=$(kubectl exec -n $NAMESPACE $POD_NAME -- su git -c "/usr/local/bin/gitea admin user generate-access-token --username gitea_admin --token-name backstage-token --scopes write:repository,read:user,write:admin,write:user --raw")
+              TOKEN=$(kubectl exec -n $NAMESPACE $POD_NAME -- /usr/local/bin/gitea admin user generate-access-token --username gitea_admin --token-name backstage-token --scopes write:repository,read:user,write:admin,write:user --raw)
 
               if [ -z "$TOKEN" ]; then
                 echo "Failed to generate token"
