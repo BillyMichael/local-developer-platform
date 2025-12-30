@@ -79,7 +79,11 @@ authelia:
 
         cors:
           endpoints: [authorization, token, revocation, introspection]
-          allowed_origins: ["*"]
+          allowed_origins:
+            - https://cd-127-0-0-1.nip.io
+            - https://portal-127-0-0-1.nip.io
+            - https://kargo-127-0-0-1.nip.io
+            - https://vcs-127-0-0-1.nip.io
 
         claims_policies:
           default:
@@ -168,6 +172,15 @@ authelia:
 
   pod:
     kind: Deployment
+
+    # Resource limits
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
 
     extraVolumes:
       - name: hashed-secrets
