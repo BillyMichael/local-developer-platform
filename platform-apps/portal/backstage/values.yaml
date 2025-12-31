@@ -23,6 +23,11 @@ backstage:
           secretKeyRef:
             name: backstage-oidc-client-secret
             key: password
+      - name: AUTH_SESSION_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: backstage-session-secret
+            key: password
       - name: GITEA_TOKEN
         valueFrom:
           secretKeyRef:
