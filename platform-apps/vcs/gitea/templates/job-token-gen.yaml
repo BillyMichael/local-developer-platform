@@ -87,8 +87,8 @@ spec:
 
               echo "Token generated successfully."
 
-              # Store secret in vcs namespace with Reflector annotations to sync to portal
-              echo "Creating secret in $NAMESPACE namespace with Reflector annotations..."
+              # Store secret in vcs namespace with Replicator annotation to sync to portal
+              echo "Creating secret in $NAMESPACE namespace with Replicator annotation..."
               cat <<EOF | kubectl apply -f -
               apiVersion: v1
               kind: Secret
@@ -96,14 +96,11 @@ spec:
                 name: gitea-admin-token
                 namespace: $NAMESPACE
                 annotations:
-                  reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
-                  reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "portal"
-                  reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
-                  reflector.v1.k8s.emberstack.com/reflection-auto-namespaces: "portal"
+                  replicator.v1.mittwald.de/replicate-to: "portal"
               type: Opaque
               stringData:
                 token: "$TOKEN"
               EOF
 
-              echo "Done! Secret stored in $NAMESPACE namespace. Reflector will sync to portal."
+              echo "Done! Secret stored in $NAMESPACE namespace. Replicator will sync to portal."
       restartPolicy: OnFailure
