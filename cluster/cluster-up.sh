@@ -102,7 +102,12 @@ run_step "Patching CoreDNS config" \
           print \"      \" traefik_ip \" 127-0-0-1.nip.io\"
           print \"      fallthrough\"
           print \"    }\"
-          print \"    rewrite name regex (.+)-127-0-0-1\\\\.nip\\\\.io 127-0-0-1.nip.io\"
+          # Use rewrite block with answer auto to rewrite response name back to original
+          # This fixes Node.js getaddrinfo which rejects responses where answer name != query name
+          print \"    rewrite stop {\"
+          print \"      name regex (.+)-127-0-0-1\\\\.nip\\\\.io 127-0-0-1.nip.io\"
+          print \"      answer auto\"
+          print \"    }\"
           next
         }
         { print }
