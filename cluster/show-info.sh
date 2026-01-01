@@ -46,13 +46,13 @@ USER_PASS=$(get_secret_field "lldap-user-credentials" "password")
 # PRINT CREDENTIAL TABLE
 # ============================================================================
 
-printf "  ┌─────────────┬──────────────────────┬──────────────────────┐\n"
-printf "  │ %-11s │ %-20s │ %-20s │\n" "Role" "Username" "Password"
-printf "  ├─────────────┼──────────────────────┼──────────────────────┤\n"
-printf "  │ %-11s │ %-20s │ %-20s │\n" "Admin"      "$ADMIN_USER" "$ADMIN_PASS"
-printf "  │ %-11s │ %-20s │ %-20s │\n" "Maintainer" "$MAINT_USER" "$MAINT_PASS"
-printf "  │ %-11s │ %-20s │ %-20s │\n" "User"       "$USER_USER"  "$USER_PASS"
-printf "  └─────────────┴──────────────────────┴──────────────────────┘\n\n"
+printf "  ┌─────────────┬──────────────────────┬──────────────────────────────────┐\n"
+printf "  │ %-11s │ %-20s │ %-32s │\n" "Role" "Username" "Password"
+printf "  ├─────────────┼──────────────────────┼──────────────────────────────────┤\n"
+printf "  │ %-11s │ %-20s │ %-32s │\n" "Admin"      "$ADMIN_USER" "$ADMIN_PASS"
+printf "  │ %-11s │ %-20s │ %-32s │\n" "Maintainer" "$MAINT_USER" "$MAINT_PASS"
+printf "  │ %-11s │ %-20s │ %-32s │\n" "User"       "$USER_USER"  "$USER_PASS"
+printf "  └─────────────┴──────────────────────┴──────────────────────────────────┘\n\n"
 
 
 # ============================================================================

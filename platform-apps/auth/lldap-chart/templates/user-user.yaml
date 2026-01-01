@@ -6,9 +6,9 @@ metadata:
   annotations:
         argocd.argoproj.io/sync-wave: '-1'
 spec:
-  length: 8
-  noUpper: true
-  symbols: 0
+  length: 32
+  noUpper: false
+  symbols: 5
   allowRepeat: true
 ---
 apiVersion: external-secrets.io/v1
