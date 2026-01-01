@@ -1,4 +1,6 @@
 lldap-chart:
+  podAnnotations:
+    reloader.stakater.com/auto: "true"
   secret:
     create: false
     useExisting: true

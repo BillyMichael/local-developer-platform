@@ -18,6 +18,8 @@ gitea:
     ENABLE_AUTO_REGISTRATION: true
 
   gitea:
+    podAnnotations:
+      reloader.stakater.com/auto: "true"
     config:
       security:
         ROOT_CA: /etc/ssl/certs/ldp-ca.pem
@@ -31,7 +33,6 @@ gitea:
         ENABLE_OPENID_SIGNIN: false
         ENABLE_OPENID_SIGNUP: true
 
-
     oauth:
       - name: "Authelia"
         provider: "openidConnect"
@@ -39,7 +40,6 @@ gitea:
         existingSecret: "gitea-oidc-client-secret"
         autoDiscoverUrl: "https://auth-127-0-0-1.nip.io/.well-known/openid-configuration"
         scopes: "openid profile email groups"
-
 
   valkey-cluster:
     enabled: false
