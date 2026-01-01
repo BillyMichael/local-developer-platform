@@ -4,6 +4,8 @@ kargo:
   webhooksServer:
     enabled: false
   api:
+    podAnnotations:
+      reloader.stakater.com/auto: "true"
     tls:
       enabled: false
     cabundle:
