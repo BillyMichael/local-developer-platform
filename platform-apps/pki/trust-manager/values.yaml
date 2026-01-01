@@ -1,4 +1,4 @@
 trust-manager:
   app:
     trust:
-      namespace: core
+      namespace: pki

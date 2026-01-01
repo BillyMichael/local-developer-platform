@@ -78,7 +78,7 @@ run_step "Migrating to custom Argo CD chart" \
 
 section "Configuring CoreDNS (nip.io → Traefik)"
 
-TRAEFIK_NS="core"
+TRAEFIK_NS="networking"
 TRAEFIK_SVC="traefik"
 
 run_step "Waiting for Traefik service" \
