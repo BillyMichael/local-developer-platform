@@ -1,6 +1,8 @@
 argo-cd:
   server:
     insecure: true
+    podAnnotations:
+      reloader.stakater.com/auto: "true"
     ingress:
       enabled: true
       annotations:
