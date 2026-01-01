@@ -173,6 +173,8 @@ authelia:
 
   pod:
     kind: Deployment
+    annotations:
+      reloader.stakater.com/auto: "true"
 
     # Resource limits
     resources:
