@@ -9,6 +9,7 @@ spec:
   length: 32
   noUpper: false
   symbols: 5
+  symbolCharacters: "-_~."
   allowRepeat: true
 ---
 apiVersion: external-secrets.io/v1
