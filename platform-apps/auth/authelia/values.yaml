@@ -174,7 +174,7 @@ authelia:
   pod:
     kind: Deployment
     annotations:
-      reloader.stakater.com/auto: "true"
+      secret.reloader.stakater.com/reload: "argocd-oidc-client-secret,backstage-oidc-client-secret,gitea-oidc-client-secret"
 
     # Resource limits
     resources:
