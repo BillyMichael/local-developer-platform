@@ -6,4 +6,4 @@ metadata:
 spec:
   type: object-storage
   owner: maintainers
-  system: storage
+  system: developer_platform

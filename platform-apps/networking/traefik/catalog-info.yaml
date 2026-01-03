@@ -7,6 +7,6 @@ spec:
   type: infrastructure
   lifecycle: production
   owner: maintainers
-  system: core
+  system: developer_platform
   dependsOn:
     - component:default/cert-manager

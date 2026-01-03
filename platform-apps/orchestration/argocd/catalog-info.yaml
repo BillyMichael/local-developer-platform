@@ -7,7 +7,7 @@ spec:
   type: website
   lifecycle: production
   owner: maintainers
-  system: orchestration
+  system: developer_platform
   dependsOn:
     - component:default/traefik
     - component:default/cert-manager

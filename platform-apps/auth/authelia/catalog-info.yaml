@@ -13,7 +13,7 @@ spec:
   type: website
   lifecycle: production
   owner: maintainers
-  system: auth
+  system: developer_platform
   dependsOn:
     - component:default/cert-manager
     - component:default/traefik
