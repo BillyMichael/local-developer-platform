@@ -1,8 +1,6 @@
 kargo:
-  externalWebhooksServer:
-    enabled: false
   webhooksServer:
-    enabled: false
+    enabled: true
   api:
     podAnnotations:
       reloader.stakater.com/auto: "true"
