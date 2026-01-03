@@ -7,4 +7,4 @@ spec:
   type: infrastructure
   lifecycle: production
   owner: maintainers
-  system: core
+  system: developer_platform

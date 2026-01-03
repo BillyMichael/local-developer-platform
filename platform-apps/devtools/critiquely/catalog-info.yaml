@@ -1,10 +1,44 @@
 apiVersion: backstage.io/v1alpha1
-kind: Component
+kind: System
 metadata:
   name: critiquely
-  description: Critiquely Helm chart for feedback collection.
+  description: Feedback collection platform for developer tools.
+spec:
+  owner: devtools-team
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: critiquely-webhook-receiver
+  description: Receives incoming feedback webhooks from external sources.
 spec:
   type: service
   lifecycle: experimental
   owner: devtools-team
-  system: devtools
+  system: critiquely
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: critiquely-queue
+  description: Message queue for buffering and distributing feedback events.
+spec:
+  type: service
+  lifecycle: experimental
+  owner: devtools-team
+  system: critiquely
+  dependsOn:
+    - component:default/critiquely-webhook-receiver
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: critiquely-processor
+  description: Processes feedback events from the queue.
+spec:
+  type: service
+  lifecycle: experimental
+  owner: devtools-team
+  system: critiquely
+  dependsOn:
+    - component:default/critiquely-queue

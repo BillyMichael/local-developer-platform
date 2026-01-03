@@ -7,6 +7,6 @@ spec:
   type: service
   lifecycle: production
   owner: maintainers
-  system: orchestration
+  system: developer_platform
   dependsOn:
     - component:default/crossplane

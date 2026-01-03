@@ -7,6 +7,6 @@ spec:
   type: service
   lifecycle: production
   owner: maintainers
-  system: auth
+  system: developer_platform
   dependsOn:
     - resource:default/external-secrets
