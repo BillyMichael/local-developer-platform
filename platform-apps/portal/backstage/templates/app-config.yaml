@@ -37,6 +37,7 @@ data:
     integrations:
       gitea:
         - host: vcs-127-0-0-1.nip.io
+          username: gitea_admin
           password: ${GITEA_TOKEN}
     catalog:
       useUrlReadersSearch: true
