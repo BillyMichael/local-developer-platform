@@ -103,4 +103,14 @@ spec:
               EOF
 
               echo "Done! Secret stored in $NAMESPACE namespace. Replicator will sync to portal."
+
+              # Create default organization if it doesn't exist
+              echo "Creating default organization..."
+              kubectl exec -n $NAMESPACE $POD_NAME -- wget -q -O- \
+                --header="Authorization: token $TOKEN" \
+                --header="Content-Type: application/json" \
+                --post-data='{"username":"local-developer-platform","full_name":"Local Developer Platform","description":"Platform infrastructure and services","visibility":"public"}' \
+                http://localhost:3000/api/v1/orgs 2>/dev/null || echo "Organization may already exist"
+
+              echo "Setup complete!"
       restartPolicy: OnFailure
