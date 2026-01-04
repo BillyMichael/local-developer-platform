@@ -72,24 +72,24 @@ spec:
               POD_NAME=$(kubectl get pod -l app.kubernetes.io/name=gitea -n $NAMESPACE -o jsonpath="{.items[0].metadata.name}")
               echo "Found Gitea pod: $POD_NAME"
 
-              # Delete existing token if it exists (ignore error)
-              echo "Cleaning up old token..."
-              kubectl exec -n $NAMESPACE $POD_NAME -- /usr/local/bin/gitea admin user delete-access-token --username gitea_admin --token-name backstage-token || true
-
-              # Generate new token
-              echo "Generating new token..."
-              TOKEN=$(kubectl exec -n $NAMESPACE $POD_NAME -- /usr/local/bin/gitea admin user generate-access-token --username gitea_admin --token-name backstage-token --scopes write:repository,read:organization,write:organization,read:user,write:admin,write:user --raw)
+              # Check if secret already exists - skip token generation if so
+              if kubectl get secret gitea-admin-token -n $NAMESPACE >/dev/null 2>&1; then
+                echo "Token secret already exists, skipping token generation"
+                TOKEN=$(kubectl get secret gitea-admin-token -n $NAMESPACE -o jsonpath='{.data.token}' | base64 -d)
+              else
+                echo "Generating new token..."
+                TOKEN=$(kubectl exec -n $NAMESPACE $POD_NAME -- /usr/local/bin/gitea admin user generate-access-token --username gitea_admin --token-name backstage-token --scopes write:repository,read:organization,write:organization,read:user,write:admin,write:user --raw)
+              fi
 
               if [ -z "$TOKEN" ]; then
-                echo "Failed to generate token"
+                echo "Failed to get or generate token"
                 exit 1
               fi
 
-              echo "Token generated successfully."
-
-              # Store secret in vcs namespace with Replicator annotation to sync to portal
-              echo "Creating secret in $NAMESPACE namespace with Replicator annotation..."
-              cat <<EOF | kubectl apply -f -
+              # Only create secret if it doesn't exist yet
+              if ! kubectl get secret gitea-admin-token -n $NAMESPACE >/dev/null 2>&1; then
+                echo "Creating secret in $NAMESPACE namespace with Replicator annotation..."
+                cat <<EOF | kubectl apply -f -
               apiVersion: v1
               kind: Secret
               metadata:
@@ -101,8 +101,8 @@ spec:
               stringData:
                 token: "$TOKEN"
               EOF
-
-              echo "Done! Secret stored in $NAMESPACE namespace. Replicator will sync to portal."
+                echo "Secret created and will be replicated to portal."
+              fi
 
               # Create default organization if it doesn't exist
               echo "Creating default organization..."
