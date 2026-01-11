@@ -17,7 +17,7 @@ kargo:
       admins:
         claims:
           groups:
-          - admin
+          - platform_maintainers
       usernameClaim: sub
     host: kargo-127-0-0-1.nip.io
     adminAccount: 

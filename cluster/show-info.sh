@@ -32,9 +32,6 @@ get_secret_field() {
   fi
 }
 
-ADMIN_USER=$(get_secret_field "lldap-admin-credentials" "id")
-ADMIN_PASS=$(get_secret_field "lldap-admin-credentials" "password")
-
 MAINT_USER=$(get_secret_field "lldap-maintainer-credentials" "id")
 MAINT_PASS=$(get_secret_field "lldap-maintainer-credentials" "password")
 
@@ -46,13 +43,12 @@ USER_PASS=$(get_secret_field "lldap-user-credentials" "password")
 # PRINT CREDENTIAL TABLE
 # ============================================================================
 
-printf "  ┌─────────────┬──────────────────────┬──────────────────────────────────┐\n"
-printf "  │ %-11s │ %-20s │ %-32s │\n" "Role" "Username" "Password"
-printf "  ├─────────────┼──────────────────────┼──────────────────────────────────┤\n"
-printf "  │ %-11s │ %-20s │ %-32s │\n" "Admin"      "$ADMIN_USER" "$ADMIN_PASS"
-printf "  │ %-11s │ %-20s │ %-32s │\n" "Maintainer" "$MAINT_USER" "$MAINT_PASS"
-printf "  │ %-11s │ %-20s │ %-32s │\n" "User"       "$USER_USER"  "$USER_PASS"
-printf "  └─────────────┴──────────────────────┴──────────────────────────────────┘\n\n"
+printf "  ┌────────────┬──────────────────────┬──────────────────────────────────┐\n"
+printf "  │ %-10s │ %-20s │ %-32s │\n" "Role" "Username" "Password"
+printf "  ├────────────┼──────────────────────┼──────────────────────────────────┤\n"
+printf "  │ %-10s │ %-20s │ %-32s │\n" "Maintainer" "$MAINT_USER" "$MAINT_PASS"
+printf "  │ %-10s │ %-20s │ %-32s │\n" "User"       "$USER_USER"  "$USER_PASS"
+printf "  └────────────┴──────────────────────┴──────────────────────────────────┘\n\n"
 
 
 # ============================================================================

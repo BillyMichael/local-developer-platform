@@ -28,17 +28,6 @@ spec:
             ]
           }
           {
-            "id": "platform_admin",
-            "email": "platform_admin@ldp.com",
-            "password": "{{`{{ .admin_password }}`}}",
-            "displayName": "Platform Admin",
-            "firstName": "Platform",
-            "lastName": "Admin",
-            "groups": [
-              "admin"
-            ]
-          }
-          {
             "id": "platform_maintainer",
             "email": "platform_maintainer@ldp.com",
             "password": "{{`{{ .maintainer_password }}`}}",
@@ -46,7 +35,7 @@ spec:
             "firstName": "Platform",
             "lastName": "Maintainer",
             "groups": [
-              "maintainer"
+              "platform_maintainers"
             ]
           }
           {
@@ -55,23 +44,22 @@ spec:
             "password": "{{`{{ .user_password }}`}}",
             "displayName": "Platform User",
             "firstName": "Platform",
-            "lastName": "User"
+            "lastName": "User",
+            "groups": [
+              "platform_users"
+            ]
           }
         group-configs.json: |
           {
-            "name": "admin"
+            "name": "platform_maintainers"
           }
           {
-            "name": "maintainer"
+            "name": "platform_users"
           }
   data:
     - secretKey: authelia_password
       remoteRef:
         key: lldap-authelia-credentials
-        property: password
-    - secretKey: admin_password
-      remoteRef:
-        key: lldap-admin-credentials
         property: password
     - secretKey: maintainer_password
       remoteRef:
