@@ -54,23 +54,8 @@ argo-cd:
     rbac:
       policy.default: 'role:readonly'
       policy.csv: |
-        # Map LDAP groups to ArgoCD roles
-        g, admin, role:admin
+        # Platform maintainers get full admin access
+        g, platform_maintainers, role:admin
 
-        # Custom maintainer role with deploy/sync but no delete permissions
-        p, role:maintainer, applications, get, */*, allow
-        p, role:maintainer, applications, create, */*, allow
-        p, role:maintainer, applications, update, */*, allow
-        p, role:maintainer, applications, sync, */*, allow
-        p, role:maintainer, applications, override, */*, allow
-        p, role:maintainer, repositories, get, *, allow
-        p, role:maintainer, repositories, create, *, allow
-        p, role:maintainer, repositories, update, *, allow
-        p, role:maintainer, clusters, get, *, allow
-        p, role:maintainer, projects, get, *, allow
-        p, role:maintainer, logs, get, */*, allow
-        p, role:maintainer, exec, create, */*, deny
-
-        # Map maintainer group to maintainer role
-        g, maintainer, role:maintainer
+        # Platform users get read-only access (default policy)
        
