@@ -55,8 +55,12 @@ run_step() {
   local start_ts
   start_ts=$(date +%s)
 
-  # Run command in background
-  "$@" >/dev/null 2>&1 &
+  # Create temp file for capturing output
+  local output_file
+  output_file=$(mktemp)
+
+  # Run command in background, capturing output
+  "$@" >"$output_file" 2>&1 &
   local cmd_pid=$!
 
   # Start spinner bound to command PID
@@ -64,13 +68,13 @@ run_step() {
   local spinner_pid=$!
 
   # Trap Ctrl-C and clean up both processes
-  trap "kill $cmd_pid 2>/dev/null; kill $spinner_pid 2>/dev/null; exit 1" INT TERM
+  trap "kill $cmd_pid 2>/dev/null; kill $spinner_pid 2>/dev/null; rm -f '$output_file'; exit 1" INT TERM
 
-  # Wait for main command
-  wait "$cmd_pid"
-  local status=$?
+  # Wait for main command and capture exit status
+  local status=0
+  wait "$cmd_pid" || status=$?
 
-  # Cleanup spinner
+  # Cleanup spinner immediately
   kill "$spinner_pid" 2>/dev/null || true
   wait "$spinner_pid" 2>/dev/null || true
 
@@ -83,8 +87,17 @@ run_step() {
     printf "\r  ${GREEN}✔${NC}  %s (${duration}s)\n" "$msg"
   else
     printf "\r  ${RED}✖${NC}  %s (${duration}s)\n" "$msg"
+    # Show the error output
+    printf "\n${RED}━━━ Error Output ━━━${NC}\n"
+    if [ -s "$output_file" ]; then
+      cat "$output_file"
+    else
+      printf "(no output captured - command failed silently)\n"
+    fi
+    printf "${RED}━━━━━━━━━━━━━━━━━━━━${NC}\n\n"
   fi
 
+  rm -f "$output_file"
   return "$status"
 }
 
