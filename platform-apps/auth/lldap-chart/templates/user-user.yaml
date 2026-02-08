@@ -8,8 +8,7 @@ metadata:
 spec:
   length: 32
   noUpper: false
-  symbols: 5
-  symbolCharacters: "_~."
+  symbols: 0
   allowRepeat: true
 ---
 apiVersion: external-secrets.io/v1
