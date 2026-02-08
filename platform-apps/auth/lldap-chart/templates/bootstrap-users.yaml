@@ -15,8 +15,7 @@ spec:
     template:
       type: Opaque
       data:
-        # User configs - one file per user
-        user-svc-authelia.json: |
+        user-configs.json: |
           {
             "id": "svc_authelia",
             "email": "svc_authelia@ldp.com",
@@ -26,7 +25,6 @@ spec:
             "lastName": "Svc Account",
             "groups": ["lldap_password_manager"]
           }
-        user-maintainer.json: |
           {
             "id": "platform_maintainer",
             "email": "platform_maintainer@ldp.com",
@@ -36,7 +34,6 @@ spec:
             "lastName": "Maintainer",
             "groups": ["platform_maintainers"]
           }
-        user-user.json: |
           {
             "id": "platform_user",
             "email": "platform_user@ldp.com",
@@ -46,10 +43,8 @@ spec:
             "lastName": "User",
             "groups": ["platform_users"]
           }
-        # Group configs - one file per group
-        group-maintainers.json: |
+        group-configs.json: |
           {"name": "platform_maintainers"}
-        group-users.json: |
           {"name": "platform_users"}
   data:
     - secretKey: authelia_password
