@@ -53,8 +53,12 @@ spec:
               - secret:
                   name: lldap-bootstrap-configs
                   items:
-                    - key: user-configs.json
-                      path: user-configs.json
+                    - key: user-svc-authelia.json
+                      path: user-svc-authelia.json
+                    - key: user-maintainer.json
+                      path: user-maintainer.json
+                    - key: user-user.json
+                      path: user-user.json
 
         - name: group-configs
           projected:
@@ -62,5 +66,7 @@ spec:
               - secret:
                   name: lldap-bootstrap-configs
                   items:
-                    - key: group-configs.json
-                      path: group-configs.json
+                    - key: group-maintainers.json
+                      path: group-maintainers.json
+                    - key: group-users.json
+                      path: group-users.json
