@@ -36,7 +36,7 @@ if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
   ok "Cluster '$CLUSTER_NAME' already exists"
 else
   run_step "Creating cluster '$CLUSTER_NAME'" \
-    kind create cluster --name "$CLUSTER_NAME" --config "$KIND_CFG" --quiet
+    kind create cluster --name "$CLUSTER_NAME" --config "$KIND_CFG"
 fi
 
 # Set kubectl context to the Kind cluster for safety

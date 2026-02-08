@@ -15,6 +15,11 @@ spec:
     metadata:
       # Escape for Helm, will be processed by ArgoCD
       name: '{{ `{{ index .path.segments 2 }}` }}'
+      annotations:
+        # Sync waves: CRD providers first (-1), everything else after (0)
+        argocd.argoproj.io/sync-wave: '{{ `{{- $app := index .path.segments 2 -}}
+          {{- $crdProviders := list "cert-manager" "external-secrets" "crossplane" -}}
+          {{- if has $app $crdProviders -}}-1{{- else -}}0{{- end -}}` }}'
     spec:
       project: default
       source:
