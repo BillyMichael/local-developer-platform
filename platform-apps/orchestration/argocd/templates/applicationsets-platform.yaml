@@ -16,10 +16,14 @@ spec:
       # Escape for Helm, will be processed by ArgoCD
       name: '{{ `{{ index .path.segments 2 }}` }}'
       annotations:
-        # Sync waves: CRD providers first (-1), everything else after (0)
+        # Sync waves:
+        #   -1: CRD providers (must exist before CRs can be created)
+        #    0: Auth services (authelia, lldap) - needed for OIDC discovery
+        #    1: Apps that configure OIDC at startup (gitea, backstage, kargo)
         argocd.argoproj.io/sync-wave: '{{ `{{- $app := index .path.segments 2 -}}
           {{- $crdProviders := list "cert-manager" "external-secrets" "crossplane" -}}
-          {{- if has $app $crdProviders -}}-1{{- else -}}0{{- end -}}` }}'
+          {{- $oidcClients := list "gitea" "backstage" "kargo" -}}
+          {{- if has $app $crdProviders -}}-1{{- else if has $app $oidcClients -}}1{{- else -}}0{{- end -}}` }}'
     spec:
       project: default
       source:
