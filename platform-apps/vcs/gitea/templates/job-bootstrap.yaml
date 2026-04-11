@@ -95,11 +95,17 @@ spec:
               metadata:
                 name: gitea-admin-token
                 namespace: $NAMESPACE
+                labels:
+                  kargo.akuity.io/cred-type: git
                 annotations:
-                  replicator.v1.mittwald.de/replicate-to: "portal"
+                  replicator.v1.mittwald.de/replicate-to: "portal,orchestration"
               type: Opaque
               stringData:
                 token: "$TOKEN"
+                repoURL: "https://vcs-127-0-0-1.nip.io"
+                repoURLIsRegex: "false"
+                username: "gitea_admin"
+                password: "$TOKEN"
               EOF
                 echo "Secret created and will be replicated to portal."
               fi
