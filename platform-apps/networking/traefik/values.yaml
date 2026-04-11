@@ -27,7 +27,7 @@ traefik:
 
   ingressRoute:
     dashboard:
-      enabled: true
+      enabled: false
 
   ports:
     web:
