@@ -55,12 +55,11 @@ run_step() {
   local start_ts
   start_ts=$(date +%s)
 
-  # Create temp file for capturing output
-  local output_file
-  output_file=$(mktemp)
+  local logfile
+  logfile=$(mktemp "/tmp/ldp-step-XXXXXX.log")
 
-  # Run command in background, capturing output
-  "$@" >"$output_file" 2>&1 &
+  # Run command in background, capturing output to logfile
+  "$@" >"$logfile" 2>&1 &
   local cmd_pid=$!
 
   # Start spinner bound to command PID
@@ -68,7 +67,7 @@ run_step() {
   local spinner_pid=$!
 
   # Trap Ctrl-C and clean up both processes
-  trap "kill $cmd_pid 2>/dev/null; kill $spinner_pid 2>/dev/null; rm -f '$output_file'; exit 1" INT TERM
+  trap "kill $cmd_pid 2>/dev/null; kill $spinner_pid 2>/dev/null; rm -f '$logfile'; exit 1" INT TERM
 
   # Wait for main command and capture exit status
   local status=0
@@ -85,19 +84,13 @@ run_step() {
   # Final output replacing spinner line
   if [ "$status" -eq 0 ]; then
     printf "\r  ${GREEN}✔${NC}  %s (${duration}s)\n" "$msg"
+    rm -f "$logfile"
   else
     printf "\r  ${RED}✖${NC}  %s (${duration}s)\n" "$msg"
-    # Show the error output
-    printf "\n${RED}━━━ Error Output ━━━${NC}\n"
-    if [ -s "$output_file" ]; then
-      cat "$output_file"
-    else
-      printf "(no output captured - command failed silently)\n"
-    fi
-    printf "${RED}━━━━━━━━━━━━━━━━━━━━${NC}\n\n"
+    printf "     ${RED}Log:${NC} %s\n" "$logfile"
+    tail -10 "$logfile" 2>/dev/null | sed 's/^/     /'
   fi
 
-  rm -f "$output_file"
   return "$status"
 }
 
@@ -141,8 +134,77 @@ detect_container_engine() {
     exit 1
   fi
 
+  # Warn if Podman is running in rootless mode (KIND requires rootful)
+  if [[ "$CE" == "podman" ]]; then
+    local rootless
+    rootless=$(podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null || echo "unknown")
+    if [[ "$rootless" == "true" ]]; then
+      warn "Podman is running in rootless mode."
+      warn "KIND requires rootful Podman. If cluster creation fails, try:"
+      warn "  systemctl start podman.socket"
+      warn "  export CONTAINER_HOST=unix:///run/podman/podman.sock"
+    fi
+  fi
+
   export CE
 }
+
+# ============================================================================
+# PORT AVAILABILITY CHECK
+# ============================================================================
+
+check_port_availability() {
+  local ports=("$@")
+
+  section "Checking Port Availability"
+
+  local blocked=false
+  for port in "${ports[@]}"; do
+    if command -v ss >/dev/null 2>&1 && ss -tlnH "sport = :${port}" 2>/dev/null | grep -q .; then
+      error "Port $port is already in use"
+      blocked=true
+    elif command -v lsof >/dev/null 2>&1 && lsof -iTCP:"${port}" -sTCP:LISTEN >/dev/null 2>&1; then
+      error "Port $port is already in use"
+      blocked=true
+    else
+      ok "Port $port is available"
+    fi
+  done
+
+  if [[ "$blocked" == "true" ]]; then
+    error "Free the ports listed above before running 'make up'."
+    exit 1
+  fi
+}
+
+
+# ============================================================================
+# RESOURCE CHECK
+# ============================================================================
+
+check_available_resources() {
+  section "Checking System Resources"
+
+  local mem_kb=0
+  if [[ "$(uname)" == "Darwin" ]]; then
+    mem_kb=$(( $(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1024 ))
+  elif [[ -f /proc/meminfo ]]; then
+    mem_kb=$(awk '/MemAvailable/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
+  fi
+
+  if (( mem_kb > 0 )); then
+    local mem_gb=$(( mem_kb / 1024 / 1024 ))
+    if (( mem_gb < 10 )); then
+      warn "Only ~${mem_gb}GB RAM available. The platform recommends 12GB+."
+      warn "Consider reducing worker nodes in cluster-config.yaml if you hit issues."
+    else
+      ok "${mem_gb}GB RAM available"
+    fi
+  else
+    warn "Could not determine available memory"
+  fi
+}
+
 
 # ============================================================================
 # REQUIRED TOOLS CHECK
