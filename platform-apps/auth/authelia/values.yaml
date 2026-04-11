@@ -11,7 +11,7 @@ authelia:
   configMap:
     theme: dark
     log:
-      level: trace
+      level: info
 
     ntp:
       disable_startup_check: true
@@ -89,7 +89,7 @@ authelia:
           default:
             id_token: [groups, email, preferred_username, name]
 
-        enable_client_debug_messages: true
+        enable_client_debug_messages: false
 
         clients:
           - client_id: argocd
@@ -206,12 +206,12 @@ authelia:
           - name: X_AUTHELIA_CONFIG
             value: /configuration.yaml
         command:
-          - sh
+          - bash
           - -c
           - |
-            echo "Hashing OIDC client secrets..."
-
             set -euo pipefail
+
+            echo "Hashing OIDC client secrets..."
 
             # ------------------------
             # ArgoCD

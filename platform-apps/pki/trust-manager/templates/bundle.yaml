@@ -4,7 +4,6 @@ metadata:
   name: ca
 spec:
   sources:
-  - useDefaultCAs: false
   - secret:
       name: "root-ca"
       key: "tls.crt"
