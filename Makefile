@@ -1,7 +1,7 @@
 # Default goal so `make` runs the cluster
 .DEFAULT_GOAL := up
 
-.PHONY: up down password restart kubeconfig info help
+.PHONY: up down restart kubeconfig info preflight status help
 
 
 # ------------------------------------------------------------------------------
@@ -24,10 +24,19 @@ restart: ## Restart the cluster
 # ------------------------------------------------------------------------------
 
 kubeconfig: ## Export updated kubeconfig
-	@kind export kubeconfig --name ldp >/dev/null
+	@kind export kubeconfig --name $${CLUSTER_NAME:-ldp} >/dev/null
 
 info: ## Show Local Development Platform info
 	@bash cluster/show-info.sh
+
+preflight: ## Check prerequisites without creating cluster
+	@bash -c 'source cluster/common.sh && detect_container_engine && check_required_tools kind kubectl helm && check_port_availability 80 443 9000 && check_available_resources'
+
+status: ## Show platform health status
+	@kubectl --context kind-$${CLUSTER_NAME:-ldp} get pods -A --no-headers 2>/dev/null | \
+		awk '$$4 != "Running" && $$4 != "Completed" && $$4 != "Succeeded" {print}' | \
+		{ result=$$(cat); if [ -z "$$result" ]; then echo "All pods healthy"; else echo "$$result"; fi; } || \
+		echo "Cluster not running"
 
 
 # ------------------------------------------------------------------------------

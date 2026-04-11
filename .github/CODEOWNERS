@@ -1,0 +1,14 @@
+# Default owner for everything
+* @BillyMichael
+
+# Cluster bootstrap scripts
+/cluster/ @BillyMichael
+
+# Platform applications (Helm charts)
+/platform-apps/ @BillyMichael
+
+# Backstage application
+/spotify-backstage/ @BillyMichael
+
+# CI/CD workflows
+/.github/workflows/ @BillyMichael
