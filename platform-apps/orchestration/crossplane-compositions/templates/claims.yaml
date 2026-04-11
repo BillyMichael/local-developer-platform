@@ -1,0 +1,64 @@
+---
+apiVersion: oidc.ldp/v1alpha1
+kind: ClientClaim
+metadata:
+  name: argocd
+  namespace: orchestration
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec: {}
+---
+apiVersion: oidc.ldp/v1alpha1
+kind: ClientClaim
+metadata:
+  name: backstage
+  namespace: portal
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec: {}
+---
+apiVersion: oidc.ldp/v1alpha1
+kind: ClientClaim
+metadata:
+  name: gitea
+  namespace: vcs
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec: {}
+---
+apiVersion: oidc.ldp/v1alpha1
+kind: UserClaim
+metadata:
+  name: authelia
+  namespace: auth
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  userId: svc_authelia
+  email: svc_authelia@ldp.com
+  groupName: lldap_password_manager
+  passwordSymbols: 6
+---
+apiVersion: oidc.ldp/v1alpha1
+kind: UserClaim
+metadata:
+  name: maintainer
+  namespace: auth
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  userId: platform_maintainer
+  email: platform_maintainer@ldp.com
+  groupName: platform_maintainers
+---
+apiVersion: oidc.ldp/v1alpha1
+kind: UserClaim
+metadata:
+  name: user
+  namespace: auth
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  userId: platform_user
+  email: platform_user@ldp.com
+  groupName: platform_users

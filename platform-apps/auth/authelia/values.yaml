@@ -124,7 +124,7 @@ authelia:
             access_token_signed_response_alg: none
             userinfo_signed_response_alg: none
 
-          - client_id: backstage-client
+          - client_id: backstage
             client_name: Backstage Portal
             public: false
             authorization_policy: one_factor

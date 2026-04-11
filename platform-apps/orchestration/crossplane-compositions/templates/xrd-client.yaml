@@ -1,0 +1,42 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: clients.oidc.ldp
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  group: oidc.ldp
+  names:
+    kind: Client
+    plural: clients
+  claimNames:
+    kind: ClientClaim
+    plural: clientclaims
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                sourceNamespace:
+                  type: string
+                  description: Namespace where the secret is created
+                  default: auth
+                secretLength:
+                  type: integer
+                  description: Length of the generated client secret
+                  default: 72
+                digits:
+                  type: integer
+                  default: 10
+                symbols:
+                  type: integer
+                  default: 5
+                symbolCharacters:
+                  type: string
+                  default: "-_~."

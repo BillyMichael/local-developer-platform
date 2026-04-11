@@ -1,0 +1,130 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: client.oidc.ldp
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  compositeTypeRef:
+    apiVersion: oidc.ldp/v1alpha1
+    kind: Client
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: password-generator
+            base:
+              apiVersion: kubernetes.crossplane.io/v1alpha2
+              kind: Object
+              spec:
+                forProvider:
+                  manifest:
+                    apiVersion: generators.external-secrets.io/v1alpha1
+                    kind: Password
+                    metadata:
+                      name: ""
+                      namespace: auth
+                    spec:
+                      length: 72
+                      digits: 10
+                      symbols: 5
+                      symbolCharacters: "-_~."
+                      noUpper: false
+                      allowRepeat: true
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-oidc-client-secret-generator"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.sourceNamespace
+                toFieldPath: spec.forProvider.manifest.metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.secretLength
+                toFieldPath: spec.forProvider.manifest.spec.length
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.digits
+                toFieldPath: spec.forProvider.manifest.spec.digits
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.symbols
+                toFieldPath: spec.forProvider.manifest.spec.symbols
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.symbolCharacters
+                toFieldPath: spec.forProvider.manifest.spec.symbolCharacters
+
+          - name: external-secret
+            base:
+              apiVersion: kubernetes.crossplane.io/v1alpha2
+              kind: Object
+              spec:
+                forProvider:
+                  manifest:
+                    apiVersion: external-secrets.io/v1
+                    kind: ExternalSecret
+                    metadata:
+                      name: ""
+                      namespace: auth
+                    spec:
+                      refreshInterval: 24h
+                      target:
+                        name: ""
+                        template:
+                          metadata:
+                            labels: {}
+                            annotations: {}
+                          data:
+                            key: ""
+                            password: "{{ .password }}"
+                            secret: "{{ .password }}"
+                      dataFrom:
+                        - sourceRef:
+                            generatorRef:
+                              apiVersion: generators.external-secrets.io/v1alpha1
+                              kind: Password
+                              name: ""
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-oidc-client-secret-generator"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.sourceNamespace
+                toFieldPath: spec.forProvider.manifest.metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.spec.target.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-oidc-client-secret"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.spec.target.template.metadata.labels["app.kubernetes.io/part-of"]
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.namespace
+                toFieldPath: spec.forProvider.manifest.spec.target.template.metadata.annotations["replicator.v1.mittwald.de/replicate-to"]
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.spec.target.template.data.key
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.spec.dataFrom[0].sourceRef.generatorRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-oidc-client-secret-generator"

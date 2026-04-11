@@ -1,0 +1,118 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: user.oidc.ldp
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  compositeTypeRef:
+    apiVersion: oidc.ldp/v1alpha1
+    kind: User
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: password-generator
+            base:
+              apiVersion: kubernetes.crossplane.io/v1alpha2
+              kind: Object
+              spec:
+                forProvider:
+                  manifest:
+                    apiVersion: generators.external-secrets.io/v1alpha1
+                    kind: Password
+                    metadata:
+                      name: ""
+                      namespace: auth
+                      annotations:
+                        argocd.argoproj.io/sync-wave: "-1"
+                    spec:
+                      length: 32
+                      noUpper: false
+                      symbols: 0
+                      allowRepeat: true
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "lldap-%s-password"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.sourceNamespace
+                toFieldPath: spec.forProvider.manifest.metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.passwordLength
+                toFieldPath: spec.forProvider.manifest.spec.length
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.passwordSymbols
+                toFieldPath: spec.forProvider.manifest.spec.symbols
+
+          - name: external-secret
+            base:
+              apiVersion: kubernetes.crossplane.io/v1alpha2
+              kind: Object
+              spec:
+                forProvider:
+                  manifest:
+                    apiVersion: external-secrets.io/v1
+                    kind: ExternalSecret
+                    metadata:
+                      name: ""
+                      namespace: auth
+                      annotations:
+                        argocd.argoproj.io/sync-wave: "-1"
+                    spec:
+                      refreshInterval: 24h
+                      refreshPolicy: CreatedOnce
+                      target:
+                        name: ""
+                        template:
+                          type: Opaque
+                          data:
+                            id: ""
+                            password: "{{ .password }}"
+                      dataFrom:
+                        - sourceRef:
+                            generatorRef:
+                              apiVersion: generators.external-secrets.io/v1alpha1
+                              kind: Password
+                              name: ""
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "lldap-%s-credentials"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.sourceNamespace
+                toFieldPath: spec.forProvider.manifest.metadata.namespace
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.spec.target.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "lldap-%s-credentials"
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.userId
+                toFieldPath: spec.forProvider.manifest.spec.target.template.data.id
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.claimRef.name
+                toFieldPath: spec.forProvider.manifest.spec.dataFrom[0].sourceRef.generatorRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "lldap-%s-password"
