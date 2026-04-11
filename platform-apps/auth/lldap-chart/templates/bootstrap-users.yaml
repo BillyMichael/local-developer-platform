@@ -5,13 +5,12 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: '0'
 spec:
-  refreshInterval: 24h0m0s
+  refreshInterval: 24h
   secretStoreRef:
     name: lldap-store
     kind: SecretStore
   target:
     name: lldap-bootstrap-configs
-    creationPolicy: Owner
     template:
       type: Opaque
       data:
