@@ -6,11 +6,19 @@ This guide will help you set up and run the Local Developer Platform on your loc
 
 Before you begin, ensure you have the following installed:
 
-- **Docker Desktop** (or equivalent container runtime)
-- **Kubernetes cluster** (kind, minikube, or Docker Desktop Kubernetes)
-- **kubectl** - Kubernetes CLI
-- **Helm** - Kubernetes package manager
-- **Git** - Version control
+- **Docker Engine** or **Podman** — [Install Docker](https://docs.docker.com/engine/install/) or [Install Podman](https://podman.io/docs/installation)
+- **kind** — [Install kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+- **kubectl** — [Install kubectl](https://kubernetes.io/docs/tasks/tools/)
+- **Helm** — [Install Helm](https://helm.sh/docs/intro/install/)
+- **Make** — Usually pre-installed on macOS/Linux
+
+!!! note
+    Docker Desktop is **not supported**. Use Docker Engine (Linux) or Podman instead.
+
+**System Requirements:**
+
+- 12GB+ RAM available for the container runtime
+- 4+ CPU cores recommended
 
 ## Quick Start
 
@@ -21,39 +29,63 @@ git clone https://github.com/BillyMichael/local-developer-platform.git
 cd local-developer-platform
 ```
 
-### 2. Create Kubernetes Cluster
-
-If using kind:
+### 2. Check Prerequisites
 
 ```bash
-kind create cluster --name ldp
+make preflight
 ```
 
-### 3. Install ArgoCD
+This verifies your container engine, required tools, port availability, and system resources.
+
+### 3. Create the Platform
 
 ```bash
-kubectl create namespace orchestration
-kubectl apply -n orchestration -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+make up
 ```
 
-### 4. Deploy Platform Apps
+This will:
+
+- Create a KIND cluster with 1 control-plane and 2 worker nodes
+- Install ArgoCD and bootstrap all platform applications via GitOps
+- Configure CoreDNS for local service resolution
+- Wait for authentication services to become ready
+- Display credentials and service URLs
+
+Takes approximately 5–10 minutes on first run.
+
+### 4. Check Platform Health
 
 ```bash
-kubectl apply -f platform-apps/orchestration/argocd/
+make status
 ```
-
-ArgoCD will automatically discover and deploy all platform applications.
 
 ## Accessing Services
 
 Once deployed, services are available at:
 
-| Service | URL |
-|---------|-----|
-| ArgoCD | https://argocd.127-0-0-1.nip.io |
-| Gitea | https://vcs.127-0-0-1.nip.io |
-| Backstage | https://portal.127-0-0-1.nip.io |
-| Authelia | https://auth.127-0-0-1.nip.io |
+| Service   | URL                                  |
+|-----------|--------------------------------------|
+| ArgoCD    | https://cd-127-0-0-1.nip.io         |
+| Authelia   | https://auth-127-0-0-1.nip.io       |
+| Gitea     | https://vcs-127-0-0-1.nip.io        |
+| Backstage | https://portal-127-0-0-1.nip.io     |
+
+Credentials are displayed after `make up` completes, or run `make info` to see them again.
+
+!!! warning
+    You will see browser security warnings for self-signed certificates. This is expected in local development.
+
+## Useful Commands
+
+| Command          | Description              |
+|------------------|--------------------------|
+| `make up`        | Create the cluster       |
+| `make down`      | Delete the cluster       |
+| `make restart`   | Restart the cluster      |
+| `make info`      | Show credentials & URLs  |
+| `make status`    | Show platform health     |
+| `make kubeconfig`| Update kubeconfig        |
+| `make preflight` | Check prerequisites      |
 
 ## Next Steps
 

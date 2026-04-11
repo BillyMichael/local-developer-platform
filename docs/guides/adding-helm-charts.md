@@ -390,5 +390,3 @@ Here's a complete example adding Valkey (Redis-compatible) to the platform:
 ## Next Steps
 
 - [Architecture Overview](../architecture/overview.md) - Understand how components interact
-- [External Secrets Guide](#) - Managing secrets securely
-- [Ingress Configuration](#) - Exposing services externally
