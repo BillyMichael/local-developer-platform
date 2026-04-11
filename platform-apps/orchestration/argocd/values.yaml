@@ -1,3 +1,7 @@
+platform:
+  repoURL: https://github.com/BillyMichael/LDP.git
+  targetRevision: main
+
 argo-cd:
   server:
     insecure: true

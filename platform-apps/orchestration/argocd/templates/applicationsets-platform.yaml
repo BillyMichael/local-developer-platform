@@ -7,8 +7,8 @@ spec:
   goTemplateOptions: ["missingkey=error"]
   generators:
     - git:
-        repoURL: https://github.com/BillyMichael/LDP.git
-        revision: HEAD
+        repoURL: {{ .Values.platform.repoURL }}
+        revision: {{ .Values.platform.targetRevision }}
         files:
           - path: "platform-apps/**/values.yaml"
   template:
@@ -27,8 +27,8 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/BillyMichael/LDP.git
-        targetRevision: main
+        repoURL: {{ .Values.platform.repoURL }}
+        targetRevision: {{ .Values.platform.targetRevision }}
         path: '{{ `{{ .path.path }}` }}'
       destination:
         server: https://kubernetes.default.svc
