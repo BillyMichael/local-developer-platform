@@ -8,6 +8,10 @@ nodes:
         nodeRegistration:
           kubeletExtraArgs:
             node-labels: "ingress-ready=true"
+      - |
+        kind: KubeletConfiguration
+        serializeImagePulls: false
+        maxParallelImagePulls: 10
     extraPortMappings:
       - containerPort: 30080   # Traefik NodePort (HTTP)
         hostPort: 80
@@ -19,5 +23,15 @@ nodes:
         hostPort: 9000
         protocol: TCP
   - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: KubeletConfiguration
+        serializeImagePulls: false
+        maxParallelImagePulls: 10
   - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: KubeletConfiguration
+        serializeImagePulls: false
+        maxParallelImagePulls: 10
 

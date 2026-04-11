@@ -4,6 +4,7 @@ metadata:
   name: user.oidc.ldp
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: '-1'
 spec:
   compositeTypeRef:
     apiVersion: oidc.ldp/v1alpha1
