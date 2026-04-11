@@ -1,0 +1,50 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: users.oidc.ldp
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  group: oidc.ldp
+  names:
+    kind: User
+    plural: users
+  claimNames:
+    kind: UserClaim
+    plural: userclaims
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  description: LDAP user identifier
+                email:
+                  type: string
+                  description: User email address
+                groupName:
+                  type: string
+                  description: LDAP group the user belongs to
+                sourceNamespace:
+                  type: string
+                  description: Namespace where credentials are created
+                  default: auth
+                passwordLength:
+                  type: integer
+                  description: Length of the generated password
+                  default: 32
+                passwordSymbols:
+                  type: integer
+                  description: Number of symbols in the generated password
+                  default: 0
+              required:
+                - userId
+                - email
+                - groupName

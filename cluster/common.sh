@@ -56,7 +56,7 @@ run_step() {
   start_ts=$(date +%s)
 
   local logfile
-  logfile=$(mktemp "/tmp/ldp-step-XXXXXX.log")
+  logfile=$(mktemp "/tmp/ldp-step-XXXXXX")
 
   # Run command in background, capturing output to logfile
   "$@" >"$logfile" 2>&1 &
