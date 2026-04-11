@@ -22,7 +22,6 @@ spec:
   refreshPolicy: CreatedOnce
   target:
     name: lldap-maintainer-credentials
-    creationPolicy: Owner
     template:
       type: Opaque
       data:
