@@ -58,7 +58,6 @@ User Credentials:
   ┌─────────────┬──────────────────────┬──────────────────────┐
   │ Role        │ Username             │ Password             │
   ├─────────────┼──────────────────────┼──────────────────────┤
-  │ Admin       │ platform_admin       │ xxxxxxxx             │
   │ Maintainer  │ platform_maintainer  │ xxxxxxxx             │
   │ User        │ platform_user        │ xxxxxxxx             │
   └─────────────┴──────────────────────┴──────────────────────┘
@@ -71,6 +70,7 @@ URLs:
   │ ArgoCD       │ https://cd-127-0-0-1.nip.io                │
   │ Authelia     │ https://auth-127-0-0-1.nip.io              │
   │ Gitea        │ https://vcs-127-0-0-1.nip.io               │
+  │ Backstage    │ https://portal-127-0-0-1.nip.io            │
   └──────────────┴────────────────────────────────────────────┘
 ```
 
@@ -80,17 +80,22 @@ URLs:
 
 ```
 local-developer-platform/
-├── cluster/                   # Cluster creation & bootstrap
+├── cluster/                   # Cluster creation & bootstrap scripts
 ├── platform-apps/             # All GitOps-managed applications
-│   ├── core/                  # Core infra (Traefik, Cert-Manager, etc.)
 │   ├── auth/                  # Authelia, LLDAP
+│   ├── networking/            # Traefik (Ingress Controller)
+│   ├── pki/                   # Cert-Manager, Trust-Manager
+│   ├── secrets/               # External-Secrets, Reloader, Replicator
+│   ├── orchestration/         # ArgoCD, Crossplane, Kargo
+│   ├── storage/               # CloudNativePG, MinIO
 │   ├── vcs/                   # Gitea (Git server)
-│   ├── orchestration/         # Argo CD + workflows
-│   ├── portal/                # Backstage / IDP components
-│   └── ...                    # Additional platform components
-├── spotify-backstage/         # Local Backstage developer portal
-├── Makefile                   # LDP Bootstrap tasks
-└── README.md                  
+│   ├── portal/                # Backstage developer portal
+│   └── devtools/              # Critiquely
+├── spotify-backstage/         # Local Backstage app source
+├── spotify-templates/         # Backstage scaffolder templates
+├── docs/                      # MkDocs documentation
+├── Makefile                   # LDP lifecycle commands
+└── README.md
 ```
 
 ## Useful Commands
@@ -100,6 +105,12 @@ local-developer-platform/
 
 - **Delete cluster:**  
   `make down`
+
+- **Check prerequisites before creating cluster:**  
+  `make preflight`
+
+- **Show platform health status:**  
+  `make status`
 
 - **Update KubeConfig for the kind cluster:**  
   `make kubeconfig`
