@@ -132,6 +132,9 @@ else
 
       kubectl --context '$CONTEXT_NAME' rollout restart deployment/coredns -n kube-system
     "
+
+  run_step "Waiting for CoreDNS to be ready" \
+    kubectl --context "$CONTEXT_NAME" rollout status deployment/coredns -n kube-system --timeout=60s
 fi
 # ============================================================================
 # WAIT FOR LLDAP SECRETS
