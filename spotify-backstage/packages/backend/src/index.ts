@@ -15,6 +15,7 @@ import {
 } from '@backstage/plugin-auth-node';
 import { oidcAuthenticator } from '@backstage/plugin-auth-backend-module-oidc-provider';
 import { DEFAULT_NAMESPACE, stringifyEntityRef } from '@backstage/catalog-model';
+import { platformPermissionModule } from './permissionPolicy';
 
 
 
@@ -93,10 +94,7 @@ backend.add(import('@backstage/plugin-catalog-backend-module-logs'));
 
 // permission plugin
 backend.add(import('@backstage/plugin-permission-backend'));
-// See https://backstage.io/docs/permissions/getting-started for how to create your own permission policy
-backend.add(
-  import('@backstage/plugin-permission-backend-module-allow-all-policy'),
-);
+backend.add(platformPermissionModule);
 
 // search plugin
 backend.add(import('@backstage/plugin-search-backend'));
