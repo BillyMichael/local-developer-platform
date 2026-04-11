@@ -22,7 +22,6 @@ spec:
   refreshPolicy: CreatedOnce
   target:
     name: lldap-authelia-credentials
-    creationPolicy: Owner
     template:
       type: Opaque
       data:
