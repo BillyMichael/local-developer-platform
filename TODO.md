@@ -5,11 +5,11 @@
 - [x] Docs workflow cache key references non-existent `requirements-docs.txt` — `.github/workflows/docs.yml`
 - [x] Service URL mismatch between docs (`argocd.127-0-0-1.nip.io`) and reality (`cd-127-0-0-1.nip.io`) — `docs/getting-started/overview.md`
 - [x] Broken "Next Steps" links point to `#` — `docs/guides/adding-helm-charts.md:393-394`
-- [ ] Crossplane-compositions chart deploys nothing (no deps, empty values, no templates) — `platform-apps/orchestration/crossplane-compositions/`
+- [x] Crossplane-compositions chart deploys nothing (no deps, empty values, no templates) — `platform-apps/orchestration/crossplane-compositions/`
 - [ ] Kargo repo-secret template fully commented out, can't auth to git — `platform-apps/orchestration/kargo/templates/repo-secret.yaml`
-- [ ] Kargo `admin.yaml` is empty + `adminAccount.enabled: false`, no admin access path — `platform-apps/orchestration/kargo/templates/admin.yaml`
-- [ ] Kargo RoleBinding references `kargo-controller-read-secrets` ClusterRole that doesn't exist — `platform-apps/orchestration/kargo/templates/rbac.yaml:10-12`
-- [ ] MinIO `values.yaml` is empty, deployed with unknown defaults — `platform-apps/storage/minio/values.yaml`
+- [x] Kargo `admin.yaml` is empty + `adminAccount.enabled: false`, no admin access path — `platform-apps/orchestration/kargo/templates/admin.yaml`
+- [x] Kargo RoleBinding references `kargo-controller-read-secrets` ClusterRole that doesn't exist — `platform-apps/orchestration/kargo/templates/rbac.yaml:10-12`
+- [x] MinIO `values.yaml` is empty, deployed with unknown defaults — `platform-apps/storage/minio/values.yaml`
 - [x] ApplicationSet generator uses `revision: HEAD` but template uses `targetRevision: main` — `platform-apps/orchestration/argocd/templates/applicationsets-platform.yaml:11`
 
 ## High — Security or Reliability
