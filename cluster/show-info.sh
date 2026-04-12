@@ -77,5 +77,6 @@ printf "  ├──────────────────┼───�
 printf "  │ %-16s │ %-38s │\n" "make down"       "Delete cluster"
 printf "  │ %-16s │ %-38s │\n" "make restart"    "Restart cluster"
 printf "  │ %-16s │ %-38s │\n" "make kubeconfig" "Update kubeconfig"
+printf "  │ %-16s │ %-38s │\n" "make trust-ca"   "Trust the platform CA (no TLS warnings)"
 printf "  │ %-16s │ %-38s │\n" "make info"       "Show LDP info"
 printf "  └──────────────────┴────────────────────────────────────────┘\n\n"
