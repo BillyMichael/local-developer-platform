@@ -5,8 +5,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-CLUSTER_NAME="${CLUSTER_NAME:-ldp}"
-CONTEXT_NAME="kind-${CLUSTER_NAME}"
 LLDAP_NS="${LLDAP_NS:-auth}"
 
 # ============================================================================

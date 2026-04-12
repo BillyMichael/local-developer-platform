@@ -9,8 +9,6 @@ source "${SCRIPT_DIR}/common.sh"
 # CONFIG
 # ============================================================================
 
-CLUSTER_NAME="${CLUSTER_NAME:-ldp}"
-CONTEXT_NAME="kind-${CLUSTER_NAME}"
 KIND_CFG="${KIND_CFG:-cluster/cluster-config.yaml}"
 ARGOCD_NS="${ARGOCD_NS:-orchestration}"
 ARGOCD_CHART_DIR="${CHART_DIR:-platform-apps/orchestration/argocd}"
@@ -18,6 +16,58 @@ ARGOCD_RELEASE="${ARGOCD_RELEASE:-argocd}"
 
 TOTAL_STEPS=9
 LDP_START_TS=$(date +%s)
+
+# ============================================================================
+# COREDNS PATCHING FUNCTION
+# ============================================================================
+
+# Patches CoreDNS to route *.nip.io traffic to Traefik inside the cluster.
+# Uses a rewrite rule so Node.js getaddrinfo accepts the response name.
+patch_coredns_for_nip_io() {
+  local traefik_ns="$1"
+  local traefik_svc="$2"
+
+  local traefik_ip
+  traefik_ip="$(kubectl --context "$CONTEXT_NAME" -n "$traefik_ns" get service "$traefik_svc" -o jsonpath='{.spec.clusterIP}')"
+
+  if kubectl --context "$CONTEXT_NAME" get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' 2>/dev/null | grep -q "127-0-0-1.nip.io"; then
+    ok "CoreDNS already patched for nip.io"
+    return 0
+  fi
+
+  run_step "Patching CoreDNS for nip.io resolution" \
+    bash -c "
+      kubectl --context '$CONTEXT_NAME' get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' |
+        awk -v traefik_ip='$traefik_ip' '
+          /^\.:[0-9]+ \{/ {
+            print \$0
+            print \"    hosts {\"
+            print \"      \" traefik_ip \" 127-0-0-1.nip.io\"
+            print \"      fallthrough\"
+            print \"    }\"
+            print \"    rewrite stop {\"
+            print \"      name regex (.+)-127-0-0-1\\\\.nip\\\\.io 127-0-0-1.nip.io\"
+            print \"      answer auto\"
+            print \"    }\"
+            next
+          }
+          { print }
+        ' > /tmp/coredns-corefile.txt
+
+      kubectl --context '$CONTEXT_NAME' create configmap coredns --from-file=Corefile=/tmp/coredns-corefile.txt \
+        --dry-run=client -o yaml |
+        kubectl --context '$CONTEXT_NAME' apply -n kube-system -f -
+
+      kubectl --context '$CONTEXT_NAME' rollout restart deployment/coredns -n kube-system
+    "
+
+  wait_for "Waiting for CoreDNS to be ready" 60 \
+    kubectl --context "$CONTEXT_NAME" -n kube-system rollout status deployment/coredns --timeout=1s
+
+  wait_for "Waiting for DNS to stabilize in repo-server" 60 \
+    kubectl --context "$CONTEXT_NAME" -n "$ARGOCD_NS" exec deploy/argocd-repo-server -- \
+      bash -c 'getent hosts github.com'
+}
 
 
 # ============================================================================
@@ -49,16 +99,9 @@ fi
 run_step "Setting kubectl context to '$CONTEXT_NAME'" \
   kubectl config use-context "$CONTEXT_NAME"
 
-run_step "Waiting for CoreDNS to resolve external hosts" \
-  bash -c "
-    for i in {1..30}; do
-      kubectl --context '$CONTEXT_NAME' run dns-check --rm -i --restart=Never \
-        --image=busybox -- nslookup github.com >/dev/null 2>&1 && exit 0
-      sleep 2
-    done
-    echo 'DNS still not resolving after 60s'
-    exit 1
-  "
+wait_for "Waiting for CoreDNS to resolve external hosts" 60 \
+  kubectl --context "$CONTEXT_NAME" run dns-check --rm -i --restart=Never \
+    --image=busybox -- nslookup github.com
 
 
 # ============================================================================
@@ -78,18 +121,9 @@ run_step "Deploying Argo CD (without ApplicationSets)" \
     --wait \
     --timeout=5m
 
-run_step "Waiting for repo-server DNS resolution" \
-  bash -c "
-    POD=\$(kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' get pod \
-      -l app.kubernetes.io/component=repo-server -o jsonpath='{.items[0].metadata.name}')
-    for i in {1..30}; do
-      kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec \"\$POD\" -- \
-        bash -c 'getent hosts github.com' >/dev/null 2>&1 && exit 0
-      sleep 2
-    done
-    echo 'repo-server DNS not resolving after 60s'
-    exit 1
-  "
+wait_for "Waiting for repo-server DNS resolution" 60 \
+  kubectl --context "$CONTEXT_NAME" -n "$ARGOCD_NS" exec deploy/argocd-repo-server -- \
+    bash -c 'getent hosts github.com'
 
 run_step "Enabling ApplicationSets" \
   helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
@@ -156,46 +190,7 @@ wait_for "Waiting for LLDAP" 180 \
   kubectl --context "$CONTEXT_NAME" -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=lldap-chart --timeout=1s
 
 # Configure CoreDNS to route *.nip.io traffic to Traefik inside the cluster
-TRAEFIK_IP="$(kubectl --context "$CONTEXT_NAME" -n "$TRAEFIK_NS" get service "$TRAEFIK_SVC" -o jsonpath='{.spec.clusterIP}')"
-
-if kubectl --context "$CONTEXT_NAME" get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' 2>/dev/null | grep -q "127-0-0-1.nip.io"; then
-  ok "CoreDNS already patched for nip.io"
-else
-  run_step "Patching CoreDNS for nip.io resolution" \
-    bash -c "
-      kubectl --context '$CONTEXT_NAME' get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' |
-        awk -v traefik_ip='$TRAEFIK_IP' '
-          /^\.:[0-9]+ \{/ {
-            print \$0
-            print \"    hosts {\"
-            print \"      \" traefik_ip \" 127-0-0-1.nip.io\"
-            print \"      fallthrough\"
-            print \"    }\"
-            # Use rewrite block with answer auto to rewrite response name back to original
-            # This fixes Node.js getaddrinfo which rejects responses where answer name != query name
-            print \"    rewrite stop {\"
-            print \"      name regex (.+)-127-0-0-1\\\\.nip\\\\.io 127-0-0-1.nip.io\"
-            print \"      answer auto\"
-            print \"    }\"
-            next
-          }
-          { print }
-        ' > /tmp/coredns-corefile.txt
-
-      kubectl --context '$CONTEXT_NAME' create configmap coredns --from-file=Corefile=/tmp/coredns-corefile.txt \
-        --dry-run=client -o yaml |
-        kubectl --context '$CONTEXT_NAME' apply -n kube-system -f -
-
-      kubectl --context '$CONTEXT_NAME' rollout restart deployment/coredns -n kube-system
-    "
-
-  wait_for "Waiting for CoreDNS to be ready" 60 \
-    kubectl --context "$CONTEXT_NAME" -n kube-system rollout status deployment/coredns --timeout=1s
-
-  wait_for "Waiting for DNS to stabilize in repo-server" 60 \
-    kubectl --context "$CONTEXT_NAME" -n "$ARGOCD_NS" exec deploy/argocd-repo-server -- \
-      bash -c 'getent hosts github.com'
-fi
+patch_coredns_for_nip_io "$TRAEFIK_NS" "$TRAEFIK_SVC"
 
 
 # ============================================================================
@@ -242,4 +237,4 @@ LDP_SECONDS=$(( LDP_DURATION % 60 ))
 
 printf "\n${GREEN}${BOLD}Platform ready in ${LDP_MINUTES}m${LDP_SECONDS}s${NC}\n"
 
-bash cluster/show-info.sh
+bash "${SCRIPT_DIR}/show-info.sh"
