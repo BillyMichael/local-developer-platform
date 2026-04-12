@@ -79,7 +79,7 @@ spec:
                           type: Opaque
                           data:
                             id: ""
-                            password: "{{ .password }}"
+                            password: '{{`{{ .password }}`}}'
                       dataFrom:
                         - sourceRef:
                             generatorRef:
