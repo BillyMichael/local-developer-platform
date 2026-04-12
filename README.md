@@ -87,7 +87,7 @@ local-developer-platform/
 │   ├── pki/                   # Cert-Manager, Trust-Manager
 │   ├── secrets/               # External-Secrets, Reloader, Replicator
 │   ├── orchestration/         # ArgoCD, Crossplane, Kargo
-│   ├── storage/               # CloudNativePG, MinIO
+│   ├── storage/               # CloudNativePG
 │   ├── vcs/                   # Gitea (Git server)
 │   ├── portal/                # Backstage developer portal
 │   └── devtools/              # Critiquely
