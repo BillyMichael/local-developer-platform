@@ -46,17 +46,11 @@ spec:
           {{- $compositions := list "crossplane-compositions" -}}
           {{- $oidcClients := list "gitea" "backstage" "kargo" "authelia" -}}
           {{- if has $app $crdProviders -}}wave-n2{{- else if has $app $compositions -}}wave-n1{{- else if has $app $oidcClients -}}wave-1{{- else -}}wave-0{{- end -}}` }}'
-      annotations:
-        # Sync waves (progressive syncs enforces ordering via labels above):
-        #   -2 (wave-n2): CRD providers (must exist before CRs can be created)
-        #   -1 (wave-n1): Crossplane compositions (XRDs + Compositions, no claims)
-        #    0 (wave-0):  Infrastructure (lldap, argocd, traefik, etc.)
-        #    1 (wave-1):  Auth + OIDC consumers (authelia, gitea, backstage, kargo)
-        argocd.argoproj.io/sync-wave: '{{ `{{- $app := index .path.segments 2 -}}
-          {{- $crdProviders := list "cert-manager" "external-secrets" "crossplane" -}}
-          {{- $compositions := list "crossplane-compositions" -}}
-          {{- $oidcClients := list "gitea" "backstage" "kargo" "authelia" -}}
-          {{- if has $app $crdProviders -}}-2{{- else if has $app $compositions -}}-1{{- else if has $app $oidcClients -}}1{{- else -}}0{{- end -}}` }}'
+      # Progressive syncs ordering (enforced via labels + RollingSync strategy):
+      #   wave-n2: CRD providers (cert-manager, external-secrets, crossplane)
+      #   wave-n1: Crossplane compositions (XRDs + Compositions, no claims)
+      #   wave-0:  Infrastructure (lldap, argocd, traefik, etc.)
+      #   wave-1:  Auth + OIDC consumers (authelia, gitea, backstage, kargo)
     spec:
       project: default
       source:
