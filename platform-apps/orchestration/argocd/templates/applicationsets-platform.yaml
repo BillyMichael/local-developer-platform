@@ -76,7 +76,9 @@ spec:
           allowEmpty: false
         syncOptions:
         - CreateNamespace=true
-        - ServerSideApply=true
+        {{ `{{- range (dig "ldp" "syncOptions" list .) }}` }}
+        - '{{ `{{ . }}` }}'
+        {{ `{{- end }}` }}
         retry:
           limit: -1
           backoff:
