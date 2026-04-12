@@ -1,7 +1,9 @@
+---
 apiVersion: oidc.ldp/v1alpha1
 kind: ClientClaim
 metadata:
   name: argocd
+  namespace: orchestration
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec: {}
