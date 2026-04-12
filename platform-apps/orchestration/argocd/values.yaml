@@ -40,6 +40,7 @@ argo-cd:
       create: true
       oidc.tls.insecure.skip.verify: 'true'
       application.resourceTrackingMethod: annotation
+      applicationsetcontroller.enable.progressive.syncs: 'true'
       resource.exclusions: |
         - apiGroups: ["*"]
           kinds: ["ProviderConfigUsage"]

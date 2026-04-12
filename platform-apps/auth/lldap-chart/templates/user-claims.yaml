@@ -1,36 +1,8 @@
 ---
 apiVersion: oidc.ldp/v1alpha1
-kind: ClientClaim
-metadata:
-  name: argocd
-  namespace: orchestration
-  annotations:
-    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-spec: {}
----
-apiVersion: oidc.ldp/v1alpha1
-kind: ClientClaim
-metadata:
-  name: backstage
-  namespace: portal
-  annotations:
-    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-spec: {}
----
-apiVersion: oidc.ldp/v1alpha1
-kind: ClientClaim
-metadata:
-  name: gitea
-  namespace: vcs
-  annotations:
-    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-spec: {}
----
-apiVersion: oidc.ldp/v1alpha1
 kind: UserClaim
 metadata:
   name: authelia
-  namespace: auth
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
@@ -43,7 +15,6 @@ apiVersion: oidc.ldp/v1alpha1
 kind: UserClaim
 metadata:
   name: maintainer
-  namespace: auth
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
@@ -55,7 +26,6 @@ apiVersion: oidc.ldp/v1alpha1
 kind: UserClaim
 metadata:
   name: user
-  namespace: auth
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
