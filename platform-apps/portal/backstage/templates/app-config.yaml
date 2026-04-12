@@ -21,8 +21,6 @@ data:
       session:
         secret: ${AUTH_SESSION_SECRET}
       providers:
-        guest:
-          dangerouslyAllowOutsideDevelopment: false
         oidc:
           production:
             metadataUrl: "https://auth-127-0-0-1.nip.io/.well-known/openid-configuration"
