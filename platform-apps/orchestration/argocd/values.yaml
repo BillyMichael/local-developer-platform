@@ -1,3 +1,6 @@
+ldp:
+  syncWave: wave-0
+
 platform:
   repoURL: https://github.com/BillyMichael/LDP.git
   targetRevision: main

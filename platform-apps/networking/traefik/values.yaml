@@ -1,3 +1,6 @@
+ldp:
+  syncWave: wave-0
+
 traefik:
   # Resource limits for local development
   resources:
