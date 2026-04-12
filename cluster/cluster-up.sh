@@ -191,6 +191,10 @@ else
 
   wait_for "Waiting for CoreDNS to be ready" 60 \
     kubectl --context "$CONTEXT_NAME" -n kube-system rollout status deployment/coredns --timeout=1s
+
+  wait_for "Waiting for DNS to stabilize in repo-server" 60 \
+    kubectl --context "$CONTEXT_NAME" -n "$ARGOCD_NS" exec deploy/argocd-repo-server -- \
+      bash -c 'getent hosts github.com'
 fi
 
 
