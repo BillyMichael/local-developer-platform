@@ -70,6 +70,7 @@ run_step "Migrating to custom Argo CD chart" \
   helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
     --kube-context "$CONTEXT_NAME" \
     --namespace "$ARGOCD_NS" \
+    --set platform.claims.enabled=false \
     --wait \
     --dependency-update \
     --timeout=5m
