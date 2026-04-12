@@ -47,6 +47,33 @@ run_step "Setting kubectl context to '$CONTEXT_NAME'" \
 
 
 # ============================================================================
+# WAIT FOR CLUSTER DNS
+# ============================================================================
+
+section "Waiting for Cluster DNS"
+
+run_step "Waiting for CoreDNS to resolve external hosts" \
+  bash -c "
+    kubectl --context '$CONTEXT_NAME' delete pod dns-check --ignore-not-found --force --grace-period=0 >/dev/null 2>&1
+    kubectl --context '$CONTEXT_NAME' run dns-check --image=busybox --restart=Never \
+      --command -- sleep 120 >/dev/null 2>&1
+    kubectl --context '$CONTEXT_NAME' wait --for=condition=Ready pod/dns-check --timeout=60s >/dev/null 2>&1
+
+    for i in {1..30}; do
+      kubectl --context '$CONTEXT_NAME' exec dns-check -- nslookup github.com >/dev/null 2>&1 && {
+        kubectl --context '$CONTEXT_NAME' delete pod dns-check --ignore-not-found --force --grace-period=0 >/dev/null 2>&1
+        exit 0
+      }
+      sleep 2
+    done
+
+    kubectl --context '$CONTEXT_NAME' delete pod dns-check --ignore-not-found --force --grace-period=0 >/dev/null 2>&1
+    echo 'DNS still not resolving after 60s'
+    exit 1
+  "
+
+
+# ============================================================================
 # INSTALL ARGO CD
 # ============================================================================
 
