@@ -223,17 +223,18 @@ authelia:
           - name: X_AUTHELIA_CONFIG
             value: /configuration.yaml
         command:
-          - bash
+          - sh
           - -c
           - |
-            set -euo pipefail
+            set -eu
 
             # Placeholder hash that won't match any real secret.
             # Used for clients whose secrets haven't been created yet.
             PLACEHOLDER='$pbkdf2-sha512$310000$placeholder$placeholder'
 
             hash_secret() {
-              local name="$1" path="/secrets/${name}-oidc-client-secret/password"
+              name="$1"
+              path="/secrets/${name}-oidc-client-secret/password"
               if [ -f "$path" ]; then
                 echo "Hashing ${name} client secret..."
                 authelia crypto hash generate pbkdf2 \
