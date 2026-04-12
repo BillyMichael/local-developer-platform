@@ -3,6 +3,8 @@
 # ----------------------------------
 *.tgz
 **/charts/*.tgz
+# Exception: lldap-chart has no public Helm repo, must be vendored
+!platform-apps/auth/lldap-chart/charts/lldap-chart-*.tgz
 **/Chart.lock
 **/tmpcharts/
 
