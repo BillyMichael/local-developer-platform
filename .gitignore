@@ -3,7 +3,7 @@
 # ----------------------------------
 *.tgz
 **/charts/*.tgz
-**/charts/Chart.lock
+**/Chart.lock
 **/tmpcharts/
 
 # Local values files that should not be committed
