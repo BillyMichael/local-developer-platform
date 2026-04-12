@@ -4,8 +4,8 @@ metadata:
   name: gitea-bootstrap
   namespace: {{ .Release.Namespace }}
   annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 ---
 # Namespace-scoped Role - only has permissions within vcs namespace
 apiVersion: rbac.authorization.k8s.io/v1
@@ -14,8 +14,8 @@ metadata:
   name: gitea-bootstrap-role
   namespace: {{ .Release.Namespace }}
   annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -33,8 +33,8 @@ metadata:
   name: gitea-bootstrap-binding
   namespace: {{ .Release.Namespace }}
   annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 subjects:
   - kind: ServiceAccount
     name: gitea-bootstrap
@@ -50,8 +50,8 @@ metadata:
   name: gitea-bootstrap
   namespace: {{ .Release.Namespace }}
   annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   template:
     spec:
