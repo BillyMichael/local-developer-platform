@@ -1,3 +1,6 @@
+ldp:
+  syncWave: wave-0
+
 lldap-chart:
   podAnnotations:
     reloader.stakater.com/auto: "true"
