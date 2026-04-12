@@ -1,7 +1,7 @@
 # Default goal so `make` runs the cluster
 .DEFAULT_GOAL := up
 
-.PHONY: up down restart kubeconfig info preflight status help
+.PHONY: up down restart kubeconfig info preflight status trust-ca help
 
 
 # ------------------------------------------------------------------------------
@@ -31,6 +31,9 @@ info: ## Show Local Development Platform info
 
 preflight: ## Check prerequisites without creating cluster
 	@bash -c 'source cluster/common.sh && detect_container_engine && check_required_tools kind kubectl helm && check_port_availability 80 443 9000 && check_available_resources'
+
+trust-ca: ## Trust the platform CA certificate (eliminates TLS warnings)
+	@bash cluster/trust-ca.sh
 
 status: ## Show platform health status
 	@kubectl --context kind-$${CLUSTER_NAME:-ldp} get pods -A --no-headers 2>/dev/null | \
