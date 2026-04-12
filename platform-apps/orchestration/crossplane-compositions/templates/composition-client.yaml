@@ -84,8 +84,8 @@ spec:
                             annotations: {}
                           data:
                             key: ""
-                            password: "{{ .password }}"
-                            secret: "{{ .password }}"
+                            password: '{{`{{ .password }}`}}'
+                            secret: '{{`{{ .password }}`}}'
                       dataFrom:
                         - sourceRef:
                             generatorRef:
