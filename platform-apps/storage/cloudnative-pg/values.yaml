@@ -3,6 +3,12 @@ ldp:
   serverSideApply: true
 
 cloudnative-pg:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
   crds:
     create: true
   serviceAccount:

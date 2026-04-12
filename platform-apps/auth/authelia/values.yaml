@@ -179,13 +179,11 @@ authelia:
     annotations:
       secret.reloader.stakater.com/reload: "argocd-oidc-client-secret,backstage-oidc-client-secret,gitea-oidc-client-secret"
 
-    # Resource limits
     resources:
       requests:
         cpu: 50m
         memory: 128Mi
       limits:
-        cpu: 500m
         memory: 256Mi
 
     extraVolumes:

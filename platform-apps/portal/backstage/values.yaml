@@ -12,6 +12,12 @@ backstage:
       enabled: true
       secretName: backstage-tls
   backstage:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
     podAnnotations:
       reloader.stakater.com/auto: "true"
     image:
