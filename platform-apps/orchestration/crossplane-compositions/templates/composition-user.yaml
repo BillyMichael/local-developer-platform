@@ -36,6 +36,7 @@ spec:
                       length: 32
                       noUpper: false
                       symbols: 0
+                      symbolCharacters: ""
                       allowRepeat: true
             patches:
               - type: FromCompositeFieldPath
