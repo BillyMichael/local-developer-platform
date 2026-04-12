@@ -1,5 +1,7 @@
 ldp:
   syncWave: wave-4
+  syncOptions:
+    - ServerSideApply=true
 
 cloudnative-pg:
   crds:
