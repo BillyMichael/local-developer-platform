@@ -35,6 +35,7 @@ spec:
         revision: {{ .Values.platform.targetRevision }}
         files:
           - path: "platform-apps/**/values.yaml"
+        requeueAfterSeconds: 10
   template:
     metadata:
       # Escape for Helm, will be processed by ArgoCD
