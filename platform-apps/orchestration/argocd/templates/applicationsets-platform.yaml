@@ -14,22 +14,37 @@ spec:
             - key: ldp.dev/sync-wave
               operator: In
               values:
-                - wave-n2
-        - matchExpressions:
-            - key: ldp.dev/sync-wave
-              operator: In
-              values:
-                - wave-n1
-        - matchExpressions:
-            - key: ldp.dev/sync-wave
-              operator: In
-              values:
-                - wave-0
-        - matchExpressions:
-            - key: ldp.dev/sync-wave
-              operator: In
-              values:
                 - wave-1
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-2
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-3
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-4
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-5
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-6
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-7
   generators:
     - git:
         repoURL: {{ .Values.platform.repoURL }}
@@ -43,8 +58,8 @@ spec:
       name: '{{ `{{ index .path.segments 2 }}` }}'
       labels:
         # Progressive syncs match on labels (not annotations)
-        # Each app declares ldp.syncWave in its values.yaml; defaults to wave-0
-        ldp.dev/sync-wave: '{{ `{{ dig "ldp" "syncWave" "wave-1" . }}` }}'
+        # Each app declares ldp.syncWave in its values.yaml; defaults to wave-7 (last)
+        ldp.dev/sync-wave: '{{ `{{ dig "ldp" "syncWave" "wave-7" . }}` }}'
     spec:
       project: default
       source:

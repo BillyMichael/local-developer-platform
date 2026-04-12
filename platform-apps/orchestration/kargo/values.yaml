@@ -1,5 +1,5 @@
 ldp:
-  syncWave: wave-1
+  syncWave: wave-5
 
 kargo:
   webhooksServer:
