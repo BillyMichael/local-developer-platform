@@ -70,6 +70,10 @@ spec:
               kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=gitea -n $NAMESPACE --timeout=300s
 
               POD_NAME=$(kubectl get pod -l app.kubernetes.io/name=gitea -n $NAMESPACE -o jsonpath="{.items[0].metadata.name}")
+              if [ -z "$POD_NAME" ]; then
+                echo "No Gitea pod found"
+                exit 1
+              fi
               echo "Found Gitea pod: $POD_NAME"
 
               # Check if secret already exists - skip token generation if so
