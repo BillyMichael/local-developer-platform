@@ -4,7 +4,19 @@ ldp:
 kargo:
   webhooksServer:
     enabled: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
   api:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
     podAnnotations:
       reloader.stakater.com/auto: "true"
     tls:
@@ -34,6 +46,12 @@ kargo:
         enabled: true
         selfSignedCert: false 
   controller:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
     cabundle:
       configMapName: ca
     globalCredentials:

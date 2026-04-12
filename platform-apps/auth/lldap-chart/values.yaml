@@ -2,6 +2,12 @@ ldp:
   syncWave: wave-3
 
 lldap-chart:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
   podAnnotations:
     reloader.stakater.com/auto: "true"
   secret:

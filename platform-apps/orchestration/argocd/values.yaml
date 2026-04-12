@@ -11,6 +11,12 @@ platform:
 
 argo-cd:
   server:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
     insecure: true
     podAnnotations:
       secret.reloader.stakater.com/reload: "argocd-oidc-client-secret"
@@ -26,14 +32,32 @@ argo-cd:
     domain: cd-127-0-0-1.nip.io
 
   controller:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
     metrics:
       enabled: true
   serverMetrics:
     enabled: true
   repoServer:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
     metrics:
       enabled: true
   applicationSet:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
     metrics:
       enabled: true
 
