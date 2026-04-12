@@ -9,7 +9,6 @@
 - [x] Kargo repo-secret template fully commented out, can't auth to git — `platform-apps/orchestration/kargo/templates/repo-secret.yaml`
 - [x] Kargo `admin.yaml` is empty + `adminAccount.enabled: false`, no admin access path — `platform-apps/orchestration/kargo/templates/admin.yaml`
 - [x] Kargo RoleBinding references `kargo-controller-read-secrets` ClusterRole that doesn't exist — `platform-apps/orchestration/kargo/templates/rbac.yaml:10-12`
-- [x] MinIO `values.yaml` is empty, deployed with unknown defaults — `platform-apps/storage/minio/values.yaml`
 - [x] ApplicationSet generator uses `revision: HEAD` but template uses `targetRevision: main` — `platform-apps/orchestration/argocd/templates/applicationsets-platform.yaml:11`
 
 ## High — Security or Reliability
@@ -18,7 +17,7 @@
 - [x] `latest` image tags in authelia init container, lldap bootstrap, gitea bootstrap, backstage — pin to specific versions
 - [x] Weak authelia service account password generator (8 chars, lowercase only) — `platform-apps/auth/lldap-chart/templates/user-authelia.yaml:9-12`
 - [x] Backstage uses allow-all permission policy — `spotify-backstage/packages/backend/src/index.ts:98`
-- [ ] Hardcoded default credentials in scaffolder template (`password`, `minioadmin`) — `spotify-templates/3-tier-app/content/backend/index.js:13,22-23`
+- [ ] Hardcoded default credentials in scaffolder template (`password`) — `spotify-templates/3-tier-app/content/backend/index.js:13`
 - [x] No `set -euo pipefail` in Authelia init container sed pipeline — `platform-apps/auth/authelia/values.yaml:209-255`
 - [ ] Backstage CI builds but never runs tests — `.github/workflows/backstage.yaml`
 - [ ] CA certificate has no explicit duration/renewBefore, defaults to 90 days — `platform-apps/pki/cert-manager/templates/selfsigned-issuer.yaml:9-21`

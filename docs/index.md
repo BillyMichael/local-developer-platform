@@ -11,7 +11,7 @@ The Local Developer Platform (LDP) is a GitOps-managed Kubernetes platform that 
 - **Developer Portal**: Backstage for service catalog and developer experience
 - **Authentication**: Authelia with LDAP for single sign-on
 - **Infrastructure**: Crossplane for infrastructure as code
-- **Storage**: CloudNativePG for PostgreSQL, MinIO for object storage
+- **Storage**: CloudNativePG for PostgreSQL
 
 ## Quick Links
 
@@ -52,4 +52,4 @@ The Local Developer Platform (LDP) is a GitOps-managed Kubernetes platform that 
 | **VCS** | Gitea | Git repository hosting |
 | **Orchestration** | ArgoCD, Crossplane, Kargo | GitOps and infrastructure management |
 | **Portal** | Backstage | Developer portal and service catalog |
-| **Storage** | CloudNativePG, MinIO | Database and object storage |
+| **Storage** | CloudNativePG | Database |

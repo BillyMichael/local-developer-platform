@@ -30,22 +30,6 @@ spec:
             secretKeyRef:
               name: ${{ values.component_id }}-db-app
               key: password
-        - name: MINIO_ENDPOINT
-          value: minio.default.svc.cluster.local # Assuming MinIO service is named 'minio' in 'default' namespace
-        - name: MINIO_PORT
-          value: "9000" # MinIO default port
-        - name: MINIO_USE_SSL
-          value: "false" # Adjust if your MinIO setup uses SSL
-        - name: MINIO_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: minio-creds # Assuming an existing secret for MinIO credentials
-              key: accesskey
-        - name: MINIO_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: minio-creds # Assuming an existing secret for MinIO credentials
-              key: secretkey
         ports:
         - containerPort: 3000
 ---

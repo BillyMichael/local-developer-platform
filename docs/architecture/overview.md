@@ -29,7 +29,6 @@ graph TB
 
     subgraph "Storage"
         PG[CloudNativePG]
-        MINIO[MinIO]
     end
 
     subgraph "Version Control"
@@ -94,7 +93,6 @@ graph TB
 | Component | Purpose |
 |-----------|---------|
 | **CloudNativePG** | PostgreSQL operator for high availability |
-| **MinIO** | S3-compatible object storage |
 
 ## GitOps Flow
 
@@ -124,7 +122,7 @@ The platform organizes applications into namespaces by category:
 | `auth` | Authentication services | Authelia, LLDAP |
 | `orchestration` | GitOps and delivery | ArgoCD, Crossplane, Kargo |
 | `portal` | Developer portal | Backstage |
-| `storage` | Data persistence | CloudNativePG, MinIO |
+| `storage` | Data persistence | CloudNativePG |
 | `vcs` | Version control | Gitea |
 
 ## Secret Management
