@@ -107,10 +107,9 @@ run_step "Enabling ApplicationSets" \
 #   wave-2: crossplane-compositions                     (XRDs & compositions)
 #   wave-3: traefik, trust-manager, lldap, reloader,    (core infra)
 #           kubernetes-replicator, argocd
-#   wave-4: cloudnative-pg                               (operators)
+#   wave-4: authelia, cloudnative-pg                     (OIDC & operators)
 #   wave-5: gitea, kargo                                (VCS & delivery)
 #   wave-6: backstage                                   (developer portal)
-#   wave-7: authelia                                    (SSO/OIDC — needs client secrets from earlier waves)
 # ============================================================================
 
 
@@ -196,10 +195,21 @@ fi
 
 
 # ============================================================================
-# [7/9] WAVE 5 — VERSION CONTROL & DELIVERY
+# [7/9] WAVE 4 — AUTHENTICATION & OPERATORS
 # ============================================================================
 
-step 7 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
+step 7 $TOTAL_STEPS "Wave 4: Authentication & Operators"
+info "authelia (SSO/OIDC), cloudnative-pg (PostgreSQL operator)"
+
+wait_for "Waiting for Authelia" 300 \
+  kubectl --context "$CONTEXT_NAME" -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s
+
+
+# ============================================================================
+# [8/9] WAVE 5 — VERSION CONTROL & DELIVERY
+# ============================================================================
+
+step 8 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
 info "gitea (Git server), kargo (progressive delivery)"
 
 wait_for "Waiting for Gitea" 300 \
@@ -207,25 +217,14 @@ wait_for "Waiting for Gitea" 300 \
 
 
 # ============================================================================
-# [8/9] WAVE 6 — DEVELOPER PORTAL
+# [9/9] WAVE 6 — DEVELOPER PORTAL
 # ============================================================================
 
-step 8 $TOTAL_STEPS "Wave 6: Developer Portal"
+step 9 $TOTAL_STEPS "Wave 6: Developer Portal"
 info "backstage (service catalog & scaffolder)"
 
 wait_for "Waiting for Backstage" 300 \
   kubectl --context "$CONTEXT_NAME" -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s
-
-
-# ============================================================================
-# [9/9] WAVE 7 — AUTHENTICATION
-# ============================================================================
-
-step 9 $TOTAL_STEPS "Wave 7: Authentication"
-info "authelia (SSO/OIDC — requires client secrets from gitea & backstage)"
-
-wait_for "Waiting for Authelia" 300 \
-  kubectl --context "$CONTEXT_NAME" -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s
 
 
 # ============================================================================

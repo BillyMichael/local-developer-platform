@@ -1,5 +1,5 @@
 ldp:
-  syncWave: wave-7
+  syncWave: wave-4
 
 authelia:
   ingress:
@@ -194,6 +194,20 @@ authelia:
       - name: authelia
         emptyDir:
           sizeLimit: 100Mi
+      - name: secret-backstage-oidc-client-secret
+        secret:
+          secretName: backstage-oidc-client-secret
+          optional: true
+          items:
+            - key: password
+              path: password
+      - name: secret-gitea-oidc-client-secret
+        secret:
+          secretName: gitea-oidc-client-secret
+          optional: true
+          items:
+            - key: password
+              path: password
 
     extraVolumeMounts:
       - name: hashed-secrets
@@ -214,48 +228,30 @@ authelia:
           - |
             set -euo pipefail
 
-            echo "Hashing OIDC client secrets..."
+            # Placeholder hash that won't match any real secret.
+            # Used for clients whose secrets haven't been created yet.
+            PLACEHOLDER='$pbkdf2-sha512$310000$placeholder$placeholder'
 
-            # ------------------------
-            # ArgoCD
-            # ------------------------
-            ARGOCD_PLAIN="$(cat /secrets/argocd-oidc-client-secret/password)"
+            hash_secret() {
+              local name="$1" path="/secrets/${name}-oidc-client-secret/password"
+              if [ -f "$path" ]; then
+                echo "Hashing ${name} client secret..."
+                authelia crypto hash generate pbkdf2 \
+                  --variant sha512 \
+                  --password "$(cat "$path")" \
+                  | sed 's/^Digest: //' \
+                  > "/hashed-secrets/${name}-password"
+              else
+                echo "Skipping ${name} (secret not yet available, using placeholder)"
+                echo "$PLACEHOLDER" > "/hashed-secrets/${name}-password"
+              fi
+            }
 
-            authelia crypto hash generate pbkdf2 \
-              --variant sha512 \
-              --password "$ARGOCD_PLAIN" \
-              | sed 's/^Digest: //' \
-              > /hashed-secrets/argocd-password
+            hash_secret argocd
+            hash_secret backstage
+            hash_secret gitea
 
-            unset ARGOCD_PLAIN
-
-            # ------------------------
-            # Backstage
-            # ------------------------
-            BACKSTAGE_PLAIN="$(cat /secrets/backstage-oidc-client-secret/password)"
-
-            authelia crypto hash generate pbkdf2 \
-              --variant sha512 \
-              --password "$BACKSTAGE_PLAIN" \
-              | sed 's/^Digest: //' \
-              > /hashed-secrets/backstage-password
-
-            unset BACKSTAGE_PLAIN
-
-            # ------------------------
-            # Gitea
-            # ------------------------
-            GITEA_PLAIN="$(cat /secrets/gitea-oidc-client-secret/password)"
-
-            authelia crypto hash generate pbkdf2 \
-              --variant sha512 \
-              --password "$GITEA_PLAIN" \
-              | sed 's/^Digest: //' \
-              > /hashed-secrets/gitea-password
-
-            unset GITEA_PLAIN
-
-            echo "All secrets hashed successfully"
+            echo "Done"
         volumeMounts:
           - name: secret-argocd-oidc-client-secret
             mountPath: /secrets/argocd-oidc-client-secret
@@ -286,14 +282,6 @@ authelia:
           - key: tls.crt
             path: tls.crt
       argocd-oidc-client-secret:
-        items:
-          - key: password
-            path: password
-      backstage-oidc-client-secret:
-        items:
-          - key: password
-            path: password
-      gitea-oidc-client-secret:
         items:
           - key: password
             path: password
