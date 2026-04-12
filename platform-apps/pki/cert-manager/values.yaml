@@ -1,3 +1,6 @@
+ldp:
+  syncWave: wave-n2
+
 cert-manager:
   crds:
     enabled: true

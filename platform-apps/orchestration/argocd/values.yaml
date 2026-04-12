@@ -1,6 +1,8 @@
 platform:
   repoURL: https://github.com/BillyMichael/LDP.git
   targetRevision: main
+  applicationSets:
+    enabled: true
   claims:
     enabled: true
 

@@ -1,3 +1,4 @@
+{{- if .Values.platform.applicationSets.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -42,16 +43,8 @@ spec:
       name: '{{ `{{ index .path.segments 2 }}` }}'
       labels:
         # Progressive syncs match on labels (not annotations)
-        ldp.dev/sync-wave: '{{ `{{- $app := index .path.segments 2 -}}
-          {{- $crdProviders := list "cert-manager" "external-secrets" "crossplane" -}}
-          {{- $compositions := list "crossplane-compositions" -}}
-          {{- $oidcClients := list "gitea" "backstage" "kargo" "authelia" -}}
-          {{- if has $app $crdProviders -}}wave-n2{{- else if has $app $compositions -}}wave-n1{{- else if has $app $oidcClients -}}wave-1{{- else -}}wave-0{{- end -}}` }}'
-      # Progressive syncs ordering (enforced via labels + RollingSync strategy):
-      #   wave-n2: CRD providers (cert-manager, external-secrets, crossplane)
-      #   wave-n1: Crossplane compositions (XRDs + Compositions, no claims)
-      #   wave-0:  Infrastructure (lldap, argocd, traefik, etc.)
-      #   wave-1:  Auth + OIDC consumers (authelia, gitea, backstage, kargo)
+        # Each app declares ldp.syncWave in its values.yaml; defaults to wave-0
+        ldp.dev/sync-wave: '{{ `{{ dig "ldp" "syncWave" "wave-0" .values }}` }}'
     spec:
       project: default
       source:
@@ -74,3 +67,4 @@ spec:
             duration: 5s
             factor: 2
             maxDuration: 3m
+{{- end }}
