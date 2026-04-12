@@ -207,6 +207,33 @@ check_available_resources() {
 
 
 # ============================================================================
+# WAIT FOR RESOURCE HELPER
+# ============================================================================
+
+# wait_for <description> <timeout_seconds> <check_command...>
+# Polls check_command every 2s until it succeeds or timeout is reached.
+# On failure, prints diagnostic output from the last attempt.
+wait_for() {
+  local desc="$1"; shift
+  local timeout="$1"; shift
+  local cmd=("$@")
+  local attempts=$(( timeout / 2 ))
+
+  run_step "$desc" \
+    bash -c '
+      for i in $(seq 1 '"$attempts"'); do
+        "$@" >/dev/null 2>&1 && exit 0
+        sleep 2
+      done
+      echo "Timed out after '"$timeout"'s"
+      echo ""
+      echo "Last attempt output:"
+      "$@" 2>&1 || true
+      exit 1
+    ' -- "${cmd[@]}"
+}
+
+# ============================================================================
 # REQUIRED TOOLS CHECK
 # ============================================================================
 

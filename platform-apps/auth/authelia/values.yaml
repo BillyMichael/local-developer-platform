@@ -1,3 +1,6 @@
+ldp:
+  syncWave: wave-1
+
 authelia:
   ingress:
     enabled: true

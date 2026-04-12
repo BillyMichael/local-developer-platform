@@ -54,20 +54,11 @@ section "Waiting for Cluster DNS"
 
 run_step "Waiting for CoreDNS to resolve external hosts" \
   bash -c "
-    kubectl --context '$CONTEXT_NAME' delete pod dns-check --ignore-not-found --force --grace-period=0 >/dev/null 2>&1
-    kubectl --context '$CONTEXT_NAME' run dns-check --image=busybox --restart=Never \
-      --command -- sleep 120 >/dev/null 2>&1
-    kubectl --context '$CONTEXT_NAME' wait --for=condition=Ready pod/dns-check --timeout=60s >/dev/null 2>&1
-
     for i in {1..30}; do
-      kubectl --context '$CONTEXT_NAME' exec dns-check -- nslookup github.com >/dev/null 2>&1 && {
-        kubectl --context '$CONTEXT_NAME' delete pod dns-check --ignore-not-found --force --grace-period=0 >/dev/null 2>&1
-        exit 0
-      }
+      kubectl --context '$CONTEXT_NAME' run dns-check --rm -i --restart=Never \
+        --image=busybox -- nslookup github.com >/dev/null 2>&1 && exit 0
       sleep 2
     done
-
-    kubectl --context '$CONTEXT_NAME' delete pod dns-check --ignore-not-found --force --grace-period=0 >/dev/null 2>&1
     echo 'DNS still not resolving after 60s'
     exit 1
   "
@@ -79,27 +70,35 @@ run_step "Waiting for CoreDNS to resolve external hosts" \
 
 section "Installing Argo CD"
 
-run_step "Adding Argo CD Helm repository" \
-  helm repo add argo https://argoproj.github.io/argo-helm --kube-context "$CONTEXT_NAME"
-
-run_step "Updating Helm repositories" \
-  helm repo update --kube-context "$CONTEXT_NAME"
-
-run_step "Installing Argo CD (core chart)" \
-  helm upgrade --install "$ARGOCD_RELEASE" argo/argo-cd \
+run_step "Installing Argo CD (without ApplicationSets)" \
+  helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
     --kube-context "$CONTEXT_NAME" \
     --namespace "$ARGOCD_NS" \
     --create-namespace \
+    --set platform.claims.enabled=false \
+    --set platform.applicationSets.enabled=false \
+    --dependency-update \
     --wait \
     --timeout=5m
 
-run_step "Migrating to custom Argo CD chart" \
+run_step "Waiting for repo-server DNS resolution" \
+  bash -c "
+    POD=\$(kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' get pod \
+      -l app.kubernetes.io/component=repo-server -o jsonpath='{.items[0].metadata.name}')
+    for i in {1..30}; do
+      kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec \"\$POD\" -- \
+        bash -c 'getent hosts github.com' >/dev/null 2>&1 && exit 0
+      sleep 2
+    done
+    echo 'repo-server DNS not resolving after 60s'
+    exit 1
+  "
+
+run_step "Enabling ApplicationSets" \
   helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
     --kube-context "$CONTEXT_NAME" \
     --namespace "$ARGOCD_NS" \
     --set platform.claims.enabled=false \
-    --wait \
-    --dependency-update \
     --timeout=5m
 
 # ============================================================================
@@ -111,21 +110,8 @@ section "Configuring CoreDNS (nip.io → Traefik)"
 TRAEFIK_NS="networking"
 TRAEFIK_SVC="traefik"
 
-run_step "Waiting for Traefik service (may take a few minutes while ArgoCD deploys apps)" \
-  bash -c "
-    for i in {1..90}; do
-      kubectl --context '$CONTEXT_NAME' -n '$TRAEFIK_NS' get service '$TRAEFIK_SVC' >/dev/null 2>&1 && exit 0
-      sleep 2
-    done
-    echo 'Timed out after 180s waiting for service/$TRAEFIK_SVC in namespace $TRAEFIK_NS'
-    echo ''
-    echo 'Namespace status:'
-    kubectl --context '$CONTEXT_NAME' get namespace '$TRAEFIK_NS' 2>&1 || echo 'Namespace $TRAEFIK_NS does not exist yet'
-    echo ''
-    echo 'ArgoCD app status:'
-    kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' get applications.argoproj.io 2>&1 || echo 'No ArgoCD applications found'
-    exit 1
-  "
+wait_for "Waiting for Traefik service (may take a few minutes while ArgoCD deploys apps)" 180 \
+  kubectl --context "$CONTEXT_NAME" -n "$TRAEFIK_NS" get service "$TRAEFIK_SVC"
 
 TRAEFIK_IP="$(kubectl --context "$CONTEXT_NAME" -n "$TRAEFIK_NS" get service "$TRAEFIK_SVC" -o jsonpath='{.spec.clusterIP}')"
 
@@ -171,48 +157,15 @@ fi
 section "Waiting for Authentication Provider"
 
 LLDAP_NS="auth"
-LLDAP_SECRETS=("maintainer" "user")
 
-for SECRET in "${LLDAP_SECRETS[@]}"; do
-  run_step "Waiting for '${SECRET}' credentials" \
-    bash -c "
-      for i in {1..150}; do
-        kubectl --context '$CONTEXT_NAME' -n '$LLDAP_NS' get secret 'lldap-${SECRET}-credentials' >/dev/null 2>&1 && exit 0
-        sleep 2
-      done
-      echo 'Timed out after 300s waiting for secret/lldap-${SECRET}-credentials in namespace $LLDAP_NS'
-      echo ''
-      echo 'Pods in $LLDAP_NS:'
-      kubectl --context '$CONTEXT_NAME' -n '$LLDAP_NS' get pods 2>&1
-      echo ''
-      echo 'Events in $LLDAP_NS (last 10):'
-      kubectl --context '$CONTEXT_NAME' -n '$LLDAP_NS' get events --sort-by=.lastTimestamp 2>&1 | tail -10
-      exit 1
-    "
-done
+wait_for "Waiting for 'maintainer' credentials" 300 \
+  kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" get secret lldap-maintainer-credentials
 
-run_step "Waiting for Authelia to be Ready" \
-  bash -c "
-    for i in {1..150}; do
-      READY=\$(kubectl --context '$CONTEXT_NAME' -n '$LLDAP_NS' get pods -l app.kubernetes.io/name=authelia \
-        -o jsonpath='{.items[*].status.conditions[?(@.type==\"Ready\")].status}' 2>/dev/null)
+wait_for "Waiting for 'user' credentials" 300 \
+  kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" get secret lldap-user-credentials
 
-      if [[ \"\$READY\" =~ ^(True|true)$ ]]; then
-        exit 0
-      fi
-
-      sleep 2
-    done
-
-    echo 'Timed out after 300s waiting for Authelia pod to become Ready'
-    echo ''
-    echo 'Authelia pods:'
-    kubectl --context '$CONTEXT_NAME' -n '$LLDAP_NS' get pods -l app.kubernetes.io/name=authelia 2>&1
-    echo ''
-    echo 'Authelia pod logs (last 20 lines):'
-    kubectl --context '$CONTEXT_NAME' -n '$LLDAP_NS' logs -l app.kubernetes.io/name=authelia --tail=20 2>&1
-    exit 1
-  "
+wait_for "Waiting for Authelia to be Ready" 300 \
+  kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s
 
 
 # ============================================================================
