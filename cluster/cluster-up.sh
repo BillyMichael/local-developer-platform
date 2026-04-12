@@ -15,7 +15,6 @@ KIND_CFG="${KIND_CFG:-cluster/cluster-config.yaml}"
 ARGOCD_NS="${ARGOCD_NS:-orchestration}"
 ARGOCD_CHART_DIR="${CHART_DIR:-platform-apps/orchestration/argocd}"
 ARGOCD_RELEASE="${ARGOCD_RELEASE:-argocd}"
-APPSET_FILE="${APPSET_FILE:-${ARGOCD_CHART_DIR}/templates/applicationsets-platform.yaml}"
 
 
 # ============================================================================
@@ -147,8 +146,8 @@ else
       kubectl --context '$CONTEXT_NAME' rollout restart deployment/coredns -n kube-system
     "
 
-  run_step "Waiting for CoreDNS to be ready" \
-    kubectl --context "$CONTEXT_NAME" rollout status deployment/coredns -n kube-system --timeout=60s
+  wait_for "Waiting for CoreDNS to be ready" 60 \
+    kubectl --context "$CONTEXT_NAME" -n kube-system rollout status deployment/coredns --timeout=1s
 fi
 # ============================================================================
 # WAIT FOR LLDAP SECRETS
