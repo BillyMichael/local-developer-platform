@@ -5,6 +5,30 @@ metadata:
 spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
+  strategy:
+    type: RollingSync
+    rollingSync:
+      steps:
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-n2
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-n1
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-0
+        - matchExpressions:
+            - key: ldp.dev/sync-wave
+              operator: In
+              values:
+                - wave-1
   generators:
     - git:
         repoURL: {{ .Values.platform.repoURL }}
@@ -15,16 +39,23 @@ spec:
     metadata:
       # Escape for Helm, will be processed by ArgoCD
       name: '{{ `{{ index .path.segments 2 }}` }}'
+      labels:
+        # Progressive syncs match on labels (not annotations)
+        ldp.dev/sync-wave: '{{ `{{- $app := index .path.segments 2 -}}
+          {{- $crdProviders := list "cert-manager" "external-secrets" "crossplane" -}}
+          {{- $compositions := list "crossplane-compositions" -}}
+          {{- $oidcClients := list "gitea" "backstage" "kargo" "authelia" -}}
+          {{- if has $app $crdProviders -}}wave-n2{{- else if has $app $compositions -}}wave-n1{{- else if has $app $oidcClients -}}wave-1{{- else -}}wave-0{{- end -}}` }}'
       annotations:
-        # Sync waves:
-        #   -2: CRD providers (must exist before CRs can be created)
-        #   -1: Crossplane compositions (must reconcile before auth services)
-        #    0: Auth services (authelia, lldap) - needed for OIDC discovery
-        #    1: Apps that configure OIDC at startup (gitea, backstage, kargo)
+        # Sync waves (progressive syncs enforces ordering via labels above):
+        #   -2 (wave-n2): CRD providers (must exist before CRs can be created)
+        #   -1 (wave-n1): Crossplane compositions (XRDs + Compositions, no claims)
+        #    0 (wave-0):  Infrastructure (lldap, argocd, traefik, etc.)
+        #    1 (wave-1):  Auth + OIDC consumers (authelia, gitea, backstage, kargo)
         argocd.argoproj.io/sync-wave: '{{ `{{- $app := index .path.segments 2 -}}
           {{- $crdProviders := list "cert-manager" "external-secrets" "crossplane" -}}
           {{- $compositions := list "crossplane-compositions" -}}
-          {{- $oidcClients := list "gitea" "backstage" "kargo" -}}
+          {{- $oidcClients := list "gitea" "backstage" "kargo" "authelia" -}}
           {{- if has $app $crdProviders -}}-2{{- else if has $app $compositions -}}-1{{- else if has $app $oidcClients -}}1{{- else -}}0{{- end -}}` }}'
     spec:
       project: default
