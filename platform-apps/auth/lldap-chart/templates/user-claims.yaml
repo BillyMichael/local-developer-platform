@@ -9,7 +9,6 @@ spec:
   userId: svc_authelia
   email: svc_authelia@ldp.com
   groupName: lldap_password_manager
-  passwordSymbols: 6
 ---
 apiVersion: oidc.ldp/v1alpha1
 kind: UserClaim
