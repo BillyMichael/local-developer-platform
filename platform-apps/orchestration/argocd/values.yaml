@@ -37,12 +37,12 @@ argo-cd:
   configs:
     params:
       server.insecure: 'true'
+      applicationsetcontroller.enable.progressive.syncs: 'true'
     cm:
       url: https://cd-127-0-0-1.nip.io
       create: true
       oidc.tls.insecure.skip.verify: 'true'
       application.resourceTrackingMethod: annotation
-      applicationsetcontroller.enable.progressive.syncs: 'true'
       resource.exclusions: |
         - apiGroups: ["*"]
           kinds: ["ProviderConfigUsage"]
