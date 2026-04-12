@@ -19,6 +19,14 @@ section() {
   printf "\n${BOLD}${BLUE}==> %s${NC}\n\n" "$1"
 }
 
+# step <current> <total> <description>
+# Prints a section header with a progress counter, e.g. [3/9] Deploying ...
+step() {
+  local current="$1"; shift
+  local total="$1"; shift
+  printf "\n${BOLD}${BLUE}==> [%s/%s] %s${NC}\n\n" "$current" "$total" "$1"
+}
+
 subsection() {
   printf "${BOLD}%s${NC}\n\n" "$1"
 }
@@ -99,8 +107,6 @@ run_step() {
 # ============================================================================
 
 detect_container_engine() {
-  section "Detecting Container Engine"
-
   if [[ "${KIND_EXPERIMENTAL_PROVIDER:-}" == "podman" ]]; then
     if command -v podman >/dev/null 2>&1; then
       ok "Using Podman (via KIND_EXPERIMENTAL_PROVIDER)"
@@ -150,9 +156,6 @@ detect_container_engine() {
 
 check_port_availability() {
   local ports=("$@")
-
-  section "Checking Port Availability"
-
   local blocked=false
   for port in "${ports[@]}"; do
     if command -v ss >/dev/null 2>&1 && ss -tlnH "sport = :${port}" 2>/dev/null | grep -q .; then
@@ -178,8 +181,6 @@ check_port_availability() {
 # ============================================================================
 
 check_available_resources() {
-  section "Checking System Resources"
-
   local mem_kb=0
   if [[ "$(uname)" == "Darwin" ]]; then
     mem_kb=$(( $(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1024 ))
@@ -234,9 +235,6 @@ wait_for() {
 
 check_required_tools() {
   local tools=("$@")
-
-  section "Checking Required Tools"
-
   for tool in "${tools[@]}"; do
     if command -v "$tool" >/dev/null 2>&1; then
       ok "$tool found"

@@ -16,10 +16,15 @@ ARGOCD_NS="${ARGOCD_NS:-orchestration}"
 ARGOCD_CHART_DIR="${CHART_DIR:-platform-apps/orchestration/argocd}"
 ARGOCD_RELEASE="${ARGOCD_RELEASE:-argocd}"
 
+TOTAL_STEPS=9
+LDP_START_TS=$(date +%s)
+
 
 # ============================================================================
-# DETECT CONTAINER ENGINE & CHECK TOOLS
+# [1/9] PREFLIGHT CHECKS
 # ============================================================================
+
+step 1 $TOTAL_STEPS "Preflight Checks"
 
 detect_container_engine
 check_required_tools "kind" "kubectl" "helm"
@@ -28,10 +33,10 @@ check_available_resources
 
 
 # ============================================================================
-# CREATE KIND CLUSTER
+# [2/9] CREATE KIND CLUSTER
 # ============================================================================
 
-section "Creating Kind Cluster"
+step 2 $TOTAL_STEPS "Creating Kind Cluster"
 
 if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
   ok "Cluster '$CLUSTER_NAME' already exists"
@@ -43,13 +48,6 @@ fi
 # Set kubectl context to the Kind cluster for safety
 run_step "Setting kubectl context to '$CONTEXT_NAME'" \
   kubectl config use-context "$CONTEXT_NAME"
-
-
-# ============================================================================
-# WAIT FOR CLUSTER DNS
-# ============================================================================
-
-section "Waiting for Cluster DNS"
 
 run_step "Waiting for CoreDNS to resolve external hosts" \
   bash -c "
@@ -64,12 +62,12 @@ run_step "Waiting for CoreDNS to resolve external hosts" \
 
 
 # ============================================================================
-# INSTALL ARGO CD
+# [3/9] INSTALL ARGO CD
 # ============================================================================
 
-section "Installing Argo CD"
+step 3 $TOTAL_STEPS "Installing Argo CD"
 
-run_step "Installing Argo CD (without ApplicationSets)" \
+run_step "Deploying Argo CD (without ApplicationSets)" \
   helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
     --kube-context "$CONTEXT_NAME" \
     --namespace "$ARGOCD_NS" \
@@ -100,25 +98,70 @@ run_step "Enabling ApplicationSets" \
     --set platform.claims.enabled=false \
     --timeout=5m
 
+
 # ============================================================================
-# CONFIGURE COREDNS
+# DEPLOYING PLATFORM (GITOPS)
+# ============================================================================
+# ArgoCD will now deploy all platform apps in sync-wave order:
+#   wave-1: cert-manager, external-secrets, crossplane  (CRDs & foundations)
+#   wave-2: crossplane-compositions                     (XRDs & compositions)
+#   wave-3: traefik, trust-manager, lldap, reloader,    (core infra)
+#           kubernetes-replicator, argocd
+#   wave-4: authelia, cloudnative-pg                    (OIDC & operators)
+#   wave-5: gitea, kargo                                (VCS & delivery)
+#   wave-6: backstage                                   (developer portal)
 # ============================================================================
 
-section "Configuring CoreDNS (nip.io → Traefik)"
+
+# ============================================================================
+# [4/9] WAVE 1 — FOUNDATIONS
+# ============================================================================
+
+step 4 $TOTAL_STEPS "Wave 1: Foundations"
+info "cert-manager (TLS), external-secrets (secret generation), crossplane (IaC)"
+
+wait_for "Waiting for cert-manager" 180 \
+  kubectl --context "$CONTEXT_NAME" -n pki wait --for=condition=Available deployment/cert-manager --timeout=1s
+
+wait_for "Waiting for external-secrets" 180 \
+  kubectl --context "$CONTEXT_NAME" -n secrets wait --for=condition=Available deployment/external-secrets --timeout=1s
+
+
+# ============================================================================
+# [5/9] WAVE 2 — CROSSPLANE COMPOSITIONS
+# ============================================================================
+
+step 5 $TOTAL_STEPS "Wave 2: Crossplane Compositions"
+info "crossplane-compositions (XRDs for OIDC clients & user claims)"
+
+wait_for "Waiting for Crossplane provider-kubernetes" 180 \
+  kubectl --context "$CONTEXT_NAME" wait --for=condition=Healthy provider/provider-kubernetes --timeout=1s
+
+
+# ============================================================================
+# [6/9] WAVE 3 — CORE INFRASTRUCTURE
+# ============================================================================
+
+step 6 $TOTAL_STEPS "Wave 3: Core Infrastructure"
+info "traefik (ingress), trust-manager (CA bundle), lldap (directory),"
+info "reloader, kubernetes-replicator, argocd (self-managed)"
 
 TRAEFIK_NS="networking"
 TRAEFIK_SVC="traefik"
 
-wait_for "Waiting for Traefik service (may take a few minutes while ArgoCD deploys apps)" 180 \
+wait_for "Waiting for Traefik service" 180 \
   kubectl --context "$CONTEXT_NAME" -n "$TRAEFIK_NS" get service "$TRAEFIK_SVC"
 
+wait_for "Waiting for LLDAP" 180 \
+  kubectl --context "$CONTEXT_NAME" -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=lldap-chart --timeout=1s
+
+# Configure CoreDNS to route *.nip.io traffic to Traefik inside the cluster
 TRAEFIK_IP="$(kubectl --context "$CONTEXT_NAME" -n "$TRAEFIK_NS" get service "$TRAEFIK_SVC" -o jsonpath='{.spec.clusterIP}')"
 
-# Check if CoreDNS is already patched to avoid duplicate injection
 if kubectl --context "$CONTEXT_NAME" get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' 2>/dev/null | grep -q "127-0-0-1.nip.io"; then
   ok "CoreDNS already patched for nip.io"
 else
-  run_step "Patching CoreDNS config" \
+  run_step "Patching CoreDNS for nip.io resolution" \
     bash -c "
       kubectl --context '$CONTEXT_NAME' get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' |
         awk -v traefik_ip='$TRAEFIK_IP' '
@@ -149,26 +192,50 @@ else
   wait_for "Waiting for CoreDNS to be ready" 60 \
     kubectl --context "$CONTEXT_NAME" -n kube-system rollout status deployment/coredns --timeout=1s
 fi
-# ============================================================================
-# WAIT FOR LLDAP SECRETS
-# ============================================================================
-
-section "Waiting for Authentication Provider"
-
-LLDAP_NS="auth"
-
-wait_for "Waiting for 'maintainer' credentials" 300 \
-  kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" get secret lldap-maintainer-credentials
-
-wait_for "Waiting for 'user' credentials" 300 \
-  kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" get secret lldap-user-credentials
-
-wait_for "Waiting for Authelia to be Ready" 300 \
-  kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s
 
 
 # ============================================================================
-# FINAL INFO
+# [7/9] WAVE 4 — AUTHENTICATION & OPERATORS
 # ============================================================================
+
+step 7 $TOTAL_STEPS "Wave 4: Authentication & Operators"
+info "authelia (SSO/OIDC), cloudnative-pg (PostgreSQL operator)"
+
+wait_for "Waiting for Authelia" 300 \
+  kubectl --context "$CONTEXT_NAME" -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s
+
+
+# ============================================================================
+# [8/9] WAVE 5 — VERSION CONTROL & DELIVERY
+# ============================================================================
+
+step 8 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
+info "gitea (Git server), kargo (progressive delivery)"
+
+wait_for "Waiting for Gitea" 300 \
+  kubectl --context "$CONTEXT_NAME" -n vcs wait --for=condition=Ready pod -l app.kubernetes.io/name=gitea --timeout=1s
+
+
+# ============================================================================
+# [9/9] WAVE 6 — DEVELOPER PORTAL
+# ============================================================================
+
+step 9 $TOTAL_STEPS "Wave 6: Developer Portal"
+info "backstage (service catalog & scaffolder)"
+
+wait_for "Waiting for Backstage" 300 \
+  kubectl --context "$CONTEXT_NAME" -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s
+
+
+# ============================================================================
+# DONE
+# ============================================================================
+
+LDP_END_TS=$(date +%s)
+LDP_DURATION=$(( LDP_END_TS - LDP_START_TS ))
+LDP_MINUTES=$(( LDP_DURATION / 60 ))
+LDP_SECONDS=$(( LDP_DURATION % 60 ))
+
+printf "\n${GREEN}${BOLD}Platform ready in ${LDP_MINUTES}m${LDP_SECONDS}s${NC}\n"
 
 bash cluster/show-info.sh
