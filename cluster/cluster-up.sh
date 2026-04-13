@@ -61,12 +61,11 @@ patch_coredns_for_nip_io() {
       kubectl --context '$CONTEXT_NAME' rollout restart deployment/coredns -n kube-system
     "
 
-  wait_for "Waiting for CoreDNS to be ready" 60 \
-    kubectl --context "$CONTEXT_NAME" -n kube-system rollout status deployment/coredns --timeout=1s
+  wait_for 60 \
+    "CoreDNS to be ready" "kubectl --context '$CONTEXT_NAME' -n kube-system rollout status deployment/coredns --timeout=1s"
 
-  wait_for "Waiting for DNS to stabilize in repo-server" 60 \
-    kubectl --context "$CONTEXT_NAME" -n "$ARGOCD_NS" exec deploy/argocd-repo-server -- \
-      bash -c 'getent hosts github.com'
+  wait_for 60 \
+    "DNS to stabilize in repo-server" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec deploy/argocd-repo-server -- getent hosts github.com"
 }
 
 
@@ -99,9 +98,13 @@ fi
 run_step "Setting kubectl context to '$CONTEXT_NAME'" \
   kubectl config use-context "$CONTEXT_NAME"
 
-wait_for "Waiting for CoreDNS to resolve external hosts" 60 \
-  kubectl --context "$CONTEXT_NAME" run dns-check --rm -i --restart=Never \
-    --image=busybox -- nslookup github.com
+# A stale dns-check pod from a previous interrupted run (kubectl run --rm -i
+# only cleans up on graceful kubectl exit) will block every retry with
+# "already exists". Clear it up front so the wait below is idempotent.
+kubectl --context "$CONTEXT_NAME" delete pod dns-check --ignore-not-found --now >/dev/null 2>&1 || true
+
+wait_for 60 \
+  "CoreDNS to resolve external hosts" "kubectl --context '$CONTEXT_NAME' run dns-check --rm -i --restart=Never --image=busybox -- nslookup github.com"
 
 
 # ============================================================================
@@ -121,9 +124,8 @@ run_step "Deploying Argo CD (without ApplicationSets)" \
     --wait \
     --timeout=5m
 
-wait_for "Waiting for repo-server DNS resolution" 60 \
-  kubectl --context "$CONTEXT_NAME" -n "$ARGOCD_NS" exec deploy/argocd-repo-server -- \
-    bash -c 'getent hosts github.com'
+wait_for 60 \
+  "repo-server DNS resolution" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec deploy/argocd-repo-server -- getent hosts github.com"
 
 run_step "Enabling ApplicationSets" \
   helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
@@ -152,13 +154,11 @@ run_step "Enabling ApplicationSets" \
 # ============================================================================
 
 step 4 $TOTAL_STEPS "Wave 1: Foundations"
-info "cert-manager (TLS), external-secrets (secret generation), crossplane (IaC)"
 
-wait_for "Waiting for cert-manager" 180 \
-  kubectl --context "$CONTEXT_NAME" -n pki wait --for=condition=Available deployment/cert-manager --timeout=1s
-
-wait_for "Waiting for external-secrets" 180 \
-  kubectl --context "$CONTEXT_NAME" -n secrets wait --for=condition=Available deployment/external-secrets --timeout=1s
+wait_for 180 \
+  "cert-manager"     "kubectl --context '$CONTEXT_NAME' -n pki wait --for=condition=Available deployment/cert-manager --timeout=1s" \
+  "external-secrets" "kubectl --context '$CONTEXT_NAME' -n secrets wait --for=condition=Available deployment/external-secrets --timeout=1s" \
+  "crossplane"       "kubectl --context '$CONTEXT_NAME' -n orchestration wait --for=condition=Available deployment/crossplane --timeout=1s"
 
 
 # ============================================================================
@@ -166,10 +166,9 @@ wait_for "Waiting for external-secrets" 180 \
 # ============================================================================
 
 step 5 $TOTAL_STEPS "Wave 2: Crossplane Compositions"
-info "crossplane-compositions (XRDs for OIDC clients & user claims)"
 
-wait_for "Waiting for Crossplane provider-kubernetes" 180 \
-  kubectl --context "$CONTEXT_NAME" wait --for=condition=Healthy provider/provider-kubernetes --timeout=1s
+wait_for 180 \
+  "Crossplane provider-kubernetes" "kubectl --context '$CONTEXT_NAME' wait --for=condition=Healthy provider/provider-kubernetes --timeout=1s"
 
 
 # ============================================================================
@@ -177,17 +176,13 @@ wait_for "Waiting for Crossplane provider-kubernetes" 180 \
 # ============================================================================
 
 step 6 $TOTAL_STEPS "Wave 3: Core Infrastructure"
-info "traefik (ingress), trust-manager (CA bundle), lldap (directory),"
-info "reloader, kubernetes-replicator, argocd (self-managed)"
 
 TRAEFIK_NS="networking"
 TRAEFIK_SVC="traefik"
 
-wait_for "Waiting for Traefik service" 180 \
-  kubectl --context "$CONTEXT_NAME" -n "$TRAEFIK_NS" get service "$TRAEFIK_SVC"
-
-wait_for "Waiting for LLDAP" 180 \
-  kubectl --context "$CONTEXT_NAME" -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=lldap-chart --timeout=1s
+wait_for 180 \
+  "Traefik service" "kubectl --context '$CONTEXT_NAME' -n '$TRAEFIK_NS' get service '$TRAEFIK_SVC'" \
+  "LLDAP"           "kubectl --context '$CONTEXT_NAME' -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=lldap-chart --timeout=1s"
 
 # Configure CoreDNS to route *.nip.io traffic to Traefik inside the cluster
 patch_coredns_for_nip_io "$TRAEFIK_NS" "$TRAEFIK_SVC"
@@ -198,10 +193,9 @@ patch_coredns_for_nip_io "$TRAEFIK_NS" "$TRAEFIK_SVC"
 # ============================================================================
 
 step 7 $TOTAL_STEPS "Wave 4: Authentication & Operators"
-info "authelia (SSO/OIDC), cloudnative-pg (PostgreSQL operator)"
 
-wait_for "Waiting for Authelia" 300 \
-  kubectl --context "$CONTEXT_NAME" -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s
+wait_for 300 \
+  "Authelia" "kubectl --context '$CONTEXT_NAME' -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s"
 
 
 # ============================================================================
@@ -209,10 +203,9 @@ wait_for "Waiting for Authelia" 300 \
 # ============================================================================
 
 step 8 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
-info "gitea (Git server), kargo (progressive delivery)"
 
-wait_for "Waiting for Gitea" 300 \
-  kubectl --context "$CONTEXT_NAME" -n vcs wait --for=condition=Ready pod -l app.kubernetes.io/name=gitea --timeout=1s
+wait_for 300 \
+  "Gitea" "kubectl --context '$CONTEXT_NAME' -n vcs wait --for=condition=Ready pod -l app.kubernetes.io/name=gitea --timeout=1s"
 
 
 # ============================================================================
@@ -220,10 +213,9 @@ wait_for "Waiting for Gitea" 300 \
 # ============================================================================
 
 step 9 $TOTAL_STEPS "Wave 6: Developer Portal"
-info "backstage (service catalog & scaffolder)"
 
-wait_for "Waiting for Backstage" 300 \
-  kubectl --context "$CONTEXT_NAME" -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s
+wait_for 300 \
+  "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s"
 
 
 # ============================================================================

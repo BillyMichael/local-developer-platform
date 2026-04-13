@@ -1,22 +1,25 @@
 # Default goal so `make` runs the cluster
 .DEFAULT_GOAL := up
 
-.PHONY: up down restart kubeconfig info preflight status trust-ca help
+.PHONY: up down restart kubeconfig info preflight status trust-ca help _banner
 
 
 # ------------------------------------------------------------------------------
 # Cluster Lifecycle
 # ------------------------------------------------------------------------------
 
-up: ## Create the kind cluster
+_banner:
+	@bash -c 'source cluster/common.sh; banner'
+
+up: _banner ## Create the kind cluster
 	@bash cluster/cluster-up.sh
 
-down: ## Delete the kind cluster
+down: _banner ## Delete the kind cluster
 	@bash cluster/cluster-down.sh
 
-restart: ## Restart the cluster
-	@$(MAKE) --no-print-directory down
-	@$(MAKE) --no-print-directory up
+restart: _banner ## Restart the cluster
+	@bash cluster/cluster-down.sh
+	@bash cluster/cluster-up.sh
 
 
 # ------------------------------------------------------------------------------

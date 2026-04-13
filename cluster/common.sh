@@ -36,6 +36,56 @@ ok()    { printf "  ${GREEN}✔${NC} %s\n" " $1"; }
 warn()  { printf "  ${YELLOW}!${NC} %s\n" " $1"; }
 error() { printf "  ${RED}✖${NC} %s\n" " $1"; }
 
+banner() {
+  printf "${BOLD}${BLUE}"
+  cat <<'EOF'
+
+  ██╗     ██████╗  ██████╗
+  ██║     ██╔══██╗ ██╔══██╗
+  ██║     ██║  ██║ ██████╔╝
+  ██║     ██║  ██║ ██╔═══╝
+  ███████╗██████╔╝ ██║
+  ╚══════╝╚═════╝  ╚═╝
+EOF
+  printf "${NC}\n  ${BOLD}Local Developer Platform${NC}\n"
+}
+
+# ============================================================================
+# CURSOR MANAGEMENT + SHARED CLEANUP STACK
+# ============================================================================
+# Hide the terminal cursor for the entire script run and restore it on any
+# exit path, including INT/TERM and `set -e` aborts.
+#
+# Functions that spawn background work (run_step, wait_for) push a cleanup
+# closure onto _CLEANUP_CMDS on entry and pop it on normal completion.
+# A single top-level trap runs whatever remains on abort, so the traps do
+# not stomp on each other when functions are nested.
+_CLEANUP_CMDS=()
+_LAST_CLEANUP_IDX=-1
+
+_push_cleanup() {
+  _CLEANUP_CMDS+=( "$1" )
+  _LAST_CLEANUP_IDX=$(( ${#_CLEANUP_CMDS[@]} - 1 ))
+}
+
+_pop_cleanup() {
+  local idx="$1"
+  [ -n "$idx" ] && unset "_CLEANUP_CMDS[$idx]"
+}
+
+_run_cleanups() {
+  local cmd
+  for cmd in "${_CLEANUP_CMDS[@]}"; do
+    [ -n "$cmd" ] && eval "$cmd" 2>/dev/null || true
+  done
+  _CLEANUP_CMDS=()
+}
+
+printf "\033[?25l"
+trap '_run_cleanups; printf "\033[?25h"' EXIT
+trap '_run_cleanups; printf "\033[?25h"; exit 130' INT
+trap '_run_cleanups; printf "\033[?25h"; exit 143' TERM
+
 # ============================================================================
 # SPINNER & STEP EXECUTION LOGIC
 # ============================================================================
@@ -46,9 +96,6 @@ spinner() {
   local msg="$1"
   local pid="$2"
   local i=0
-
-  # Stop spinner on interrupt
-  trap "exit 1" INT TERM
 
   while kill -0 "$pid" 2>/dev/null; do
     printf "\r  ${BLUE}%s${NC}  %s..." "${SPINNER_FRAMES[$i]}" "$msg"
@@ -74,8 +121,9 @@ run_step() {
   spinner "$msg" "$cmd_pid" &
   local spinner_pid=$!
 
-  # Trap Ctrl-C and clean up both processes
-  trap "kill $cmd_pid 2>/dev/null; kill $spinner_pid 2>/dev/null; rm -f '$logfile'; exit 1" INT TERM
+  # Register cleanup on the shared stack; popped on normal completion below
+  _push_cleanup "kill $cmd_pid 2>/dev/null; kill $spinner_pid 2>/dev/null; rm -f '$logfile'"
+  local _cleanup_idx=$_LAST_CLEANUP_IDX
 
   # Wait for main command and capture exit status
   local status=0
@@ -84,6 +132,8 @@ run_step() {
   # Cleanup spinner immediately
   kill "$spinner_pid" 2>/dev/null || true
   wait "$spinner_pid" 2>/dev/null || true
+
+  _pop_cleanup "$_cleanup_idx"
 
   local end_ts
   end_ts=$(date +%s)
@@ -206,27 +256,148 @@ check_available_resources() {
 # WAIT FOR RESOURCE HELPER
 # ============================================================================
 
-# wait_for <description> <timeout_seconds> <check_command...>
-# Polls check_command every 2s until it succeeds or timeout is reached.
-# On failure, prints diagnostic output from the last attempt.
+# wait_for <timeout_seconds> <label1> <cmd1> [<label2> <cmd2> ...]
+# Polls each cmd every 2s until all succeed or the timeout is reached.
+# Renders one independent line per task with its own spinner, so tasks
+# tick off as they become ready rather than serially. Pass a single
+# label/cmd pair for a single wait; pass multiple for parallel waits.
+# cmd is executed via `bash -c`, so quote it as a single argument.
 wait_for() {
-  local desc="$1"; shift
   local timeout="$1"; shift
-  local cmd=("$@")
-  local attempts=$(( timeout / 2 ))
 
-  run_step "$desc" \
-    bash -c '
-      for i in $(seq 1 '"$attempts"'); do
-        "$@" >/dev/null 2>&1 && exit 0
+  local -a labels=() cmds=()
+  while [ $# -ge 2 ]; do
+    labels+=( "$1" )
+    cmds+=( "$2" )
+    shift 2
+  done
+
+  local n="${#labels[@]}"
+  if [ "$n" -eq 0 ]; then
+    return 0
+  fi
+
+  local tmpdir
+  tmpdir=$(mktemp -d "/tmp/ldp-par-XXXXXX")
+  local start_ts
+  start_ts=$(date +%s)
+
+  # Enable job control so each background worker is its own process group
+  # leader. That lets us SIGTERM the whole group on abort and take the
+  # worker's kubectl/sleep children with it, instead of orphaning them.
+  set -m
+
+  # Launch one worker per task. Each writes:
+  #   $tmpdir/<i>.status -> ok|fail (only after done)
+  #   $tmpdir/<i>.end    -> completion epoch
+  #   $tmpdir/<i>.log    -> last attempt's combined output
+  local -a pids=()
+  local i
+  for i in "${!labels[@]}"; do
+    (
+      local attempts=$(( timeout / 2 ))
+      local j rc=1
+      local log="$tmpdir/$i.log"
+      for j in $(seq 1 "$attempts"); do
+        # Redirect stdin from /dev/null so commands using `-i` (kubectl run -i,
+        # kubectl exec -i, etc.) don't trigger SIGTTIN/SIGTTOU under `set -m`
+        # and stop the worker waiting on the controlling terminal.
+        if bash -c "${cmds[$i]}" </dev/null >"$log" 2>&1; then
+          rc=0
+          break
+        fi
         sleep 2
       done
-      echo "Timed out after '"$timeout"'s"
-      echo ""
-      echo "Last attempt output:"
-      "$@" 2>&1 || true
-      exit 1
-    ' -- "${cmd[@]}"
+      date +%s > "$tmpdir/$i.end"
+      if [ "$rc" -eq 0 ]; then
+        echo ok > "$tmpdir/$i.status"
+      else
+        echo fail > "$tmpdir/$i.status"
+      fi
+    ) &
+    pids+=( $! )
+  done
+  set +m
+
+  # On abort: kill each worker's whole process group (negative PID) and
+  # drop the tmpdir. Registered on the shared stack so it composes with
+  # any outer run_step/wait_for.
+  _push_cleanup "for p in ${pids[*]}; do kill -- -\$p 2>/dev/null; done; rm -rf '$tmpdir'"
+  local _cleanup_idx=$_LAST_CLEANUP_IDX
+
+  # Reserve N output lines (one per task).
+  for _ in "${labels[@]}"; do echo; done
+
+  local frame=0
+  while :; do
+    local done_count=0
+    # Build the entire frame in one buffer and flush atomically to avoid
+    # tearing/flicker from multiple partial writes per tick.
+    local frame_buf
+    printf -v frame_buf "\033[%dA" "$n"
+
+    for i in "${!labels[@]}"; do
+      local status="running"
+      if [ -f "$tmpdir/$i.status" ]; then
+        status=$(cat "$tmpdir/$i.status")
+      elif ! kill -0 "${pids[$i]}" 2>/dev/null; then
+        # Worker died without writing a status (e.g. external SIGKILL).
+        # Mark as failed so the render loop can complete instead of
+        # spinning forever on a missing file.
+        echo fail > "$tmpdir/$i.status"
+        echo "worker exited without writing status" > "$tmpdir/$i.log"
+        date +%s > "$tmpdir/$i.end"
+        status="fail"
+      fi
+
+      local elapsed
+      if [ -f "$tmpdir/$i.end" ]; then
+        elapsed=$(( $(cat "$tmpdir/$i.end") - start_ts ))
+      else
+        elapsed=$(( $(date +%s) - start_ts ))
+      fi
+
+      local line
+      case "$status" in
+        ok)
+          printf -v line "\r\033[K  ${GREEN}✔${NC}  Waiting for %s (%ss)\n" "${labels[$i]}" "$elapsed"
+          done_count=$(( done_count + 1 ))
+          ;;
+        fail)
+          printf -v line "\r\033[K  ${RED}✖${NC}  Waiting for %s (%ss)\n" "${labels[$i]}" "$elapsed"
+          done_count=$(( done_count + 1 ))
+          ;;
+        *)
+          printf -v line "\r\033[K  ${BLUE}%s${NC}  Waiting for %s...\n" "${SPINNER_FRAMES[$frame]}" "${labels[$i]}"
+          ;;
+      esac
+      frame_buf+="$line"
+    done
+
+    printf '%s' "$frame_buf"
+
+    [ "$done_count" -eq "$n" ] && break
+    frame=$(( (frame + 1) % ${#SPINNER_FRAMES[@]} ))
+    sleep 0.125
+  done
+
+  # Reap any remaining workers
+  wait 2>/dev/null || true
+
+  _pop_cleanup "$_cleanup_idx"
+
+  # Collect failures and emit diagnostics
+  local rc=0
+  for i in "${!labels[@]}"; do
+    if [[ "$(cat "$tmpdir/$i.status" 2>/dev/null)" == "fail" ]]; then
+      rc=1
+      printf "     ${RED}Log (%s):${NC}\n" "${labels[$i]}"
+      tail -10 "$tmpdir/$i.log" 2>/dev/null | sed 's/^/     /'
+    fi
+  done
+
+  rm -rf "$tmpdir"
+  return "$rc"
 }
 
 # ============================================================================
