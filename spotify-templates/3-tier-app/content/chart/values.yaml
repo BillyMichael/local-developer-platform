@@ -1,0 +1,13 @@
+backend:
+  replicas: 1
+  image: node:18-alpine
+  port: 3000
+
+frontend:
+  replicas: 1
+  image: nginx:alpine
+  port: 80
+
+postgres:
+  instances: 3
+  storageSize: 1Gi

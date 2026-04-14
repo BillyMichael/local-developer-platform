@@ -1,8 +1,0 @@
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
-metadata:
-  name: ${{ values.component_id }}-db
-spec:
-  instances: 3
-  storage:
-    size: 1Gi
