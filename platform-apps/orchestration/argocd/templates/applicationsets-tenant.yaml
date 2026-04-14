@@ -1,0 +1,48 @@
+{{- if .Values.platform.applicationSets.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: tenant-apps
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - scmProvider:
+        gitea:
+          owner: local-developer-platform
+          api: https://vcs-127-0-0-1.nip.io
+          tokenRef:
+            secretName: gitea-admin-token
+            key: token
+          allBranches: false
+          insecure: true
+        filters:
+          - branchMatch: main
+            pathsExist:
+              - ldp.yaml
+        requeueAfterSeconds: 30
+  template:
+    metadata:
+      name: '{{ `{{ .repository }}` }}'
+    spec:
+      project: default
+      source:
+        repoURL: '{{ `{{ .url }}` }}'
+        targetRevision: main
+        path: chart
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ `{{ .repository }}` }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: -1
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+{{- end }}
