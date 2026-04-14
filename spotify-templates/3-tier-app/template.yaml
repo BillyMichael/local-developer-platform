@@ -35,19 +35,9 @@ spec:
           ui:field: OwnerPicker
           ui:options:
             catalogFilter:
-              kind: Group
-
-    - title: Choose a location
-      required:
-        - repoUrl
-      properties:
-        repoUrl:
-          title: Repository Location
-          type: string
-          ui:field: RepoUrlPicker
-          ui:options:
-            allowedHosts:
-              - vcs-127-0-0-1.nip.io
+              kind:
+                - Group
+                - User
 
   steps:
     - id: fetch-base
@@ -65,7 +55,7 @@ spec:
       action: publish:gitea
       input:
         description: This is ${{ parameters.component_id }}
-        repoUrl: ${{ parameters.repoUrl }}
+        repoUrl: vcs-127-0-0-1.nip.io?owner=local-developer-platform&repo=${{ parameters.component_id }}
         defaultBranch: main
 
     - id: register
