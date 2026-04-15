@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ required "tenant.name is required" .Values.tenant.name }}
+  namespace: orchestration
+spec:
+  description: "Tenant project for {{ .Values.tenant.name }}"
+  sourceRepos:
+    - {{ required "tenant.repoURL is required" .Values.tenant.repoURL | quote }}
+  destinations:
+    - namespace: {{ .Values.tenant.name }}
+      server: https://kubernetes.default.svc
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Secret
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: apps
+      kind: StatefulSet
+    - group: apps
+      kind: ReplicaSet
+    - group: batch
+      kind: Job
+    - group: batch
+      kind: CronJob
+    - group: networking.k8s.io
+      kind: Ingress
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: postgresql.cnpg.io
+      kind: Cluster
+  orphanedResources:
+    warn: true
