@@ -1,0 +1,4 @@
+apiVersion: v2
+name: tenant-bootstrap
+description: Bootstrap resources for tenant applications
+version: 0.1.0
