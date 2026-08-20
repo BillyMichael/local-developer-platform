@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  # Optional: allow manual runs
   workflow_dispatch:
 
 jobs:
@@ -51,6 +50,3 @@ jobs:
           tags: |
             ghcr.io/${{ env.REPO }}:latest
             ghcr.io/${{ env.REPO }}:${{ github.sha }}
-
-      - name: Image digest
-        run: echo "Image pushed with digest ${{ steps.build-and-push.outputs.digest }}"

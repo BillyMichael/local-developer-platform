@@ -33,7 +33,7 @@ info: ## Show Local Development Platform info
 	@bash cluster/show-info.sh
 
 preflight: ## Check prerequisites without creating cluster
-	@bash -c 'source cluster/common.sh && detect_container_engine && check_required_tools kind kubectl helm && check_port_availability 80 443 9000 && check_available_resources'
+	@bash -c 'source cluster/common.sh && preflight'
 
 trust-ca: ## Trust the platform CA certificate (eliminates TLS warnings)
 	@bash cluster/trust-ca.sh

@@ -4,6 +4,9 @@ ldp:
 platform:
   repoURL: https://github.com/BillyMichael/LDP.git
   targetRevision: main
+  # Number of ldp.dev/sync-wave steps the ApplicationSet rolls through.
+  # Apps without an ldp.syncWave default to the last wave.
+  syncWaves: 7
   applicationSets:
     enabled: true
   # Tenant ApplicationSets use an scmProvider generator that needs the

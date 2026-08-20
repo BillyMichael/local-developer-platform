@@ -17,14 +17,14 @@ This repository provides a reproducible **Internal Developer Platform** running 
 
 Before you begin, ensure you have the following installed:
 
-- **Docker** or **Podman** - [Install Docker](https://docs.docker.com/get-docker/) or [Install Podman](https://podman.io/docs/installation) 
+- **Docker Engine**, **Docker Desktop**, or **Podman** - [Install Docker](https://docs.docker.com/get-docker/) or [Install Podman](https://podman.io/docs/installation)
 - **kind** - [Install kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
 - **kubectl** - [Install kubectl](https://kubernetes.io/docs/tasks/tools/)
 - **Helm** - [Install Helm](https://helm.sh/docs/intro/install/)
 - **Make** - Usually pre-installed on macOS/Linux
 
 **System Requirements:**
-- 12GB+ RAM available for Docker
+- 12GB+ RAM available to the container runtime (on Docker Desktop, set this under Settings > Resources)
 
 ## Getting Started
 

@@ -156,62 +156,49 @@ run_step() {
 # CONTAINER ENGINE DETECTION
 # ============================================================================
 
+# Sets CE to "docker" or "podman". Docker wins if both work, since kind's
+# podman support is still experimental. Set KIND_EXPERIMENTAL_PROVIDER=podman
+# to force podman.
 detect_container_engine() {
   if [[ "${KIND_EXPERIMENTAL_PROVIDER:-}" == "podman" ]]; then
-    if command -v podman >/dev/null 2>&1; then
-      ok "Using Podman (via KIND_EXPERIMENTAL_PROVIDER)"
-      CE="podman"
-    else
-      error "KIND_EXPERIMENTAL_PROVIDER=podman is set but Podman is not installed."
-      exit 1
-    fi
-
-  elif command -v podman >/dev/null 2>&1; then
-    ok "Using Podman"
+    engine_works podman || { error "KIND_EXPERIMENTAL_PROVIDER=podman but podman is not working."; exit 1; }
+    CE="podman"
+  elif engine_works docker; then
+    CE="docker"
+    unset KIND_EXPERIMENTAL_PROVIDER
+  elif engine_works podman; then
     CE="podman"
     export KIND_EXPERIMENTAL_PROVIDER=podman
-
-  elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    if [ "$(docker info --format '{{.OperatingSystem}}')" = "Docker Desktop" ]; then
-      error "Docker Desktop detected — not supported. Use Podman or Docker Engine."
-      exit 1
-    fi
-
-    ok "Using Docker Engine"
-    CE="docker"
-
   else
-    error "No supported container engine found (need Docker Engine or Podman)."
+    error "No container engine found. Install Docker or Podman and start it."
     exit 1
   fi
 
-  # Warn if Podman is running in rootless mode (KIND requires rootful)
-  if [[ "$CE" == "podman" ]]; then
-    local rootless
-    rootless=$(podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null || echo "unknown")
-    if [[ "$rootless" == "true" ]]; then
-      warn "Podman is running in rootless mode."
-      warn "KIND requires rootful Podman. If cluster creation fails, try:"
-      warn "  systemctl start podman.socket"
-      warn "  export CONTAINER_HOST=unix:///run/podman/podman.sock"
-    fi
-  fi
-
+  ok "Using ${CE}"
   export CE
+}
+
+# True if the engine is installed and its daemon is responding.
+engine_works() {
+  command -v "$1" >/dev/null 2>&1 && "$1" info >/dev/null 2>&1
 }
 
 # ============================================================================
 # PORT AVAILABILITY CHECK
 # ============================================================================
 
+port_in_use() {
+  if command -v ss >/dev/null 2>&1; then
+    ss -tlnH "sport = :$1" 2>/dev/null | grep -q .
+  else
+    lsof -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
+  fi
+}
+
 check_port_availability() {
-  local ports=("$@")
   local blocked=false
-  for port in "${ports[@]}"; do
-    if command -v ss >/dev/null 2>&1 && ss -tlnH "sport = :${port}" 2>/dev/null | grep -q .; then
-      error "Port $port is already in use"
-      blocked=true
-    elif command -v lsof >/dev/null 2>&1 && lsof -iTCP:"${port}" -sTCP:LISTEN >/dev/null 2>&1; then
+  for port in "$@"; do
+    if port_in_use "$port"; then
       error "Port $port is already in use"
       blocked=true
     else
@@ -223,31 +210,32 @@ check_port_availability() {
     error "Free the ports listed above before running 'make up'."
     exit 1
   fi
-}
 
+  # Rootless podman cannot bind ports below 1024 at all.
+  if [[ "$CE" == "podman" ]] && [[ "$(podman info --format '{{.Host.Security.Rootless}}')" == "true" ]]; then
+    warn "Rootless podman cannot bind ports 80/443. Either run:"
+    warn "  sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80"
+    warn "or use rootful podman (sudo systemctl start podman.socket)."
+  fi
+}
 
 # ============================================================================
 # RESOURCE CHECK
 # ============================================================================
 
+# Asks the container engine how much RAM it has. On Docker Desktop and
+# podman machine that is the VM's allocation, which is what actually
+# constrains the cluster -- the host may have far more.
 check_available_resources() {
-  local mem_kb=0
-  if [[ "$(uname)" == "Darwin" ]]; then
-    mem_kb=$(( $(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1024 ))
-  elif [[ -f /proc/meminfo ]]; then
-    mem_kb=$(awk '/MemAvailable/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
-  fi
+  local mem_gb=$(( $("$CE" info --format '{{.MemTotal}}' 2>/dev/null || echo 0) / 1024 / 1024 / 1024 ))
 
-  if (( mem_kb > 0 )); then
-    local mem_gb=$(( mem_kb / 1024 / 1024 ))
-    if (( mem_gb < 10 )); then
-      warn "Only ~${mem_gb}GB RAM available. The platform recommends 12GB+."
-      warn "Consider reducing worker nodes in cluster-config.yaml if you hit issues."
-    else
-      ok "${mem_gb}GB RAM available"
-    fi
-  else
+  if (( mem_gb == 0 )); then
     warn "Could not determine available memory"
+  elif (( mem_gb < 10 )); then
+    warn "${CE} has only ~${mem_gb}GB RAM. The platform recommends 12GB+."
+    warn "Raise it in your engine's settings, or drop a worker from cluster-config.yaml."
+  else
+    ok "${mem_gb}GB RAM available to ${CE}"
   fi
 }
 
@@ -256,12 +244,10 @@ check_available_resources() {
 # WAIT FOR RESOURCE HELPER
 # ============================================================================
 
-# wait_for <timeout_seconds> <label1> <cmd1> [<label2> <cmd2> ...]
-# Polls each cmd every 2s until all succeed or the timeout is reached.
-# Renders one independent line per task with its own spinner, so tasks
-# tick off as they become ready rather than serially. Pass a single
-# label/cmd pair for a single wait; pass multiple for parallel waits.
-# cmd is executed via `bash -c`, so quote it as a single argument.
+# wait_for <timeout_seconds> <label> <cmd> [<label> <cmd> ...]
+# Polls each cmd until it succeeds or the timeout passes. Multiple pairs are
+# polled in parallel, each getting its own spinner line that ticks off as it
+# becomes ready. cmd runs via `bash -c`, so quote it as one argument.
 wait_for() {
   local timeout="$1"; shift
 
@@ -272,127 +258,80 @@ wait_for() {
     shift 2
   done
 
-  local n="${#labels[@]}"
-  if [ "$n" -eq 0 ]; then
-    return 0
-  fi
-
   local tmpdir
-  tmpdir=$(mktemp -d "/tmp/ldp-par-XXXXXX")
+  tmpdir=$(mktemp -d "/tmp/ldp-wait-XXXXXX")
   local start_ts
   start_ts=$(date +%s)
 
-  # Enable job control so each background worker is its own process group
-  # leader. That lets us SIGTERM the whole group on abort and take the
-  # worker's kubectl/sleep children with it, instead of orphaning them.
+  # One background worker per task. Each writes its exit status to
+  # <i>.status when done; the render loop below reads those files.
+  #
+  # `set -m` makes each worker its own process group leader, so the cleanup
+  # below can kill the group (negative PID) and take the worker's kubectl
+  # and sleep children with it instead of orphaning them.
   set -m
-
-  # Launch one worker per task. Each writes:
-  #   $tmpdir/<i>.status -> ok|fail (only after done)
-  #   $tmpdir/<i>.end    -> completion epoch
-  #   $tmpdir/<i>.log    -> last attempt's combined output
   local -a pids=()
   local i
   for i in "${!labels[@]}"; do
     (
-      local attempts=$(( timeout / 2 ))
-      local j rc=1
-      local log="$tmpdir/$i.log"
-      for j in $(seq 1 "$attempts"); do
-        # Redirect stdin from /dev/null so commands using `-i` (kubectl run -i,
-        # kubectl exec -i, etc.) don't trigger SIGTTIN/SIGTTOU under `set -m`
-        # and stop the worker waiting on the controlling terminal.
-        if bash -c "${cmds[$i]}" </dev/null >"$log" 2>&1; then
-          rc=0
-          break
+      local deadline=$(( start_ts + timeout ))
+      while :; do
+        # stdin from /dev/null so `kubectl run -i` doesn't fight for the tty.
+        if bash -c "${cmds[$i]}" </dev/null >"$tmpdir/$i.log" 2>&1; then
+          echo "ok $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status"
+          exit 0
+        fi
+        if (( $(date +%s) >= deadline )); then
+          echo "fail $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status"
+          exit 1
         fi
         sleep 2
       done
-      date +%s > "$tmpdir/$i.end"
-      if [ "$rc" -eq 0 ]; then
-        echo ok > "$tmpdir/$i.status"
-      else
-        echo fail > "$tmpdir/$i.status"
-      fi
     ) &
     pids+=( $! )
   done
   set +m
 
-  # On abort: kill each worker's whole process group (negative PID) and
-  # drop the tmpdir. Registered on the shared stack so it composes with
-  # any outer run_step/wait_for.
   _push_cleanup "for p in ${pids[*]}; do kill -- -\$p 2>/dev/null; done; rm -rf '$tmpdir'"
   local _cleanup_idx=$_LAST_CLEANUP_IDX
 
-  # Reserve N output lines (one per task).
+  # Reserve one output line per task, then repaint them in place each tick.
   for _ in "${labels[@]}"; do echo; done
 
-  local frame=0
-  while :; do
-    local done_count=0
-    # Build the entire frame in one buffer and flush atomically to avoid
-    # tearing/flicker from multiple partial writes per tick.
-    local frame_buf
-    printf -v frame_buf "\033[%dA" "$n"
+  local frame=0 done_count=0
+  while (( done_count < ${#labels[@]} )); do
+    done_count=0
+    printf "\033[%dA" "${#labels[@]}"
 
     for i in "${!labels[@]}"; do
-      local status="running"
-      if [ -f "$tmpdir/$i.status" ]; then
-        status=$(cat "$tmpdir/$i.status")
-      elif ! kill -0 "${pids[$i]}" 2>/dev/null; then
-        # Worker died without writing a status (e.g. external SIGKILL).
-        # Mark as failed so the render loop can complete instead of
-        # spinning forever on a missing file.
-        echo fail > "$tmpdir/$i.status"
-        echo "worker exited without writing status" > "$tmpdir/$i.log"
-        date +%s > "$tmpdir/$i.end"
-        status="fail"
-      fi
+      # Finished workers record their own elapsed time, so the line freezes.
+      local status elapsed
+      status=running
+      [[ -f "$tmpdir/$i.status" ]] && read -r status elapsed < "$tmpdir/$i.status"
 
-      local elapsed
-      if [ -f "$tmpdir/$i.end" ]; then
-        elapsed=$(( $(cat "$tmpdir/$i.end") - start_ts ))
-      else
-        elapsed=$(( $(date +%s) - start_ts ))
-      fi
-
-      local line
       case "$status" in
-        ok)
-          printf -v line "\r\033[K  ${GREEN}✔${NC}  Waiting for %s (%ss)\n" "${labels[$i]}" "$elapsed"
-          done_count=$(( done_count + 1 ))
-          ;;
-        fail)
-          printf -v line "\r\033[K  ${RED}✖${NC}  Waiting for %s (%ss)\n" "${labels[$i]}" "$elapsed"
-          done_count=$(( done_count + 1 ))
-          ;;
-        *)
-          printf -v line "\r\033[K  ${BLUE}%s${NC}  Waiting for %s...\n" "${SPINNER_FRAMES[$frame]}" "${labels[$i]}"
-          ;;
+        ok)   printf "\r\033[K  ${GREEN}✔${NC}  Waiting for %s (%ss)\n" "${labels[$i]}" "$elapsed"
+              done_count=$(( done_count + 1 )) ;;
+        fail) printf "\r\033[K  ${RED}✖${NC}  Waiting for %s (%ss)\n" "${labels[$i]}" "$elapsed"
+              done_count=$(( done_count + 1 )) ;;
+        *)    printf "\r\033[K  ${BLUE}%s${NC}  Waiting for %s...\n" "${SPINNER_FRAMES[$frame]}" "${labels[$i]}" ;;
       esac
-      frame_buf+="$line"
     done
 
-    printf '%s' "$frame_buf"
-
-    [ "$done_count" -eq "$n" ] && break
     frame=$(( (frame + 1) % ${#SPINNER_FRAMES[@]} ))
     sleep 0.125
   done
 
-  # Reap any remaining workers
   wait 2>/dev/null || true
-
   _pop_cleanup "$_cleanup_idx"
 
-  # Collect failures and emit diagnostics
+  # Report failures with the last attempt's output.
   local rc=0
   for i in "${!labels[@]}"; do
-    if [[ "$(cat "$tmpdir/$i.status" 2>/dev/null)" == "fail" ]]; then
+    if [[ "$(<"$tmpdir/$i.status")" == fail* ]]; then
       rc=1
       printf "     ${RED}Log (%s):${NC}\n" "${labels[$i]}"
-      tail -10 "$tmpdir/$i.log" 2>/dev/null | sed 's/^/     /'
+      tail -10 "$tmpdir/$i.log" | sed 's/^/     /'
     fi
   done
 
@@ -414,6 +353,19 @@ check_required_tools() {
       exit 1
     fi
   done
+}
+
+# ============================================================================
+# PREFLIGHT
+# ============================================================================
+
+# Everything `make up` needs before it touches the cluster. Also exposed on
+# its own as `make preflight`.
+preflight() {
+  detect_container_engine
+  check_required_tools kind kubectl helm
+  check_port_availability 80 443 9000
+  check_available_resources
 }
 
 # ============================================================================

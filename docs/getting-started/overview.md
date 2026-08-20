@@ -6,14 +6,26 @@ This guide will help you set up and run the Local Developer Platform on your loc
 
 Before you begin, ensure you have the following installed:
 
-- **Docker Engine** or **Podman** — [Install Docker](https://docs.docker.com/engine/install/) or [Install Podman](https://podman.io/docs/installation)
+- **Docker Engine**, **Docker Desktop**, or **Podman** — [Install Docker](https://docs.docker.com/engine/install/) or [Install Podman](https://podman.io/docs/installation)
 - **kind** — [Install kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
 - **kubectl** — [Install kubectl](https://kubernetes.io/docs/tasks/tools/)
 - **Helm** — [Install Helm](https://helm.sh/docs/intro/install/)
 - **Make** — Usually pre-installed on macOS/Linux
 
 !!! note
-    Docker Desktop is **not supported**. Use Docker Engine (Linux) or Podman instead.
+    All three runtimes are supported and detected automatically. Docker is
+    preferred when both are available; set `KIND_EXPERIMENTAL_PROVIDER=podman`
+    to force Podman.
+
+!!! tip "Docker Desktop"
+    Raise the VM allocation to 12GB+ under **Settings → Resources**. The host
+    may have plenty of RAM while the VM does not.
+
+!!! tip "Rootless Podman"
+    Binding ports 80/443 needs the unprivileged port floor lowered:
+    `sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80`. Alternatively use
+    rootful Podman via `sudo systemctl start podman.socket` and
+    `export CONTAINER_HOST=unix:///run/podman/podman.sock`.
 
 **System Requirements:**
 
