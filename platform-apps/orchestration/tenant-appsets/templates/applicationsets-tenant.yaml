@@ -1,4 +1,3 @@
-{{- if .Values.platform.tenantApplicationSets.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -100,4 +99,3 @@ spec:
             duration: 5s
             factor: 2
             maxDuration: 3m
-{{- end }}
