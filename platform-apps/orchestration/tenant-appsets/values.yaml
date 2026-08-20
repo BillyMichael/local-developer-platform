@@ -1,0 +1,11 @@
+# Tenant onboarding ApplicationSets.
+#
+# These use an scmProvider generator against Gitea and need the
+# gitea-admin-token secret, which the Gitea bootstrap job creates in wave-5.
+# Kept in wave-7 (after Gitea) so they never block the platform rollout.
+ldp:
+  syncWave: wave-7
+
+platform:
+  repoURL: https://github.com/BillyMichael/LDP.git
+  targetRevision: main
