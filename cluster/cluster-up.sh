@@ -75,10 +75,7 @@ patch_coredns_for_nip_io() {
 
 step 1 $TOTAL_STEPS "Preflight Checks"
 
-detect_container_engine
-check_required_tools "kind" "kubectl" "helm"
-check_port_availability 80 443 9000
-check_available_resources
+preflight
 
 
 # ============================================================================

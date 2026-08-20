@@ -10,41 +10,13 @@ spec:
     type: RollingSync
     rollingSync:
       steps:
+        {{- range $i := until (int .Values.platform.syncWaves) }}
         - matchExpressions:
             - key: ldp.dev/sync-wave
               operator: In
               values:
-                - wave-1
-        - matchExpressions:
-            - key: ldp.dev/sync-wave
-              operator: In
-              values:
-                - wave-2
-        - matchExpressions:
-            - key: ldp.dev/sync-wave
-              operator: In
-              values:
-                - wave-3
-        - matchExpressions:
-            - key: ldp.dev/sync-wave
-              operator: In
-              values:
-                - wave-4
-        - matchExpressions:
-            - key: ldp.dev/sync-wave
-              operator: In
-              values:
-                - wave-5
-        - matchExpressions:
-            - key: ldp.dev/sync-wave
-              operator: In
-              values:
-                - wave-6
-        - matchExpressions:
-            - key: ldp.dev/sync-wave
-              operator: In
-              values:
-                - wave-7
+                - wave-{{ add1 $i }}
+        {{- end }}
   generators:
     - git:
         repoURL: {{ .Values.platform.repoURL }}
