@@ -1,4 +1,4 @@
-{{- if .Values.platform.applicationSets.enabled }}
+{{- if .Values.platform.tenantApplicationSets.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
