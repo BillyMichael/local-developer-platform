@@ -6,6 +6,13 @@ platform:
   targetRevision: main
   applicationSets:
     enabled: true
+  # Tenant ApplicationSets use an scmProvider generator that needs the
+  # gitea-admin-token secret, created by Gitea in wave-5. This chart is wave-3,
+  # so enabling them on a fresh cluster deadlocks RollingSync: they go Degraded,
+  # wave-3 never completes, and Gitea never syncs to create the token.
+  # Enable once Gitea is up.
+  tenantApplicationSets:
+    enabled: false
   claims:
     enabled: true
 
