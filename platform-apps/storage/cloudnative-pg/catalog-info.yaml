@@ -5,5 +5,5 @@ metadata:
   description: PostgreSQL operator.
 spec:
   type: database
-  owner: maintainers
+  owner: group:default/platform_maintainers
   system: developer_platform

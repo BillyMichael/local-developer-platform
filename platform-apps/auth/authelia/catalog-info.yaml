@@ -12,7 +12,7 @@ metadata:
 spec:
   type: website
   lifecycle: production
-  owner: maintainers
+  owner: group:default/platform_maintainers
   system: developer_platform
   dependsOn:
     - component:default/cert-manager
