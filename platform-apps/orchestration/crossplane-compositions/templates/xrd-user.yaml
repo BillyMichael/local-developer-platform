@@ -37,6 +37,9 @@ spec:
                   type: string
                   description: Namespace where credentials are created
                   default: auth
+                replicateTo:
+                  type: string
+                  description: Comma-separated namespaces to replicate the credentials secret to
                 passwordLength:
                   type: integer
                   description: Length of the generated password

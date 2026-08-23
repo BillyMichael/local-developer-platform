@@ -43,6 +43,45 @@ data:
         pullRequestBranchName: backstage-integration
       rules:
         - allow: [Component, System, API, Resource, Location, Template, User, Group]
+      providers:
+        gitea:
+          ldp:
+            host: vcs-127-0-0-1.nip.io
+            organization: local-developer-platform
+            branch: main
+            catalogPath: catalog-info.yaml
+            schedule:
+              frequency: { minutes: 5 }
+              timeout: { minutes: 3 }
+        ldapOrg:
+          default:
+            target: ldap://lldap-chart-service.auth.svc.cluster.local:3890
+            bind:
+              dn: uid=svc_backstage,ou=people,dc=ldp,dc=com
+              secret: ${LLDAP_BIND_PASSWORD}
+            users:
+              - dn: ou=people,dc=ldp,dc=com
+                options:
+                  # skip the admin and svc_* service accounts
+                  filter: (&(objectClass=person)(!(uid=svc_*))(!(uid=admin)))
+                map:
+                  rdn: uid
+                  name: uid
+                  displayName: displayName
+                  email: mail
+            groups:
+              - dn: ou=groups,dc=ldp,dc=com
+                options:
+                  # skip lldap's built-in permission groups
+                  filter: (&(objectClass=groupOfUniqueNames)(!(cn=lldap_*)))
+                map:
+                  rdn: cn
+                  name: cn
+                  displayName: cn
+                  members: member
+            schedule:
+              frequency: { minutes: 10 }
+              timeout: { minutes: 3 }
       locations:
         - type: url
           target: https://github.com/BillyMichael/local-developer-platform/blob/main/**/catalog-info.yaml

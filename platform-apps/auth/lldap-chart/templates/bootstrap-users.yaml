@@ -25,6 +25,15 @@ spec:
             "groups": ["lldap_password_manager"]
           }
           {
+            "id": "svc_backstage",
+            "email": "svc_backstage@ldp.com",
+            "password": "{{`{{ .backstage_password }}`}}",
+            "displayName": "Backstage Svc Account",
+            "firstName": "Backstage",
+            "lastName": "Svc Account",
+            "groups": ["lldap_strict_readonly"]
+          }
+          {
             "id": "platform_maintainer",
             "email": "platform_maintainer@ldp.com",
             "password": "{{`{{ .maintainer_password }}`}}",
@@ -49,6 +58,10 @@ spec:
     - secretKey: authelia_password
       remoteRef:
         key: lldap-authelia-credentials
+        property: password
+    - secretKey: backstage_password
+      remoteRef:
+        key: lldap-backstage-credentials
         property: password
     - secretKey: maintainer_password
       remoteRef:

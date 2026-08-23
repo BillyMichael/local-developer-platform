@@ -40,9 +40,11 @@ const myAuthProviderModule = createBackendModule({
             // For more info about authenticators please see https://backstage.io/docs/auth/add-auth-provider/#adding-an-oauth-based-provider
             authenticator: oidcAuthenticator,
             async signInResolver(info, ctx) {
+              const userinfo = info?.result.fullProfile.userinfo;
               const userRef = stringifyEntityRef({
                 kind: 'User',
-                name: info?.result.fullProfile.userinfo.name as string,
+                name: (userinfo?.preferred_username ??
+                  userinfo?.name) as string,
                 namespace: DEFAULT_NAMESPACE,
               });
               return ctx.issueToken({
@@ -114,5 +116,13 @@ backend.add(import('@backstage/plugin-signals-backend'));
 
 // github
 backend.add(import('@backstage/plugin-catalog-backend-module-github'));
+
+// gitea discovery — auto-registers repos from the Gitea org configured
+// under catalog.providers.gitea in app-config
+backend.add(import('@backstage/plugin-catalog-backend-module-gitea'));
+
+// ldap org discovery — imports users/groups from LLDAP configured
+// under catalog.providers.ldapOrg in app-config
+backend.add(import('@backstage/plugin-catalog-backend-module-ldap'));
 
 backend.start();

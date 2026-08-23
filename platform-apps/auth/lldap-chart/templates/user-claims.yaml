@@ -24,6 +24,18 @@ spec:
 apiVersion: oidc.ldp/v1alpha1
 kind: UserClaim
 metadata:
+  name: backstage
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  userId: svc_backstage
+  email: svc_backstage@ldp.com
+  groupName: lldap_strict_readonly
+  replicateTo: portal
+---
+apiVersion: oidc.ldp/v1alpha1
+kind: UserClaim
+metadata:
   name: user
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
