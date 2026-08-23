@@ -10,6 +10,11 @@ spec:
   destinations:
     - namespace: {{ .Values.tenant.name }}
       server: https://kubernetes.default.svc
+  # CreateNamespace=true on the tenant app needs to create the (cluster-scoped)
+  # Namespace; permit nothing else at cluster scope
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
   namespaceResourceWhitelist:
     - group: ""
       kind: Service
