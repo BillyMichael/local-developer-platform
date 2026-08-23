@@ -48,6 +48,12 @@ backstage:
           secretKeyRef:
             name: lldap-backstage-credentials
             key: password
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: github-token
+            key: token
+            optional: true
       - name: NODE_EXTRA_CA_CERTS
         value: /etc/ssl/certs/ldp-ca.pem
 
