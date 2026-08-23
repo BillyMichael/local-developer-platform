@@ -86,6 +86,16 @@ step 2 $TOTAL_STEPS "Creating Kind Cluster"
 
 if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
   ok "Cluster '$CLUSTER_NAME' already exists"
+
+  # An engine/VM restart leaves kind's node containers stopped (they carry no
+  # restart policy under podman), and the kubeconfig entry may be gone too.
+  stopped_nodes=$("$CE" ps -a --filter "name=${CLUSTER_NAME}-" --filter status=exited --format '{{.Names}}')
+  if [ -n "$stopped_nodes" ]; then
+    run_step "Starting stopped cluster nodes" "$CE" start $stopped_nodes
+  fi
+
+  run_step "Refreshing kubeconfig for '$CLUSTER_NAME'" \
+    kind export kubeconfig --name "$CLUSTER_NAME"
 else
   run_step "Creating cluster '$CLUSTER_NAME'" \
     kind create cluster --name "$CLUSTER_NAME" --config "$KIND_CFG"
