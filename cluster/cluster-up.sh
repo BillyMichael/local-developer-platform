@@ -105,6 +105,34 @@ fi
 run_step "Setting kubectl context to '$CONTEXT_NAME'" \
   kubectl config use-context "$CONTEXT_NAME"
 
+# Optional GitHub token for Backstage's catalog reads of this repo.
+# Anonymous GitHub API access is capped at 60 req/hr, which the catalog's
+# 5-minute refresh exhausts. Honours $GITHUB_TOKEN, prompts otherwise.
+if kubectl --context "$CONTEXT_NAME" -n portal get secret github-token >/dev/null 2>&1; then
+  ok "GitHub token secret already exists"
+else
+  gh_token="${GITHUB_TOKEN:-}"
+  if [ -z "$gh_token" ] && [ -t 0 ]; then
+    printf "  ${BLUE}?${NC}  Provide a GitHub token for Backstage catalog reads? [y/N] "
+    read -r gh_reply || gh_reply=""
+    if [[ "$gh_reply" =~ ^[Yy] ]]; then
+      printf "  ${BLUE}➜${NC}  Enter token (input hidden): "
+      read -rs gh_token || gh_token=""
+      printf "\n"
+    fi
+  fi
+  if [ -n "$gh_token" ]; then
+    kubectl --context "$CONTEXT_NAME" create namespace portal --dry-run=client -o yaml |
+      kubectl --context "$CONTEXT_NAME" apply -f - >/dev/null
+    kubectl --context "$CONTEXT_NAME" -n portal create secret generic github-token \
+      --from-literal=token="$gh_token" >/dev/null
+    ok "GitHub token stored as secret 'github-token' in namespace 'portal'"
+  else
+    warn "No GitHub token provided; GitHub reads run anonymously (60 req/hr)"
+  fi
+  unset gh_token
+fi
+
 # A stale dns-check pod from a previous interrupted run (kubectl run --rm -i
 # only cleans up on graceful kubectl exit) will block every retry with
 # "already exists". Clear it up front so the wait below is idempotent.

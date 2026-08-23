@@ -30,6 +30,11 @@ data:
             tokenEndpointAuthMethod: client_secret_post
             additionalScopes: openid profile email
     integrations:
+      # token comes from the optional github-token secret; when unset the
+      # config key is dropped and reads fall back to anonymous (60 req/hr)
+      github:
+        - host: github.com
+          token: ${GITHUB_TOKEN}
       gitea:
         - host: vcs-127-0-0-1.nip.io
           username: gitea_admin
