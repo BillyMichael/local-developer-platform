@@ -36,7 +36,7 @@ spec:
             - name: tenant.name
               value: '{{ `{{ .repository }}` }}'
             - name: tenant.repoURL
-              value: '{{ `{{ .url }}` }}'
+              value: 'http://gitea-http.vcs.svc.cluster.local:3000/local-developer-platform/{{ `{{ .repository }}` }}.git'
       destination:
         server: https://kubernetes.default.svc
         namespace: orchestration
@@ -81,7 +81,9 @@ spec:
     spec:
       project: '{{ `{{ .repository }}` }}'
       source:
-        repoURL: '{{ `{{ .url }}` }}'
+        # clone via the in-cluster HTTP service; the SCM provider's {{ `{{ .url }}` }}
+        # is an SSH URL, and ArgoCD has no SSH credentials
+        repoURL: 'http://gitea-http.vcs.svc.cluster.local:3000/local-developer-platform/{{ `{{ .repository }}` }}.git'
         targetRevision: main
         path: chart
       destination:
