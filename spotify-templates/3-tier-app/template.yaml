@@ -10,7 +10,7 @@ metadata:
     - vite
     - postgres
 spec:
-  owner: user:guest
+  owner: group:default/platform_maintainers
   type: service
 
   parameters:

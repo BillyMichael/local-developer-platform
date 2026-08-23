@@ -6,7 +6,7 @@ metadata:
 spec:
   type: service
   lifecycle: production
-  owner: maintainers
+  owner: group:default/platform_maintainers
   system: developer_platform
   dependsOn:
     - resource:default/external-secrets
