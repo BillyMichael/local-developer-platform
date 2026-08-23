@@ -114,6 +114,30 @@ spec:
                 echo "Secret created and will be replicated to portal."
               fi
 
+              # ArgoCD repo-creds template so tenant apps can clone Gitea
+              # repos over the in-cluster HTTP service (private repos, no TLS).
+              # Replicated to orchestration where ArgoCD picks it up by label.
+              if ! kubectl get secret gitea-repo-creds -n $NAMESPACE >/dev/null 2>&1; then
+                echo "Creating ArgoCD repo-creds secret..."
+                cat <<EOF | kubectl apply -f -
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: gitea-repo-creds
+                namespace: $NAMESPACE
+                labels:
+                  argocd.argoproj.io/secret-type: repo-creds
+                annotations:
+                  replicator.v1.mittwald.de/replicate-to: "orchestration"
+              type: Opaque
+              stringData:
+                type: git
+                url: "http://gitea-http.vcs.svc.cluster.local:3000"
+                username: "gitea_admin"
+                password: "$TOKEN"
+              EOF
+              fi
+
               # Create default organization if it doesn't exist
               echo "Creating default organization..."
               kubectl exec -n $NAMESPACE $POD_NAME -- wget -q -O- \
