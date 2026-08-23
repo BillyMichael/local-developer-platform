@@ -108,6 +108,9 @@ spec:
                       type: Format
                       fmt: "lldap-%s-credentials"
               - type: FromCompositeFieldPath
+                fromFieldPath: spec.replicateTo
+                toFieldPath: spec.forProvider.manifest.spec.target.template.metadata.annotations["replicator.v1.mittwald.de/replicate-to"]
+              - type: FromCompositeFieldPath
                 fromFieldPath: spec.userId
                 toFieldPath: spec.forProvider.manifest.spec.target.template.data.id
               - type: FromCompositeFieldPath

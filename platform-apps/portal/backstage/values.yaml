@@ -43,6 +43,11 @@ backstage:
           secretKeyRef:
             name: gitea-admin-token
             key: token
+      - name: LLDAP_BIND_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: lldap-backstage-credentials
+            key: password
       - name: NODE_EXTRA_CA_CERTS
         value: /etc/ssl/certs/ldp-ca.pem
 
