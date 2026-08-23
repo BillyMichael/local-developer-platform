@@ -1,0 +1,7 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: developer_platform
+  description: Local Developer Platform — GitOps-managed core services for auth, ingress, secrets, VCS, delivery, and the developer portal.
+spec:
+  owner: group:default/platform_maintainers
