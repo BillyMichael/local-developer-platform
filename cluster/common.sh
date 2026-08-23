@@ -75,7 +75,9 @@ _pop_cleanup() {
 
 _run_cleanups() {
   local cmd
-  for cmd in "${_CLEANUP_CMDS[@]}"; do
+  # ${arr[@]+...} guard: bash 3.2 (macOS default) treats an empty array as
+  # unbound under `set -u`, so a bare "${_CLEANUP_CMDS[@]}" would abort here.
+  for cmd in ${_CLEANUP_CMDS[@]+"${_CLEANUP_CMDS[@]}"}; do
     [ -n "$cmd" ] && eval "$cmd" 2>/dev/null || true
   done
   _CLEANUP_CMDS=()
@@ -227,7 +229,12 @@ check_port_availability() {
 # podman machine that is the VM's allocation, which is what actually
 # constrains the cluster -- the host may have far more.
 check_available_resources() {
-  local mem_gb=$(( $("$CE" info --format '{{.MemTotal}}' 2>/dev/null || echo 0) / 1024 / 1024 / 1024 ))
+  # docker exposes {{.MemTotal}} at the top level; podman nests it under .Host
+  local mem_bytes
+  mem_bytes=$("$CE" info --format '{{.MemTotal}}' 2>/dev/null) || mem_bytes=""
+  [[ "$mem_bytes" =~ ^[0-9]+$ ]] || mem_bytes=$("$CE" info --format '{{.Host.MemTotal}}' 2>/dev/null || echo 0)
+  [[ "$mem_bytes" =~ ^[0-9]+$ ]] || mem_bytes=0
+  local mem_gb=$(( mem_bytes / 1024 / 1024 / 1024 ))
 
   if (( mem_gb == 0 )); then
     warn "Could not determine available memory"
@@ -364,7 +371,13 @@ check_required_tools() {
 preflight() {
   detect_container_engine
   check_required_tools kind kubectl helm
-  check_port_availability 80 443 9000
+  # A running cluster legitimately holds the ingress ports, so only demand
+  # they be free when we'd actually be creating the cluster.
+  if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
+    ok "Ports 80/443/9000 belong to the existing '$CLUSTER_NAME' cluster"
+  else
+    check_port_availability 80 443 9000
+  fi
   check_available_resources
 }
 
