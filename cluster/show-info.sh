@@ -81,3 +81,30 @@ printf "  │ %-16s │ %-39s │\n" "make kubeconfig" "Update kubeconfig"
 printf "  │ %-16s │ %-39s │\n" "make trust-ca"   "Trust the platform CA (no TLS warnings)"
 printf "  │ %-16s │ %-39s │\n" "make info"       "Show LDP info"
 printf "  └──────────────────┴─────────────────────────────────────────┘\n\n"
+
+
+# ============================================================================
+# CA TRUST NOTICE
+# ============================================================================
+# Probe a platform URL using only the OS trust store. curl exit 60 means the
+# platform CA is not trusted yet, so every browser hit will warn. Any other
+# outcome (trusted, or the endpoint not up yet) prints nothing: the aim is to
+# answer "why is my browser shouting at me", not to nag on every run.
+#
+# On WSL the CA is imported into Windows, where the browser runs, so a Linux
+# curl still fails after `make trust-ca`. Word the notice for that case rather
+# than claiming the CA is definitely untrusted.
+
+if command -v curl >/dev/null 2>&1; then
+  # `|| rc=$?` keeps set -e from aborting here: a failing probe is the interesting case
+  ca_rc=0
+  curl -s -o /dev/null --max-time 5 https://portal-127-0-0-1.nip.io >/dev/null 2>&1 || ca_rc=$?
+  if [ "$ca_rc" -eq 60 ]; then
+    warn "Browsers will show TLS warnings until the platform CA is trusted."
+    printf "  ${BLUE}\u279c${NC}  Run ${BOLD}make trust-ca${NC}, then restart your browser.\n"
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+      printf "  ${BLUE}\u279c${NC}  ${DIM}Already ran it under WSL? The CA is stored in Windows, where your browser reads it.${NC}\n"
+    fi
+    printf "\n"
+  fi
+fi
