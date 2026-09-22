@@ -285,11 +285,13 @@ wait_for() {
       while :; do
         # stdin from /dev/null so `kubectl run -i` doesn't fight for the tty.
         if bash -c "${cmds[$i]}" </dev/null >"$tmpdir/$i.log" 2>&1; then
-          echo "ok $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status"
+          # Publish atomically: a plain `>` truncates first and writes second, and the
+          # render loop can read the empty file in between, which kills the script under set -e.
+          echo "ok $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status.tmp" && mv "$tmpdir/$i.status.tmp" "$tmpdir/$i.status"
           exit 0
         fi
         if (( $(date +%s) >= deadline )); then
-          echo "fail $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status"
+          echo "fail $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status.tmp" && mv "$tmpdir/$i.status.tmp" "$tmpdir/$i.status"
           exit 1
         fi
         sleep 2
