@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kagent
+description: Kubernetes-native AI agent runtime (controller, UI, built-in tool server)
+version: 1.0.0
+type: application
+
+dependencies:
+  - name: kagent
+    version: 0.10.1
+    repository: oci://ghcr.io/kagent-dev/kagent/helm

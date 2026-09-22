@@ -1,0 +1,23 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kagent
+  description: Kubernetes-native runtime for AI agents. Agents are CRDs; no image build needed.
+  tags:
+    - ai
+    - agents
+  links:
+    - url: https://agents-127-0-0-1.nip.io
+      title: kagent UI
+    - url: https://kagent.dev/docs
+      title: kagent Documentation
+spec:
+  type: service
+  lifecycle: production
+  owner: group:default/platform_maintainers
+  system: developer_platform
+  dependsOn:
+    - component:default/kagent-crds
+    - component:default/traefik
+    - component:default/cert-manager
+    - component:default/kubernetes-replicator

@@ -90,7 +90,7 @@ local-developer-platform/
 │   ├── storage/               # CloudNativePG
 │   ├── vcs/                   # Gitea (Git server)
 │   ├── portal/                # Backstage developer portal
-│   └── devtools/              # Critiquely
+│   └── devtools/              # kagent (AI agent runtime)
 ├── spotify-backstage/         # Local Backstage app source
 ├── spotify-templates/         # Backstage scaffolder templates
 ├── docs/                      # MkDocs documentation

@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.component_id | dump }}
+  description: ${{ values.description | dump }}
+  tags:
+    - agent
+  links:
+    - url: https://agents-127-0-0-1.nip.io
+      title: kagent UI
+spec:
+  type: service
+  owner: ${{ values.owner | dump }}
+  lifecycle: experimental
+  dependsOn:
+    - component:default/kagent

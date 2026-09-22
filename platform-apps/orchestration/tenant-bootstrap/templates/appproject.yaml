@@ -40,5 +40,8 @@ spec:
       kind: NetworkPolicy
     - group: postgresql.cnpg.io
       kind: Cluster
+    # Agent, ModelConfig, RemoteMCPServer, MCPServer (spotify-templates/agent)
+    - group: kagent.dev
+      kind: "*"
   orphanedResources:
     warn: true

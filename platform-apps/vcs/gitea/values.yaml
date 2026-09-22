@@ -7,7 +7,8 @@ gitea:
       cpu: 50m
       memory: 128Mi
     limits:
-      memory: 256Mi
+      # container registry pushes and Actions logs need headroom over the old 256Mi
+      memory: 512Mi
   ingress:
     enabled: true
     annotations:
@@ -41,6 +42,12 @@ gitea:
       openid:
         ENABLE_OPENID_SIGNIN: false
         ENABLE_OPENID_SIGNUP: true
+      # CI and the OCI/container registry (both default-on upstream; pinned so a
+      # default change can't silently remove them)
+      actions:
+        ENABLED: true
+      packages:
+        ENABLED: true
 
     oauth:
       - name: "Authelia"
@@ -75,3 +82,10 @@ gitea:
     env:
       - name: SSL_CERT_FILE
         value: /etc/ssl/certs/ldp-ca.pem
+      # Fixed global Actions runner registration token (templates/runner-token.yaml).
+      # Gitea creates it at startup; the gitea-actions chart registers with the same secret.
+      - name: GITEA_RUNNER_REGISTRATION_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: gitea-runner-token
+            key: token

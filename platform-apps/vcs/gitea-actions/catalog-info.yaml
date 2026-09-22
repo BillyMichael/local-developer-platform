@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: gitea-actions
+  description: CI runner for Gitea Actions (act_runner with docker-in-docker).
+  tags:
+    - ci
+spec:
+  type: service
+  lifecycle: production
+  owner: group:default/platform_maintainers
+  system: developer_platform
+  dependsOn:
+    - component:default/gitea
+    - component:default/trust-manager
