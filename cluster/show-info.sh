@@ -101,7 +101,7 @@ if command -v curl >/dev/null 2>&1; then
   curl -s -o /dev/null --max-time 5 https://portal-127-0-0-1.nip.io >/dev/null 2>&1 || ca_rc=$?
   if [ "$ca_rc" -eq 60 ]; then
     warn "Browsers will show TLS warnings until the platform CA is trusted."
-    printf "  ${BLUE}\u279c${NC}  Run ${BOLD}make trust-ca${NC}, then restart your browser.\n"
+    printf "  ${BLUE}\u279c${NC}  Run ${DIM}\`${NC}${BOLD}${YELLOW}make trust-ca${NC}${DIM}\`${NC}, then restart your browser.\n"
     if grep -qi microsoft /proc/version 2>/dev/null; then
       printf "  ${BLUE}\u279c${NC}  ${DIM}Already ran it under WSL? The CA is stored in Windows, where your browser reads it.${NC}\n"
     fi
