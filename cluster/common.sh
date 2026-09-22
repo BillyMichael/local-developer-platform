@@ -10,6 +10,14 @@ BLUE="\033[34m"
 RED="\033[31m"
 NC="\033[0m"
 BOLD="\033[1m"
+DIM="\033[2m"
+
+# Rules, progress bar and spinner animation only when stdout is a terminal;
+# piped or CI output stays a plain scrolling log.
+if [[ -t 1 ]]; then LDP_TTY=1; else LDP_TTY=0; fi
+RULE_W=64
+# Column where result durations right-align
+RESULT_W=50
 
 # ============================================================================
 # FORMATTING FUNCTIONS
@@ -19,12 +27,42 @@ section() {
   printf "\n${BOLD}${BLUE}==> %s${NC}\n\n" "$1"
 }
 
+rule() {
+  (( LDP_TTY )) || return 0
+  printf "${DIM}"
+  printf '─%.0s' $(seq 1 "$RULE_W")
+  printf "${NC}\n"
+}
+
 # step <current> <total> <description>
-# Prints a section header with a progress counter, e.g. [3/9] Deploying ...
+# Section header with a progress bar, e.g.  3/10 ▰▰▰▱▱▱▱▱▱▱  Optional Credentials
 step() {
   local current="$1"; shift
   local total="$1"; shift
-  printf "\n${BOLD}${BLUE}==> [%s/%s] %s${NC}\n\n" "$current" "$total" "$1"
+  local title="$1"
+  if (( LDP_TTY )); then
+    local bar=""
+    local i
+    for (( i = 1; i <= total; i++ )); do
+      if (( i <= current )); then bar+="▰"; else bar+="▱"; fi
+    done
+    printf "\n"; rule
+    printf "  ${DIM}%2s/%s${NC}  ${BLUE}%s${NC}  ${BOLD}%s${NC}\n" "$current" "$total" "$bar" "$title"
+    rule; printf "\n"
+  else
+    printf "\n==> [%s/%s] %s\n\n" "$current" "$total" "$title"
+  fi
+}
+
+# result_line <coloured glyph> <label> [duration-seconds]
+# Label padded so durations line up in a dim right-hand column.
+result_line() {
+  local glyph="$1" label="$2" secs="${3:-}"
+  if [ -n "$secs" ]; then
+    printf "  %b  %-*s ${DIM}%5ss${NC}\n" "$glyph" "$RESULT_W" "$label" "$secs"
+  else
+    printf "  %b  %s\n" "$glyph" "$label"
+  fi
 }
 
 subsection() {
@@ -40,14 +78,14 @@ banner() {
   printf "${BOLD}${BLUE}"
   cat <<'EOF'
 
-  ██╗     ██████╗  ██████╗
-  ██║     ██╔══██╗ ██╔══██╗
-  ██║     ██║  ██║ ██████╔╝
-  ██║     ██║  ██║ ██╔═══╝
-  ███████╗██████╔╝ ██║
-  ╚══════╝╚═════╝  ╚═╝
+  ██╗      ██████╗  ██████╗
+  ██║      ██╔══██╗ ██╔══██╗
+  ██║      ██║  ██║ ██████╔╝
+  ██║      ██║  ██║ ██╔═══╝
+  ███████╗ ██████╔╝ ██║
+  ╚══════╝ ╚═════╝  ╚═╝
 EOF
-  printf "${NC}\n  ${BOLD}Local Developer Platform${NC}\n"
+  printf "${NC}\n  ${BOLD}Local Developer Platform${NC}  ${DIM}by Billy Michael${NC}\n"
 }
 
 # ============================================================================
@@ -83,10 +121,11 @@ _run_cleanups() {
   _CLEANUP_CMDS=()
 }
 
-printf "\033[?25l"
-trap '_run_cleanups; printf "\033[?25h"' EXIT
-trap '_run_cleanups; printf "\033[?25h"; exit 130' INT
-trap '_run_cleanups; printf "\033[?25h"; exit 143' TERM
+_cursor() { (( LDP_TTY )) && printf "$1" || true; }
+_cursor "\033[?25l"
+trap '_run_cleanups; _cursor "\033[?25h"' EXIT
+trap '_run_cleanups; _cursor "\033[?25h"; exit 130' INT
+trap '_run_cleanups; _cursor "\033[?25h"; exit 143' TERM
 
 # ============================================================================
 # SPINNER & STEP EXECUTION LOGIC
@@ -119,12 +158,15 @@ run_step() {
   "$@" >"$logfile" 2>&1 &
   local cmd_pid=$!
 
-  # Start spinner bound to command PID
-  spinner "$msg" "$cmd_pid" &
-  local spinner_pid=$!
+  # Start spinner bound to command PID (no animation when piped)
+  local spinner_pid=""
+  if (( LDP_TTY )); then
+    spinner "$msg" "$cmd_pid" &
+    spinner_pid=$!
+  fi
 
   # Register cleanup on the shared stack; popped on normal completion below
-  _push_cleanup "kill $cmd_pid 2>/dev/null; kill $spinner_pid 2>/dev/null; rm -f '$logfile'"
+  _push_cleanup "kill $cmd_pid 2>/dev/null; kill ${spinner_pid:-0} 2>/dev/null; rm -f '$logfile'"
   local _cleanup_idx=$_LAST_CLEANUP_IDX
 
   # Wait for main command and capture exit status
@@ -132,8 +174,10 @@ run_step() {
   wait "$cmd_pid" || status=$?
 
   # Cleanup spinner immediately
-  kill "$spinner_pid" 2>/dev/null || true
-  wait "$spinner_pid" 2>/dev/null || true
+  if [ -n "$spinner_pid" ]; then
+    kill "$spinner_pid" 2>/dev/null || true
+    wait "$spinner_pid" 2>/dev/null || true
+  fi
 
   _pop_cleanup "$_cleanup_idx"
 
@@ -142,11 +186,12 @@ run_step() {
   local duration=$(( end_ts - start_ts ))
 
   # Final output replacing spinner line
+  (( LDP_TTY )) && printf "\r\033[K"
   if [ "$status" -eq 0 ]; then
-    printf "\r  ${GREEN}✔${NC}  %s (${duration}s)\n" "$msg"
+    result_line "${GREEN}✔${NC}" "$msg" "$duration"
     rm -f "$logfile"
   else
-    printf "\r  ${RED}✖${NC}  %s (${duration}s)\n" "$msg"
+    result_line "${RED}✖${NC}" "$msg" "$duration"
     printf "     ${RED}Log:${NC} %s\n" "$logfile"
     tail -10 "$logfile" 2>/dev/null | sed 's/^/     /'
   fi
@@ -304,6 +349,10 @@ wait_for() {
   _push_cleanup "for p in ${pids[*]}; do kill -- -\$p 2>/dev/null; done; rm -rf '$tmpdir'"
   local _cleanup_idx=$_LAST_CLEANUP_IDX
 
+  if (( ! LDP_TTY )); then
+    # Piped: no repainting. Wait for every worker, then print one line each below.
+    wait 2>/dev/null || true
+  else
   # Reserve one output line per task, then repaint them in place each tick.
   for _ in "${labels[@]}"; do echo; done
 
@@ -318,26 +367,33 @@ wait_for() {
       status=running
       [[ -f "$tmpdir/$i.status" ]] && read -r status elapsed < "$tmpdir/$i.status"
 
+      printf "\r\033[K"
       case "$status" in
-        ok)   printf "\r\033[K  ${GREEN}✔${NC}  Waiting for %s (%ss)\n" "${labels[$i]}" "$elapsed"
+        ok)   result_line "${GREEN}✔${NC}" "${labels[$i]}" "$elapsed"
               done_count=$(( done_count + 1 )) ;;
-        fail) printf "\r\033[K  ${RED}✖${NC}  Waiting for %s (%ss)\n" "${labels[$i]}" "$elapsed"
+        fail) result_line "${RED}✖${NC}" "${labels[$i]}" "$elapsed"
               done_count=$(( done_count + 1 )) ;;
-        *)    printf "\r\033[K  ${BLUE}%s${NC}  Waiting for %s...\n" "${SPINNER_FRAMES[$frame]}" "${labels[$i]}" ;;
+        *)    result_line "${BLUE}${SPINNER_FRAMES[$frame]}${NC}" "${labels[$i]}" "$(( $(date +%s) - start_ts ))" ;;
       esac
     done
 
     frame=$(( (frame + 1) % ${#SPINNER_FRAMES[@]} ))
     sleep 0.125
   done
+  fi
 
   wait 2>/dev/null || true
   _pop_cleanup "$_cleanup_idx"
 
-  # Report failures with the last attempt's output.
+  # Report failures with the last attempt's output (and, when piped, every result).
   local rc=0
   for i in "${!labels[@]}"; do
-    if [[ "$(<"$tmpdir/$i.status")" == fail* ]]; then
+    local st el
+    read -r st el < "$tmpdir/$i.status"
+    if (( ! LDP_TTY )); then
+      if [[ "$st" == ok ]]; then result_line "${GREEN}✔${NC}" "${labels[$i]}" "$el"; else result_line "${RED}✖${NC}" "${labels[$i]}" "$el"; fi
+    fi
+    if [[ "$st" == fail ]]; then
       rc=1
       printf "     ${RED}Log (%s):${NC}\n" "${labels[$i]}"
       tail -10 "$tmpdir/$i.log" | sed 's/^/     /'
