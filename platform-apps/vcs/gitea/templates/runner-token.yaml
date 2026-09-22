@@ -1,0 +1,36 @@
+---
+# Registration token shared by Gitea (GITEA_RUNNER_REGISTRATION_TOKEN) and the
+# gitea-actions runner. Generated once; refreshInterval 0 so it never rotates
+# underneath a registered runner. Gitea requires >= 32 characters.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: gitea-runner-token-generator
+  annotations:
+    argocd.argoproj.io/sync-wave: '-1'
+spec:
+  length: 40
+  digits: 10
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: gitea-runner-token
+  annotations:
+    argocd.argoproj.io/sync-wave: '-1'
+spec:
+  refreshInterval: "0"
+  target:
+    name: gitea-runner-token
+    template:
+      data:
+        token: '{{ `{{ .password }}` }}'
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: gitea-runner-token-generator

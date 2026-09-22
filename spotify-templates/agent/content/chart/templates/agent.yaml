@@ -1,0 +1,42 @@
+---
+# API key: an empty stub that kubernetes-replicator fills from the platform copy.
+# ArgoCD leaves the replicated data alone because it is not part of the desired manifest.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kagent-anthropic
+  annotations:
+    replicator.v1.mittwald.de/replicate-from: devtools/kagent-anthropic
+type: Opaque
+---
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: {{ .Release.Name }}-model
+spec:
+  provider: Anthropic
+  model: {{ .Values.model.name }}
+  apiKeySecret: kagent-anthropic
+  apiKeySecretKey: ANTHROPIC_API_KEY
+  anthropic: {}
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  description: {{ .Values.agent.description | quote }}
+  type: Declarative
+  declarative:
+    modelConfig: {{ .Release.Name }}-model
+    systemMessage: |-
+{{ .Values.agent.systemPrompt | indent 6 }}
+    tools:
+      - type: McpServer
+        mcpServer:
+          apiGroup: kagent.dev
+          kind: RemoteMCPServer
+          name: kagent-tool-server
+          namespace: devtools
+          toolNames:
+{{ toYaml .Values.agent.tools | indent 12 }}

@@ -1,0 +1,46 @@
+ldp:
+  syncWave: wave-6
+
+kagent:
+  providers:
+    default: anthropic
+    anthropic:
+      model: claude-sonnet-5
+      # Created by cluster-up.sh in this namespace from $ANTHROPIC_API_KEY.
+      # Tenant charts pull a copy via kubernetes-replicator (see spotify-templates/agent).
+      apiKeySecretRef: kagent-anthropic
+      apiKeySecretKey: ANTHROPIC_API_KEY
+
+  # No Grafana on the platform
+  grafana-mcp:
+    enabled: false
+
+  # ponytail: the built-in tool server (kagent-tools) is bound to cluster-admin and
+  # shared by every tenant agent. Fine for one team per LDP instance; on a shared
+  # cluster give tenants their own tool server or a read-only ClusterRole.
+
+  ui:
+    externalUrl: https://agents-127-0-0-1.nip.io
+    route:
+      enabled: false
+
+  # Bundled demo agents: keep the Kubernetes one as a worked example, drop the rest
+  # (each is a Deployment; the platform runs on a laptop)
+  kgateway-agent:
+    enabled: false
+  istio-agent:
+    enabled: false
+  promql-agent:
+    enabled: false
+  observability-agent:
+    enabled: false
+  argo-rollouts-agent:
+    enabled: false
+  helm-agent:
+    enabled: false
+  cilium-policy-agent:
+    enabled: false
+  cilium-manager-agent:
+    enabled: false
+  cilium-debug-agent:
+    enabled: false

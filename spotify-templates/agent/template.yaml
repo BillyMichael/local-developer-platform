@@ -1,0 +1,116 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: agent-template
+  title: AI Agent (kagent)
+  description: Deploys a declarative kagent Agent from a system prompt and a set of tools. Pure YAML, no image build.
+  tags:
+    - recommended
+    - agent
+    - kagent
+spec:
+  owner: group:default/platform_maintainers
+  type: service
+
+  parameters:
+    - title: About the agent
+      required:
+        - component_id
+        - owner
+        - system_prompt
+      properties:
+        component_id:
+          title: Name
+          type: string
+          description: Unique name of the agent (lowercase, dashes)
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          ui:autofocus: true
+        description:
+          title: Description
+          type: string
+          description: What this agent does for its users
+        owner:
+          title: Owner
+          type: string
+          description: Owner of the component
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind:
+                - Group
+                - User
+        system_prompt:
+          title: System prompt
+          type: string
+          description: Instructions the agent follows on every conversation
+          ui:widget: textarea
+          ui:options:
+            rows: 12
+          default: |
+            You are a helpful agent for a platform engineering team.
+
+            # Instructions
+            - Use the tools available to you before answering; do not guess.
+            - If the request is unclear, ask a clarifying question first.
+            - Explain what you did and what you found.
+
+            # Response format
+            - Always answer in Markdown.
+        tools:
+          title: Tools
+          type: array
+          description: Tools from the platform's built-in kagent tool server
+          uniqueItems: true
+          ui:widget: checkboxes
+          items:
+            type: string
+            enum:
+              - k8s_get_resources
+              - k8s_describe_resource
+              - k8s_get_pod_logs
+              - k8s_get_events
+              - k8s_get_available_api_resources
+              # ponytail: read-only tools only. Write tools (k8s_apply_manifest) and a
+              # git/Gitea MCP server are the next step once the tool server is per-tenant.
+          default:
+            - k8s_get_resources
+            - k8s_describe_resource
+            - k8s_get_pod_logs
+
+  steps:
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      input:
+        url: ./content
+        values:
+          component_id: ${{ parameters.component_id }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          system_prompt: ${{ parameters.system_prompt }}
+          tools: ${{ parameters.tools }}
+
+    - id: publish
+      name: Publish
+      action: publish:gitea
+      input:
+        description: ${{ parameters.description }}
+        repoUrl: vcs-127-0-0-1.nip.io?owner=local-developer-platform&repo=${{ parameters.component_id }}
+        defaultBranch: main
+
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
+      - title: Chat with it (kagent UI)
+        url: https://agents-127-0-0-1.nip.io
