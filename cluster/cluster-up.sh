@@ -14,7 +14,7 @@ ARGOCD_NS="${ARGOCD_NS:-orchestration}"
 ARGOCD_CHART_DIR="${CHART_DIR:-platform-apps/orchestration/argocd}"
 ARGOCD_RELEASE="${ARGOCD_RELEASE:-argocd}"
 
-TOTAL_STEPS=9
+TOTAL_STEPS=10
 LDP_START_TS=$(date +%s)
 
 # ============================================================================
@@ -122,7 +122,7 @@ trust_registry_on_nodes() {
 
 
 # ============================================================================
-# [1/9] PREFLIGHT CHECKS
+# [1/10] PREFLIGHT CHECKS
 # ============================================================================
 
 step 1 $TOTAL_STEPS "Preflight Checks"
@@ -131,7 +131,7 @@ preflight
 
 
 # ============================================================================
-# [2/9] CREATE KIND CLUSTER
+# [2/10] CREATE KIND CLUSTER
 # ============================================================================
 
 step 2 $TOTAL_STEPS "Creating Kind Cluster"
@@ -156,6 +156,23 @@ fi
 # Set kubectl context to the Kind cluster for safety
 run_step "Setting kubectl context to '$CONTEXT_NAME'" \
   kubectl config use-context "$CONTEXT_NAME"
+
+# A stale dns-check pod from a previous interrupted run (kubectl run --rm -i
+# only cleans up on graceful kubectl exit) will block every retry with
+# "already exists". Clear it up front so the wait below is idempotent.
+kubectl --context "$CONTEXT_NAME" delete pod dns-check --ignore-not-found --now >/dev/null 2>&1 || true
+
+wait_for 60 \
+  "CoreDNS to resolve external hosts" "kubectl --context '$CONTEXT_NAME' run dns-check --rm -i --restart=Never --image=busybox -- nslookup github.com"
+
+
+# ============================================================================
+# [3/10] OPTIONAL CREDENTIALS
+# ============================================================================
+# Both prompts are skipped when the matching env var is set or stdin is not a
+# terminal, so unattended runs never block here.
+
+step 3 $TOTAL_STEPS "Optional Credentials"
 
 # Optional GitHub token for Backstage's catalog reads of this repo.
 # Anonymous GitHub API access is capped at 60 req/hr, which the catalog's
@@ -216,20 +233,12 @@ else
   unset anthropic_key
 fi
 
-# A stale dns-check pod from a previous interrupted run (kubectl run --rm -i
-# only cleans up on graceful kubectl exit) will block every retry with
-# "already exists". Clear it up front so the wait below is idempotent.
-kubectl --context "$CONTEXT_NAME" delete pod dns-check --ignore-not-found --now >/dev/null 2>&1 || true
-
-wait_for 60 \
-  "CoreDNS to resolve external hosts" "kubectl --context '$CONTEXT_NAME' run dns-check --rm -i --restart=Never --image=busybox -- nslookup github.com"
-
 
 # ============================================================================
-# [3/9] INSTALL ARGO CD
+# [4/10] INSTALL ARGO CD
 # ============================================================================
 
-step 3 $TOTAL_STEPS "Installing Argo CD"
+step 4 $TOTAL_STEPS "Installing Argo CD"
 
 run_step "Deploying Argo CD (without ApplicationSets)" \
   helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
@@ -269,10 +278,10 @@ run_step "Enabling ApplicationSets" \
 
 
 # ============================================================================
-# [4/9] WAVE 1 — FOUNDATIONS
+# [5/10] WAVE 1 — FOUNDATIONS
 # ============================================================================
 
-step 4 $TOTAL_STEPS "Wave 1: Foundations"
+step 5 $TOTAL_STEPS "Wave 1: Foundations"
 
 wait_for 180 \
   "cert-manager"     "kubectl --context '$CONTEXT_NAME' -n pki wait --for=condition=Available deployment/cert-manager --timeout=1s" \
@@ -281,20 +290,20 @@ wait_for 180 \
 
 
 # ============================================================================
-# [5/9] WAVE 2 — CROSSPLANE COMPOSITIONS
+# [6/10] WAVE 2 — CROSSPLANE COMPOSITIONS
 # ============================================================================
 
-step 5 $TOTAL_STEPS "Wave 2: Crossplane Compositions"
+step 6 $TOTAL_STEPS "Wave 2: Crossplane Compositions"
 
 wait_for 180 \
   "Crossplane provider-kubernetes" "kubectl --context '$CONTEXT_NAME' wait --for=condition=Healthy provider/provider-kubernetes --timeout=1s"
 
 
 # ============================================================================
-# [6/9] WAVE 3 — CORE INFRASTRUCTURE
+# [7/10] WAVE 3 — CORE INFRASTRUCTURE
 # ============================================================================
 
-step 6 $TOTAL_STEPS "Wave 3: Core Infrastructure"
+step 7 $TOTAL_STEPS "Wave 3: Core Infrastructure"
 
 TRAEFIK_NS="networking"
 TRAEFIK_SVC="traefik"
@@ -311,30 +320,30 @@ trust_registry_on_nodes "$TRAEFIK_NS" "$TRAEFIK_SVC"
 
 
 # ============================================================================
-# [7/9] WAVE 4 — AUTHENTICATION & OPERATORS
+# [8/10] WAVE 4 — AUTHENTICATION & OPERATORS
 # ============================================================================
 
-step 7 $TOTAL_STEPS "Wave 4: Authentication & Operators"
+step 8 $TOTAL_STEPS "Wave 4: Authentication & Operators"
 
 wait_for 300 \
   "Authelia" "kubectl --context '$CONTEXT_NAME' -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s"
 
 
 # ============================================================================
-# [8/9] WAVE 5 — VERSION CONTROL & DELIVERY
+# [9/10] WAVE 5 — VERSION CONTROL & DELIVERY
 # ============================================================================
 
-step 8 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
+step 9 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
 
 wait_for 300 \
   "Gitea" "kubectl --context '$CONTEXT_NAME' -n vcs wait --for=condition=Ready pod -l app.kubernetes.io/name=gitea --timeout=1s"
 
 
 # ============================================================================
-# [9/9] WAVE 6 — DEVELOPER PORTAL
+# [10/10] WAVE 6 — DEVELOPER PORTAL
 # ============================================================================
 
-step 9 $TOTAL_STEPS "Wave 6: Developer Portal"
+step 10 $TOTAL_STEPS "Wave 6: Developer Portal"
 
 wait_for 300 \
   "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s" \
