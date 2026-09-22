@@ -1,0 +1,8 @@
+agent:
+  description: ${{ values.description | dump }}
+  systemPrompt: ${{ values.system_prompt | dump }}
+  # Tool names on the platform tool server (RemoteMCPServer devtools/kagent-tool-server)
+  tools: ${{ values.tools | dump }}
+
+model:
+  name: claude-sonnet-5

@@ -1,5 +1,11 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+# Per-registry hosts.toml files (CA trust for the in-cluster Gitea registry) are
+# written here by cluster-up.sh; containerd only honours them when config_path is set.
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = "/etc/containerd/certs.d"
 nodes:
   - role: control-plane
     kubeadmConfigPatches:

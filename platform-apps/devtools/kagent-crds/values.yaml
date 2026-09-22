@@ -1,0 +1,5 @@
+ldp:
+  # CRDs land with the other foundations so wave-6 charts can create Agents
+  syncWave: wave-1
+  # large CRDs overflow the last-applied annotation
+  serverSideApply: true

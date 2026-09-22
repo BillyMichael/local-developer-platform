@@ -1,0 +1,28 @@
+# ponytail: nothing in front of the kagent UI. The platform only listens on
+# loopback and a workshop instance serves one team. When it is shared, enable the
+# chart's bundled oauth2-proxy against Authelia (add a ClientClaim like the gitea
+# chart has and set controller.auth.mode=trusted-proxy).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kagent-ui
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: ca-issuer
+spec:
+  tls:
+    - hosts:
+        - agents-127-0-0-1.nip.io
+      secretName: kagent-ui-tls
+  rules:
+    - host: agents-127-0-0-1.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kagent-ui
+                port:
+                  number: 8080

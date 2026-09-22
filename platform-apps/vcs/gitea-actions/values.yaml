@@ -1,0 +1,65 @@
+ldp:
+  syncWave: wave-6
+
+actions:
+  enabled: true
+  # Register over the in-cluster HTTP service so the runner itself has no TLS to trust.
+  # Jobs still see Gitea's public ROOT_URL (https://vcs-127-0-0-1.nip.io); the CA
+  # plumbing below is what makes checkout and `docker push` work from inside them.
+  giteaRootURL: http://gitea-http.vcs.svc.cluster.local:3000
+  # Created by the gitea chart (templates/runner-token.yaml)
+  existingSecret: gitea-runner-token
+  existingSecretKey: token
+
+  statefulset:
+    persistence:
+      size: 2Gi
+    extraVolumes:
+      - name: ca
+        configMap:
+          name: ca
+
+    runner:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+      config: |
+        log:
+          level: info
+        runner:
+          # Applied to every job: makes git, node and curl in job containers trust the platform CA
+          envs:
+            SSL_CERT_FILE: /etc/ssl/certs/ldp-ca.pem
+            GIT_SSL_CAINFO: /etc/ssl/certs/ldp-ca.pem
+            NODE_EXTRA_CA_CERTS: /etc/ssl/certs/ldp-ca.pem
+        cache:
+          enabled: false
+        container:
+          require_docker: true
+          docker_timeout: 300s
+          # Paths are resolved by the dind daemon, i.e. inside the dind container's filesystem
+          options: -v /etc/ssl/certs/ldp-ca.pem:/etc/ssl/certs/ldp-ca.pem:ro
+          valid_volumes:
+            - /etc/ssl/certs/ldp-ca.pem
+
+    dind:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          memory: 2Gi
+      extraVolumeMounts:
+        # `docker push vcs-127-0-0-1.nip.io/...` from a job
+        - name: ca
+          mountPath: /etc/docker/certs.d/vcs-127-0-0-1.nip.io/ca.crt
+          subPath: trust-bundle.pem
+          readOnly: true
+        # Source of the -v mount into job containers (see runner.config above)
+        - name: ca
+          mountPath: /etc/ssl/certs/ldp-ca.pem
+          subPath: trust-bundle.pem
+          readOnly: true

@@ -70,6 +70,58 @@ patch_coredns_for_nip_io() {
 
 
 # ============================================================================
+# NODE REGISTRY TRUST
+# ============================================================================
+
+# Lets kubelet pull images that CI pushed to the in-cluster Gitea registry.
+# containerd on the kind nodes uses neither CoreDNS nor the platform CA, so each
+# node gets a /etc/hosts entry pointing the vcs hostname at Traefik's ClusterIP
+# and a containerd hosts.toml carrying the CA (config_path is set in
+# cluster-config.yaml). Docker rewrites /etc/hosts when a node container
+# restarts, which is why this runs on every `make up`, not only on create.
+REGISTRY_HOST="vcs-127-0-0-1.nip.io"
+
+_trust_registry_on_node() {
+  local node="$1" host="$2" ip="$3" ca_file="$4"
+  local dir="/etc/containerd/certs.d/${host}"
+
+  "$CE" exec -i "$node" sh -c "mkdir -p '$dir' && cat > '$dir/ca.crt'" < "$ca_file"
+
+  "$CE" exec -i "$node" sh -c "cat > '$dir/hosts.toml'" <<EOF
+server = "https://${host}"
+
+[host."https://${host}"]
+  capabilities = ["pull", "resolve"]
+  ca = "${dir}/ca.crt"
+EOF
+
+  # /etc/hosts is a bind mount: rewrite in place rather than sed -i (rename fails)
+  "$CE" exec "$node" sh -c \
+    "grep -v ' ${host}\$' /etc/hosts > /tmp/hosts.new; echo '${ip} ${host}' >> /tmp/hosts.new; cat /tmp/hosts.new > /etc/hosts"
+}
+
+trust_registry_on_nodes() {
+  local traefik_ns="$1"
+  local traefik_svc="$2"
+
+  wait_for 120 \
+    "platform CA" "kubectl --context '$CONTEXT_NAME' -n pki get secret root-ca"
+
+  local traefik_ip ca_file
+  traefik_ip="$(kubectl --context "$CONTEXT_NAME" -n "$traefik_ns" get service "$traefik_svc" -o jsonpath='{.spec.clusterIP}')"
+  ca_file=$(mktemp "/tmp/ldp-ca-XXXXXX")
+  kubectl --context "$CONTEXT_NAME" -n pki get secret root-ca -o jsonpath='{.data.tls\.crt}' | base64 -d > "$ca_file"
+
+  local node
+  for node in $(kind get nodes --name "$CLUSTER_NAME"); do
+    run_step "Trusting Gitea registry on $node" \
+      _trust_registry_on_node "$node" "$REGISTRY_HOST" "$traefik_ip" "$ca_file"
+  done
+  rm -f "$ca_file"
+}
+
+
+# ============================================================================
 # [1/9] PREFLIGHT CHECKS
 # ============================================================================
 
@@ -133,6 +185,37 @@ else
   unset gh_token
 fi
 
+# Anthropic API key for kagent agents. Honours $ANTHROPIC_API_KEY, prompts
+# otherwise. Always created (possibly empty) so agent pods can start; the
+# annotations let tenant namespaces pull a copy via kubernetes-replicator.
+if kubectl --context "$CONTEXT_NAME" -n devtools get secret kagent-anthropic >/dev/null 2>&1; then
+  ok "Anthropic API key secret already exists"
+else
+  anthropic_key="${ANTHROPIC_API_KEY:-}"
+  if [ -z "$anthropic_key" ] && [ -t 0 ]; then
+    printf "  ${BLUE}?${NC}  Provide an Anthropic API key for kagent agents? [y/N] "
+    read -r ak_reply || ak_reply=""
+    if [[ "$ak_reply" =~ ^[Yy] ]]; then
+      printf "  ${BLUE}➜${NC}  Enter key (input hidden): "
+      read -rs anthropic_key || anthropic_key=""
+      printf "\n"
+    fi
+  fi
+  kubectl --context "$CONTEXT_NAME" create namespace devtools --dry-run=client -o yaml |
+    kubectl --context "$CONTEXT_NAME" apply -f - >/dev/null
+  kubectl --context "$CONTEXT_NAME" -n devtools create secret generic kagent-anthropic \
+    --from-literal=ANTHROPIC_API_KEY="$anthropic_key" >/dev/null
+  kubectl --context "$CONTEXT_NAME" -n devtools annotate secret kagent-anthropic \
+    replicator.v1.mittwald.de/replication-allowed="true" \
+    replicator.v1.mittwald.de/replication-allowed-namespaces=".*" >/dev/null
+  if [ -n "$anthropic_key" ]; then
+    ok "Anthropic API key stored as secret 'kagent-anthropic' in namespace 'devtools'"
+  else
+    warn "No Anthropic API key provided; agents will fail until 'kagent-anthropic' in 'devtools' is populated"
+  fi
+  unset anthropic_key
+fi
+
 # A stale dns-check pod from a previous interrupted run (kubectl run --rm -i
 # only cleans up on graceful kubectl exit) will block every retry with
 # "already exists". Clear it up front so the wait below is idempotent.
@@ -174,13 +257,14 @@ run_step "Enabling ApplicationSets" \
 # DEPLOYING PLATFORM (GITOPS)
 # ============================================================================
 # ArgoCD will now deploy all platform apps in sync-wave order:
-#   wave-1: cert-manager, external-secrets, crossplane  (CRDs & foundations)
+#   wave-1: cert-manager, external-secrets, crossplane, (CRDs & foundations)
+#           kagent-crds
 #   wave-2: crossplane-compositions                     (XRDs & compositions)
 #   wave-3: traefik, trust-manager, lldap, reloader,    (core infra)
 #           kubernetes-replicator, argocd
 #   wave-4: authelia, cloudnative-pg                     (OIDC & operators)
 #   wave-5: gitea, kargo                                (VCS & delivery)
-#   wave-6: backstage                                   (developer portal)
+#   wave-6: backstage, gitea-actions, kagent            (portal, CI runner, agents)
 # ============================================================================
 
 
@@ -222,6 +306,9 @@ wait_for 180 \
 # Configure CoreDNS to route *.nip.io traffic to Traefik inside the cluster
 patch_coredns_for_nip_io "$TRAEFIK_NS" "$TRAEFIK_SVC"
 
+# Let kubelet pull from the in-cluster Gitea registry (needs Traefik's ClusterIP and the CA)
+trust_registry_on_nodes "$TRAEFIK_NS" "$TRAEFIK_SVC"
+
 
 # ============================================================================
 # [7/9] WAVE 4 — AUTHENTICATION & OPERATORS
@@ -250,7 +337,8 @@ wait_for 300 \
 step 9 $TOTAL_STEPS "Wave 6: Developer Portal"
 
 wait_for 300 \
-  "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s"
+  "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s" \
+  "kagent"    "kubectl --context '$CONTEXT_NAME' -n devtools wait --for=condition=Available deployment/kagent-controller --timeout=1s"
 
 
 # ============================================================================

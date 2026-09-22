@@ -62,6 +62,7 @@ printf "  │ %-12s │ %-42s │\n" "ArgoCD"   "https://cd-127-0-0-1.nip.io"
 printf "  │ %-12s │ %-42s │\n" "Authelia" "https://auth-127-0-0-1.nip.io"
 printf "  │ %-12s │ %-42s │\n" "Gitea"    "https://vcs-127-0-0-1.nip.io"
 printf "  │ %-12s │ %-42s │\n" "Backstage" "https://portal-127-0-0-1.nip.io"
+printf "  │ %-12s │ %-42s │\n" "kagent"   "https://agents-127-0-0-1.nip.io"
 printf "  └──────────────┴────────────────────────────────────────────┘\n\n"
 
 
