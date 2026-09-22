@@ -281,7 +281,7 @@ run_step "Enabling ApplicationSets" \
 # [5/10] WAVE 1 — FOUNDATIONS
 # ============================================================================
 
-step 5 $TOTAL_STEPS "Wave 1 · Foundations"
+step 5 $TOTAL_STEPS "Wave 1: Foundations"
 
 wait_for 180 \
   "cert-manager"     "kubectl --context '$CONTEXT_NAME' -n pki wait --for=condition=Available deployment/cert-manager --timeout=1s" \
@@ -293,7 +293,7 @@ wait_for 180 \
 # [6/10] WAVE 2 — CROSSPLANE COMPOSITIONS
 # ============================================================================
 
-step 6 $TOTAL_STEPS "Wave 2 · Crossplane compositions"
+step 6 $TOTAL_STEPS "Wave 2: Crossplane Compositions"
 
 wait_for 180 \
   "Crossplane provider-kubernetes" "kubectl --context '$CONTEXT_NAME' wait --for=condition=Healthy provider/provider-kubernetes --timeout=1s"
@@ -303,7 +303,7 @@ wait_for 180 \
 # [7/10] WAVE 3 — CORE INFRASTRUCTURE
 # ============================================================================
 
-step 7 $TOTAL_STEPS "Wave 3 · Core infrastructure"
+step 7 $TOTAL_STEPS "Wave 3: Core Infrastructure"
 
 TRAEFIK_NS="networking"
 TRAEFIK_SVC="traefik"
@@ -323,7 +323,7 @@ trust_registry_on_nodes "$TRAEFIK_NS" "$TRAEFIK_SVC"
 # [8/10] WAVE 4 — AUTHENTICATION & OPERATORS
 # ============================================================================
 
-step 8 $TOTAL_STEPS "Wave 4 · Authentication & operators"
+step 8 $TOTAL_STEPS "Wave 4: Authentication & Operators"
 
 wait_for 300 \
   "Authelia" "kubectl --context '$CONTEXT_NAME' -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s"
@@ -333,7 +333,7 @@ wait_for 300 \
 # [9/10] WAVE 5 — VERSION CONTROL & DELIVERY
 # ============================================================================
 
-step 9 $TOTAL_STEPS "Wave 5 · Version control & delivery"
+step 9 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
 
 wait_for 300 \
   "Gitea" "kubectl --context '$CONTEXT_NAME' -n vcs wait --for=condition=Ready pod -l app.kubernetes.io/name=gitea --timeout=1s"
@@ -343,7 +343,7 @@ wait_for 300 \
 # [10/10] WAVE 6 — DEVELOPER PORTAL
 # ============================================================================
 
-step 10 $TOTAL_STEPS "Wave 6 · Portal, CI runner & agents"
+step 10 $TOTAL_STEPS "Wave 6: Developer Portal"
 
 wait_for 300 \
   "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s" \
@@ -359,7 +359,6 @@ LDP_DURATION=$(( LDP_END_TS - LDP_START_TS ))
 LDP_MINUTES=$(( LDP_DURATION / 60 ))
 LDP_SECONDS=$(( LDP_DURATION % 60 ))
 
-printf "\n"; rule
-printf "  ${GREEN}✔${NC}  ${BOLD}Platform ready${NC} ${DIM}in ${LDP_MINUTES}m${LDP_SECONDS}s${NC}\n"
+printf "\n${GREEN}${BOLD}Platform ready in ${LDP_MINUTES}m${LDP_SECONDS}s${NC}\n"
 
 bash "${SCRIPT_DIR}/show-info.sh"
