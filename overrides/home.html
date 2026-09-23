@@ -73,23 +73,25 @@
     var timers = [];
 
     function esc(s) { return s.replace(/[&<>]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
-    function pad(s, n) { return s + ' '.repeat(Math.max(0, n - s.length)); }
-    function line(cls, html) { var el = document.createElement('span'); el.className = cls; el.innerHTML = html + '\n'; out.appendChild(el); return el; }
+    function line(cls, html, parent) { var el = document.createElement('span'); el.className = cls; el.innerHTML = html + '\n'; (parent || out).appendChild(el); return el; }
     function okText(msg, d) { return '  <span class="t-ok">✔</span>  ' + esc(msg) + ' <span class="t-dim">(' + d + 's)</span>'; }
 
+    // Borders are CSS, not box-drawing glyphs: web fonts ship without U+2500,
+    // and the fallback font never lines up.
     function table() {
-      var w1 = Math.max.apply(null, URLS.map(function (r) { return r[0].length; }).concat(['Service'.length])) + 2;
-      var w2 = Math.max.apply(null, URLS.map(function (r) { return r[1].length; }).concat(['URL'.length])) + 2;
-      var bar = function (l, m, r) { return '  ' + l + '─'.repeat(w1) + m + '─'.repeat(w2) + r; };
-      var v = '<span class="t-dim">│</span>';
       line('t-hd', 'URLs:'); line('', '');
-      line('t-dim', bar('┌','┬','┐'));
-      line('', '  ' + v + ' ' + pad('Service', w1 - 1) + v + ' ' + pad('URL', w2 - 1) + v);
-      line('t-dim', bar('├','┼','┤'));
-      URLS.forEach(function (r) {
-        line('', '  ' + v + ' ' + pad(r[0], w1 - 1) + v + ' <span class="t-url">' + r[1] + '</span>' + ' '.repeat(w2 - 1 - r[1].length) + v);
+      var t = document.createElement('span'); t.className = 't-tbl';
+      var cells = [['Service', 'URL']].concat(URLS);
+      cells.forEach(function (r, i) {
+        r.forEach(function (c, j) {
+          var el = document.createElement('span');
+          el.className = (i === 0 ? 't-th' : '') + (j === 1 && i > 0 ? ' t-url' : '');
+          el.textContent = c;
+          t.appendChild(el);
+        });
       });
-      line('t-dim', bar('└','┴','┘'));
+      out.appendChild(t);
+      out.appendChild(document.createTextNode('\n'));
     }
 
     function render(upTo, instant) {
