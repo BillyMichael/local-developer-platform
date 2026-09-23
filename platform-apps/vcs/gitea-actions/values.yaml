@@ -41,9 +41,9 @@ actions:
           require_docker: true
           docker_timeout: 300s
           # Paths are resolved by the dind daemon, i.e. inside the dind container's filesystem
-          options: -v /etc/ssl/certs/ldp-ca.pem:/etc/ssl/certs/ldp-ca.pem:ro
+          options: -v /etc/docker/certs.d/vcs-127-0-0-1.nip.io/ca.crt:/etc/ssl/certs/ldp-ca.pem:ro
           valid_volumes:
-            - /etc/ssl/certs/ldp-ca.pem
+            - /etc/docker/certs.d/vcs-127-0-0-1.nip.io/ca.crt
 
     dind:
       resources:
@@ -53,13 +53,9 @@ actions:
         limits:
           memory: 2Gi
       extraVolumeMounts:
-        # `docker push vcs-127-0-0-1.nip.io/...` from a job
+        # `docker push vcs-127-0-0-1.nip.io/...` from a job; also the source of the
+        # -v mount into job containers (see runner.config above)
         - name: ca
           mountPath: /etc/docker/certs.d/vcs-127-0-0-1.nip.io/ca.crt
-          subPath: trust-bundle.pem
-          readOnly: true
-        # Source of the -v mount into job containers (see runner.config above)
-        - name: ca
-          mountPath: /etc/ssl/certs/ldp-ca.pem
           subPath: trust-bundle.pem
           readOnly: true

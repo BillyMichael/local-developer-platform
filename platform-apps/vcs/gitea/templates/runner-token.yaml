@@ -12,7 +12,6 @@ spec:
   length: 40
   digits: 10
   symbols: 0
-  noUpper: false
   allowRepeat: true
 ---
 apiVersion: external-secrets.io/v1

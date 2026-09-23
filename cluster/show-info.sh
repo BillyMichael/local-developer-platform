@@ -81,3 +81,23 @@ printf "  │ %-16s │ %-39s │\n" "make kubeconfig" "Update kubeconfig"
 printf "  │ %-16s │ %-39s │\n" "make trust-ca"   "Trust the platform CA (no TLS warnings)"
 printf "  │ %-16s │ %-39s │\n" "make info"       "Show LDP info"
 printf "  └──────────────────┴─────────────────────────────────────────┘\n\n"
+
+
+# ============================================================================
+# CA TRUST NOTICE
+# ============================================================================
+# curl exit 60 = the OS trust store lacks the platform CA; anything else prints nothing.
+# Under WSL the CA lives in Windows, so Linux curl fails even after `make trust-ca`.
+
+if command -v curl >/dev/null 2>&1; then
+  ca_rc=0
+  curl -s -o /dev/null --max-time 5 https://portal-127-0-0-1.nip.io || ca_rc=$?
+  if [ "$ca_rc" -eq 60 ]; then
+    warn "Browsers will show TLS warnings until the platform CA is trusted."
+    printf "  ${BLUE}\u279c${NC}  Run ${DIM}\`${NC}${BOLD}${YELLOW}make trust-ca${NC}${DIM}\`${NC}, then restart your browser.\n"
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+      printf "  ${BLUE}\u279c${NC}  ${DIM}Already ran it under WSL? The CA is stored in Windows, where your browser reads it.${NC}\n"
+    fi
+    printf "\n"
+  fi
+fi

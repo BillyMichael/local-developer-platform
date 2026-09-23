@@ -42,12 +42,6 @@ gitea:
       openid:
         ENABLE_OPENID_SIGNIN: false
         ENABLE_OPENID_SIGNUP: true
-      # CI and the OCI/container registry (both default-on upstream; pinned so a
-      # default change can't silently remove them)
-      actions:
-        ENABLED: true
-      packages:
-        ENABLED: true
 
     oauth:
       - name: "Authelia"
