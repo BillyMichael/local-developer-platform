@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#1b2d4f" />
     <meta
       name="description"
-      content="Backstage is an open source framework for building developer portals"
+      content="Local Developer Platform — catalogue, templates and docs for the local platform"
     />
     <!--
       manifest.json provides metadata used when your web app is installed on a
@@ -16,6 +16,11 @@
       rel="manifest"
       href="<%= publicPath %>/manifest.json"
       crossorigin="use-credentials"
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="<%= publicPath %>/favicon.svg"
     />
     <link rel="icon" href="<%= publicPath %>/favicon.ico" />
     <link rel="shortcut icon" href="<%= publicPath %>/favicon.ico" />
@@ -39,7 +44,14 @@
     <link
       rel="mask-icon"
       href="<%= publicPath %>/safari-pinned-tab.svg"
-      color="#5bbad5"
+      color="#1b2d4f"
+    />
+    <!-- Same faces as the docs site. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
     />
     <title><%= config.getOptionalString('app.title') ?? 'Backstage' %></title>
   </head>

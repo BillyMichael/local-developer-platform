@@ -1,7 +1,12 @@
 {
-  "short_name": "Backstage",
-  "name": "Backstage",
+  "short_name": "LDP",
+  "name": "Local Developer Platform",
   "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
     {
       "src": "favicon.ico",
       "sizes": "48x48",
@@ -10,6 +15,6 @@
   ],
   "start_url": "./index.html",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#1b2d4f",
+  "background_color": "#f5f7fa"
 }

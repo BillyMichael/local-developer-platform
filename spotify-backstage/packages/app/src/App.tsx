@@ -25,11 +25,7 @@ import { entityPage } from './components/catalog/EntityPage';
 import { searchPage } from './components/search/SearchPage';
 import { Root } from './components/Root';
 
-import {
-  AlertDisplay,
-  OAuthRequestDialog,
-  SignInPage,
-} from '@backstage/core-components';
+import { AlertDisplay, OAuthRequestDialog } from '@backstage/core-components';
 import { createApp } from '@backstage/app-defaults';
 import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
 import { CatalogGraphPage } from '@backstage/plugin-catalog-graph';
@@ -38,11 +34,12 @@ import { catalogEntityCreatePermission } from '@backstage/plugin-catalog-common/
 import { NotificationsPage } from '@backstage/plugin-notifications';
 import { SignalsDisplay } from '@backstage/plugin-signals';
 
-import { oidcAuthApiRef } from './apis';
-
+import { LdpSignInPage } from './components/SignInPage';
+import { ldpThemes } from './theme';
 
 const app = createApp({
   apis,
+  themes: ldpThemes,
   bindRoutes({ bind }) {
     bind(catalogPlugin.externalRoutes, {
       createComponent: scaffolderPlugin.routes.root,
@@ -61,17 +58,7 @@ const app = createApp({
     });
   },
   components: {
-    SignInPage: props => (
-      <SignInPage {...props} auto providers={[
-          {
-            id: 'oidc',
-            title: 'OIDC',
-            message: 'Sign in with OIDC',
-            apiRef: oidcAuthApiRef,
-          }
-        ]}
-      />
-    ),
+    SignInPage: props => <LdpSignInPage {...props} />,
   },
 });
 
