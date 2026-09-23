@@ -37,6 +37,18 @@ ok()    { printf "  ${GREEN}✔${NC} %s\n" " $1"; }
 warn()  { printf "  ${YELLOW}!${NC} %s\n" " $1"; }
 error() { printf "  ${RED}✖${NC} %s\n" " $1"; }
 
+# Prints $1 if set; otherwise asks for a hidden value when stdin is a terminal.
+# Enter on its own skips (prints nothing). Prompt goes to stderr so $(...) only captures the value.
+prompt_secret() {
+  local value="$1"
+  if [ -z "$value" ] && [ -t 0 ]; then
+    printf "  ${BLUE}?${NC}  %s (input hidden, Enter to skip): " "$2" >&2
+    read -rs value || value=""
+    printf "\n" >&2
+  fi
+  printf '%s' "$value"
+}
+
 banner() {
   printf "${BOLD}${BLUE}"
   cat <<'EOF'
