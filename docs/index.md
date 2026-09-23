@@ -6,10 +6,7 @@ hide:
   - toc
 ---
 
-## What `make up` installs
-
-Every component is a Helm chart under `platform-apps/`, deployed by ArgoCD
-into a namespace named after its folder. Add a chart, push, and it appears.
+## What LDP installs
 
 | Layer | Components | What it does |
 |-------|------------|--------------|
