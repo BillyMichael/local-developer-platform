@@ -1,52 +1,9 @@
-<svg viewBox="82 72 360 360" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- LDP Local Developer Platform icon -->
-  <g stroke-linejoin="round" stroke-linecap="round">
-    <!-- Top face: amber -->
-    <path d="M256 78
-             C262 78 268 80 273 83
-             L390 149
-             C402 156 402 173 390 180
-             L273 246
-             C263 252 249 252 239 246
-             L122 180
-             C110 173 110 156 122 149
-             L239 83
-             C244 80 250 78 256 78Z"
-          fill="#f5b335"/>
-
-    <!-- Left face -->
-    <path d="M105 187
-             C105 175 118 168 128 174
-             L236 235
-             C246 241 252 252 252 264
-             L252 407
-             C252 420 238 427 227 421
-             L119 360
-             C110 355 105 345 105 334Z"
-          fill="#8fb3ff"/>
-
-    <!-- Right face -->
-    <path d="M260 264
-             C260 252 266 241 276 235
-             L384 174
-             C394 168 407 175 407 187
-             L407 274
-             C407 285 401 295 392 300
-             L319 342
-             L319 385
-             C319 397 313 407 303 413
-             L284 424
-             C273 430 260 423 260 411Z"
-          fill="#4f6fb8"/>
-
-    <!-- Code mark -->
-    <path d="M176 256 L145 287 L176 318" stroke="white" stroke-width="18"/>
-    <path d="M218 251 L196 324" stroke="white" stroke-width="18"/>
-    <path d="M232 270 L250 287 L232 304" stroke="white" stroke-width="18"/>
-
-    <!-- Node / branch motif -->
-    <circle cx="322" cy="275" r="24" fill="white"/>
-    <path d="M338 293 L374 329" stroke="white" stroke-width="16"/>
-    <circle cx="392" cy="347" r="24" fill="#f5b335" stroke="white" stroke-width="8"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="43 37 428 428">
+  <!-- LDP: isometric cube with a branching node. Generated; faces shrunk 0.8 for gaps. -->
+  <path d="M256.0 76.0 L394.6 156.0 L256.0 236.0 L117.4 156.0Z" fill="#f5b335" stroke="#f5b335" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M100.1 186.0 L238.7 266.0 L238.7 426.0 L100.1 346.0Z" fill="#8fb3ff" stroke="#8fb3ff" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M273.3 266.0 L411.9 186.0 L411.9 269.2 L350.9 304.4 L350.9 381.2 L273.3 426.0Z" fill="#4f6fb8" stroke="#4f6fb8" stroke-width="18" stroke-linejoin="round"/>
+  <line x1="328.7" y1="291.6" x2="414.7" y2="341.2" stroke="#f5b335" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="328.7" cy="291.6" r="28" fill="#ffffff"/>
+  <circle cx="414.7" cy="341.2" r="24" fill="#f5b335"/>
 </svg>
