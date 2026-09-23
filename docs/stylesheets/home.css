@@ -18,6 +18,7 @@
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: 2.4rem;
   align-items: center;
+  width: 100%;
   max-width: 61rem;
   margin: 0 auto;
   padding: 2.6rem 1.2rem 2.8rem;
@@ -36,11 +37,10 @@
 .ldp-hero__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; }
 .ldp-hero__actions .md-button { margin: 0; }
 
-/* Terminal replay. Material centres figures, hence the .md-typeset prefix.
-   Same navy as the header so the page reads as one object. */
-.md-typeset .ldp-term, .md-typeset .ldp-term pre { text-align: left; }
+/* Terminal replay. Same navy as the header so the page reads as one object. */
 .ldp-term {
   margin: 0;
+  min-width: 0; /* width comes from the grid track, never from the text */
   background: var(--md-primary-fg-color);
   color: #cfd7e6;
   border-radius: 6px;
@@ -67,8 +67,11 @@
   padding: 0.6rem 0.8rem 0.7rem;
   overflow: hidden;
   display: flex; flex-direction: column; justify-content: flex-end;
+  container-type: inline-size;
 }
-.ldp-term pre { flex-shrink: 0; margin: 0; padding: 0; background: transparent; color: inherit; white-space: pre; overflow-x: auto; font-size: inherit; }
+.ldp-term pre { flex-shrink: 0; margin: 0; padding: 0; background: transparent; color: inherit; white-space: pre-wrap; overflow: hidden;
+  /* The URL table is 49 chars; a mono glyph is ~0.6em, so 3.3cqi keeps it on one line at any width. */
+  font-size: min(1em, 3.3cqi); }
 .t-cmd { color: #fff; }
 .t-cmd::before { content: "$ "; color: #7f8fb0; }
 .t-step { color: #8fb3ff; font-weight: 500; }
@@ -83,7 +86,7 @@
 @media (prefers-reduced-motion: reduce) { .t-cursor::after { animation: none; } }
 
 @media (max-width: 56em) {
-  .ldp-hero__inner { grid-template-columns: 1fr; gap: 1.6rem; padding-top: 1.8rem; }
+  .ldp-hero__inner { grid-template-columns: minmax(0, 1fr); gap: 1.6rem; padding-top: 1.8rem; }
   .ldp-hero h1 { max-width: none; }
   .ldp-term__body { height: 15rem; }
 }
