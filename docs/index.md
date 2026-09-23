@@ -8,17 +8,17 @@ hide:
 
 ## What LDP installs
 
-| Layer | Components | What it does |
-|-------|------------|--------------|
-| Networking | Traefik | Ingress for `*.127-0-0-1.nip.io` |
-| PKI | cert-manager, trust-manager | Local CA and TLS for every service |
-| Secrets | External Secrets, Reloader, Replicator | Generate, sync, and roll out secrets |
-| Auth | LLDAP, Authelia | Directory and single sign-on |
-| Storage | CloudNativePG | PostgreSQL for the platform apps |
-| VCS | Gitea, Gitea Actions | Git hosting and CI runners |
-| Orchestration | ArgoCD, Crossplane, Kargo | GitOps, infrastructure, promotion |
-| Portal | Backstage | Service catalog and scaffolder |
-| Devtools | kagent | AI agent runtime |
+| Area | Components | What it does |
+|------|------------|--------------|
+| Networking | Traefik | Gives every tool its own web address on your machine |
+| Certificates | cert-manager, trust-manager | Lets your browser open every tool securely |
+| Secrets | External Secrets, Reloader, Replicator | Creates passwords and shares them with the tools that need them |
+| Sign-in | LLDAP, Authelia | One username and password for every tool |
+| Databases | CloudNativePG | Stores data for the tools that need it |
+| Code | Gitea, Gitea Actions | Hosts your code and runs your builds |
+| Deployment | ArgoCD, Crossplane, Kargo | Keeps the platform in line with the code that describes it |
+| Portal | Backstage | One place to find and create services |
+| AI agents | kagent | Runs AI assistants inside the platform |
 
 ## Where to next
 
