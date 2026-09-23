@@ -1,0 +1,141 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: langgraph-agent
+  title: LangGraph Agent (kagent)
+  description: >-
+    A Python LangGraph agent in its own repo: built by Gitea Actions, deployed by ArgoCD and
+    served by kagent over A2A. Optionally triggered by Gitea pull request webhooks through a
+    RabbitMQ queue, with KEDA scaling the agent on queue depth.
+  tags:
+    - recommended
+    - agent
+    - kagent
+    - langgraph
+    - python
+spec:
+  owner: group:default/platform_maintainers
+  type: service
+
+  parameters:
+    - title: About the agent
+      required:
+        - name
+        - description
+        - owner
+        - systemPrompt
+      properties:
+        name:
+          title: Name
+          type: string
+          description: >-
+            Lowercase and dashes. Becomes the repo, the namespace, the kagent Agent and the
+            Python package (with dashes as underscores).
+          pattern: '^[a-z]([-a-z0-9]*[a-z0-9])?$'
+          maxLength: 40
+          ui:autofocus: true
+          ui:help: 'e.g. agent-reviewer'
+        description:
+          title: Description
+          type: string
+          description: >-
+            One line, shown in the kagent UI and the catalog. No double quotes or
+            backslashes (it lands in Python and TOML strings).
+          pattern: '^[^"\\]+$'
+        owner:
+          title: Owner
+          type: string
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind:
+                - Group
+                - User
+        systemPrompt:
+          title: System prompt
+          type: string
+          description: >-
+            Lands in graph.py as SYSTEM_PROMPT; change it there any time. No double quotes
+            or backslashes (it lands in a Python string).
+          pattern: '^[^"\\]+$'
+          ui:widget: textarea
+          ui:options:
+            rows: 8
+          default: |
+            You are a concise assistant running on the local developer platform.
+
+            Answer directly. Say plainly when you do not know something rather than guessing.
+        model:
+          title: Model
+          type: string
+          default: claude-sonnet-5
+          enum:
+            - claude-sonnet-5
+            - claude-opus-5-5
+            - claude-haiku-4-5
+          enumNames:
+            - Claude Sonnet 5 (default)
+            - Claude Opus 5.5 (most capable)
+            - Claude Haiku 4.5 (fastest, cheapest)
+
+    - title: Triggers
+      properties:
+        queue:
+          title: Webhook + queue
+          type: boolean
+          default: false
+          description: >-
+            Also run the agent on Gitea pull request events. Adds a webhook receiver, a
+            RabbitMQ queue and KEDA autoscaling. Leave off for a chat-only agent.
+
+  steps:
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
+      input:
+        url: ./content
+        # GitHub-style ${{ }} expressions belong to Gitea Actions, not the scaffolder
+        copyWithoutTemplating:
+          - .gitea/**
+        values:
+          name: ${{ parameters.name }}
+          pkgName: ${{ parameters.name | replace("-", "_") }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          systemPrompt: ${{ parameters.systemPrompt }}
+          model: ${{ parameters.model }}
+          queue: ${{ parameters.queue }}
+
+    - id: publish
+      name: Publish
+      action: publish:gitea
+      input:
+        description: ${{ parameters.description }}
+        repoUrl: vcs-127-0-0-1.nip.io?owner=local-developer-platform&repo=${{ parameters.name }}
+        defaultBranch: main
+
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Build (Gitea Actions)
+        url: https://vcs-127-0-0-1.nip.io/local-developer-platform/${{ parameters.name }}/actions
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
+      - title: Chat with it (kagent UI)
+        url: https://agents-127-0-0-1.nip.io
+    text:
+      - title: What happens next
+        content: |
+          Gitea Actions builds the image and pins its tag in `chart/values.yaml`; ArgoCD then
+          deploys the agent into the `${{ parameters.name }}` namespace. Until the first build
+          finishes the pod shows `ImagePullBackOff` — that's expected.
+          ${{ "The README explains how to point a Gitea webhook at the receiver." if parameters.queue else "" }}

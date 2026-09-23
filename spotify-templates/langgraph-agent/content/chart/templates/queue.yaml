@@ -1,0 +1,166 @@
+{{- if .Values.queue.enabled }}
+{{- $receiver := printf "%s-receiver" .Release.Name }}
+# Random values generated once (refreshPolicy: CreatedOnce) and never in Git: the rabbitmq
+# subchart reads password and erlang-cookie, the receiver password and webhook-secret, KEDA
+# password. Keep derived values (URLs) out of here — CreatedOnce never re-renders them.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: queue-password
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  length: 32
+  symbols: 0
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: queue-credentials
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshPolicy: CreatedOnce
+  target:
+    name: queue-credentials
+    template:
+      data:
+        username: {{ .Values.rabbitmq.auth.username | quote }}
+        password: '{{`{{ .password }}`}}'
+        erlang-cookie: '{{`{{ .cookie }}`}}'
+        webhook-secret: '{{`{{ .webhook }}`}}'
+  dataFrom:
+    {{- range $key := list "password" "cookie" "webhook" }}
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: queue-password
+      rewrite:
+        - regexp:
+            source: password
+            target: {{ $key }}
+    {{- end }}
+---
+# Webhook receiver + queue dispatcher: small, always on, no model key
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $receiver }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $receiver }}
+  template:
+    metadata:
+      labels:
+        app: {{ $receiver }}
+    spec:
+      containers:
+        - name: receiver
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["receive"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: AGENT_NAME
+              value: {{ .Release.Name }}
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: queue-credentials
+                  key: password
+            # Generated passwords are alphanumeric, so no URL escaping is needed
+            - name: AMQP_URL
+              value: "amqp://{{ .Values.rabbitmq.auth.username }}:$(RABBITMQ_PASSWORD)@rabbitmq:5672/"
+            - name: AGENT_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: queue-credentials
+                  key: webhook-secret
+            - name: AGENT_BRANCH_PREFIX
+              value: {{ .Values.queue.branchPrefix | quote }}
+            # The agent's own Service, not the card URL (which routes via the controller)
+            - name: AGENT_A2A_URL
+              value: "http://{{ .Release.Name }}:8080"
+            - name: AGENT_DISPATCH_CONCURRENCY
+              value: {{ .Values.queue.dispatch.concurrency | quote }}
+            - name: AGENT_DISPATCH_TIMEOUT
+              value: {{ .Values.queue.dispatch.timeout | quote }}
+          # The server only listens once connected to RabbitMQ, which can take a minute on
+          # a fresh install
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            # Not /readyz: a RabbitMQ outage should make the receiver unready, not restart it
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 20
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 25m, memory: 96Mi }
+            limits: { memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $receiver }}
+spec:
+  selector:
+    app: {{ $receiver }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+# Scales the controller-generated agent Deployment on ready + unacked messages. The http
+# protocol matters: over AMQP KEDA sees only ready messages, and the dispatcher takes
+# jobs off "ready" within milliseconds, so running work would be invisible.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  scaleTargetRef:
+    name: {{ .Release.Name }}
+  minReplicaCount: {{ .Values.queue.keda.minReplicas }}
+  maxReplicaCount: {{ .Values.queue.keda.maxReplicas }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          # HPA scale-in can kill a pod mid-run (the job is redelivered, not lost);
+          # holding capacity through a burst's quiet gaps makes that rare
+          stabilizationWindowSeconds: 600
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: http
+        # Namespace-qualified: the KEDA operator resolves it from its own namespace
+        host: "http://rabbitmq.{{ .Release.Namespace }}.svc:15672/"
+        queueName: jobs
+        mode: QueueLength
+        value: {{ .Values.agent.maxInflight | quote }}
+      authenticationRef:
+        name: {{ .Release.Name }}-rabbitmq
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ .Release.Name }}-rabbitmq
+spec:
+  secretTargetRef:
+    - parameter: username
+      name: queue-credentials
+      key: username
+    - parameter: password
+      name: queue-credentials
+      key: password
+{{- end }}
