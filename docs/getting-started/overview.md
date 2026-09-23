@@ -73,19 +73,14 @@ make status
 
 ## Accessing Services
 
-Once deployed, services are available at:
+When `make up` finishes, it prints the web address of every tool and the
+usernames and passwords to sign in with. Run `make info` at any time to see
+them again.
 
-| Service   | URL                                  |
-|-----------|--------------------------------------|
-| ArgoCD    | https://cd-127-0-0-1.nip.io         |
-| Authelia   | https://auth-127-0-0-1.nip.io       |
-| Gitea     | https://vcs-127-0-0-1.nip.io        |
-| Backstage | https://portal-127-0-0-1.nip.io     |
-
-Credentials are displayed after `make up` completes, or run `make info` to see them again.
-
-!!! warning
-    You will see browser security warnings for self-signed certificates. This is expected in local development.
+!!! tip "Browser security warnings"
+    The platform uses its own certificates, so your browser will warn you the
+    first time you open a tool. Run `make trust-ca` once to trust them and the
+    warnings go away.
 
 ## Useful Commands
 
@@ -98,6 +93,7 @@ Credentials are displayed after `make up` completes, or run `make info` to see t
 | `make status`    | Show platform health     |
 | `make kubeconfig`| Update kubeconfig        |
 | `make preflight` | Check prerequisites      |
+| `make trust-ca`  | Trust the platform certificates |
 
 ## Next Steps
 
