@@ -81,6 +81,16 @@
 .t-dim { color: #7f8fb0; }
 .t-ready { color: #6fd39a; font-weight: 500; }
 .t-hd { color: #fff; font-weight: 500; }
+.t-tbl {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  margin-left: 2ch;
+  border: 1px solid #7f8fb0;
+  border-radius: 2px;
+}
+.t-tbl > span { padding: 0 1ch; }
+.t-tbl > span:nth-child(odd) { border-right: 1px solid #7f8fb0; }
+.t-tbl > .t-th { color: #fff; padding-block: 0.15em; border-bottom: 1px solid #7f8fb0; margin-bottom: 0.15em; }
 .t-cursor::after { content: "▍"; color: var(--ldp-amber); animation: ldp-blink 1s steps(1, end) infinite; }
 @keyframes ldp-blink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .t-cursor::after { animation: none; } }
@@ -97,5 +107,6 @@
 .ldp-next a { font-weight: 600; }
 
 /* Header logo: Material defaults to 1.2rem; the cube needs more to read. */
-.md-header__button.md-logo { padding-block: 0.2rem; margin-block: 0; }
+[dir] .md-header__button.md-logo { padding: 0.2rem; margin-block: 0; }
+[dir] .md-header__title { margin-left: 0.3rem; }
 .md-header__button.md-logo img { height: 2rem; }
