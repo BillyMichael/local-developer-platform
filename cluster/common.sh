@@ -10,6 +10,7 @@ BLUE="\033[34m"
 RED="\033[31m"
 NC="\033[0m"
 BOLD="\033[1m"
+DIM="\033[2m"
 
 # ============================================================================
 # FORMATTING FUNCTIONS
@@ -36,6 +37,18 @@ ok()    { printf "  ${GREEN}✔${NC} %s\n" " $1"; }
 warn()  { printf "  ${YELLOW}!${NC} %s\n" " $1"; }
 error() { printf "  ${RED}✖${NC} %s\n" " $1"; }
 
+# Prints $1 if set; otherwise asks for a hidden value when stdin is a terminal.
+# Enter on its own skips (prints nothing). Prompt goes to stderr so $(...) only captures the value.
+prompt_secret() {
+  local value="$1"
+  if [ -z "$value" ] && [ -t 0 ]; then
+    printf "  ${BLUE}?${NC}  %s (input hidden, Enter to skip): " "$2" >&2
+    read -rs value || value=""
+    printf "\n" >&2
+  fi
+  printf '%s' "$value"
+}
+
 banner() {
   printf "${BOLD}${BLUE}"
   cat <<'EOF'
@@ -47,7 +60,7 @@ banner() {
   ███████╗██████╔╝ ██║
   ╚══════╝╚═════╝  ╚═╝
 EOF
-  printf "${NC}\n  ${BOLD}Local Developer Platform${NC}\n"
+  printf "${NC}\n  ${BOLD}Local Developer Platform${NC}  by Billy Michael\n"
 }
 
 # ============================================================================
@@ -285,11 +298,13 @@ wait_for() {
       while :; do
         # stdin from /dev/null so `kubectl run -i` doesn't fight for the tty.
         if bash -c "${cmds[$i]}" </dev/null >"$tmpdir/$i.log" 2>&1; then
-          echo "ok $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status"
+          # Publish atomically: a plain `>` truncates first and writes second, and the
+          # render loop can read the empty file in between, which kills the script under set -e.
+          echo "ok $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status.tmp" && mv "$tmpdir/$i.status.tmp" "$tmpdir/$i.status"
           exit 0
         fi
         if (( $(date +%s) >= deadline )); then
-          echo "fail $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status"
+          echo "fail $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status.tmp" && mv "$tmpdir/$i.status.tmp" "$tmpdir/$i.status"
           exit 1
         fi
         sleep 2
