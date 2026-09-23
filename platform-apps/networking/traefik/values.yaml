@@ -41,10 +41,6 @@ traefik:
   service:
     type: NodePort
 
-  metrics:
-    prometheus:
-      enabled: true
-
   additionalArguments:
     - --api.insecure=false
     - --log.level=INFO

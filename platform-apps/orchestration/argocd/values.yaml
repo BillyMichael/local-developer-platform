@@ -20,7 +20,6 @@ argo-cd:
         memory: 128Mi
       limits:
         memory: 256Mi
-    insecure: true
     podAnnotations:
       secret.reloader.stakater.com/reload: "argocd-oidc-client-secret"
     ingress:
@@ -41,10 +40,6 @@ argo-cd:
         memory: 512Mi
       limits:
         memory: 1536Mi
-    metrics:
-      enabled: true
-  serverMetrics:
-    enabled: true
   repoServer:
     resources:
       requests:
@@ -52,8 +47,6 @@ argo-cd:
         memory: 256Mi
       limits:
         memory: 768Mi
-    metrics:
-      enabled: true
   applicationSet:
     resources:
       requests:
@@ -61,8 +54,6 @@ argo-cd:
         memory: 64Mi
       limits:
         memory: 128Mi
-    metrics:
-      enabled: true
 
   dex:
     enabled: false

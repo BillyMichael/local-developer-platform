@@ -20,6 +20,9 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get"]
   - apiGroups: [""]
     resources: ["pods/exec"]
     verbs: ["create"]
@@ -69,29 +72,14 @@ spec:
               echo "Waiting for Gitea pod to be ready..."
               kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=gitea -n $NAMESPACE --timeout=300s
 
-              POD_NAME=$(kubectl get pod -l app.kubernetes.io/name=gitea -n $NAMESPACE -o jsonpath="{.items[0].metadata.name}")
-              if [ -z "$POD_NAME" ]; then
-                echo "No Gitea pod found"
-                exit 1
-              fi
-              echo "Found Gitea pod: $POD_NAME"
-
-              # Check if secret already exists - skip token generation if so
+              # Reuse the token if the secret exists, otherwise generate one and store it
               if kubectl get secret gitea-admin-token -n $NAMESPACE >/dev/null 2>&1; then
                 echo "Token secret already exists, skipping token generation"
                 TOKEN=$(kubectl get secret gitea-admin-token -n $NAMESPACE -o jsonpath='{.data.token}' | base64 -d)
               else
                 echo "Generating new token..."
-                TOKEN=$(kubectl exec -n $NAMESPACE $POD_NAME -- /usr/local/bin/gitea admin user generate-access-token --username gitea_admin --token-name backstage-token --scopes write:repository,read:organization,write:organization,read:user,write:admin,write:user,read:issue --raw)
-              fi
-
-              if [ -z "$TOKEN" ]; then
-                echo "Failed to get or generate token"
-                exit 1
-              fi
-
-              # Only create secret if it doesn't exist yet
-              if ! kubectl get secret gitea-admin-token -n $NAMESPACE >/dev/null 2>&1; then
+                TOKEN=$(kubectl exec -n $NAMESPACE deploy/gitea -- /usr/local/bin/gitea admin user generate-access-token --username gitea_admin --token-name backstage-token --scopes write:repository,read:organization,write:organization,read:user,write:admin,write:user,read:issue --raw)
+                [ -n "$TOKEN" ] || { echo "Failed to generate token"; exit 1; }
                 echo "Creating secret in $NAMESPACE namespace with Replicator annotation..."
                 cat <<EOF | kubectl apply -f -
               apiVersion: v1
@@ -140,7 +128,7 @@ spec:
 
               # Create default organization if it doesn't exist
               echo "Creating default organization..."
-              kubectl exec -n $NAMESPACE $POD_NAME -- wget -q -O- \
+              kubectl exec -n $NAMESPACE deploy/gitea -- wget -q -O- \
                 --header="Authorization: token $TOKEN" \
                 --header="Content-Type: application/json" \
                 --post-data='{"username":"local-developer-platform","full_name":"Local Developer Platform","description":"Platform infrastructure and services","visibility":"public"}' \
