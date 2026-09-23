@@ -37,68 +37,9 @@
 .ldp-hero__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; }
 .ldp-hero__actions .md-button { margin: 0; }
 
-/* Terminal replay. Same navy as the header so the page reads as one object. */
-.ldp-term {
-  margin: 0;
-  min-width: 0; /* width comes from the grid track, never from the text */
-  background: var(--md-primary-fg-color);
-  color: #cfd7e6;
-  border-radius: 6px;
-  overflow: hidden;
-  font: 0.62rem/1.6 var(--md-code-font-family);
-}
-.ldp-term__bar {
-  display: flex; align-items: center; gap: 0.3rem;
-  padding: 0.35rem 0.6rem;
-  font-size: 0.55rem;
-  background: var(--md-primary-fg-color--dark);
-}
-.ldp-term__bar i { width: 0.4rem; height: 0.4rem; border-radius: 50%; background: currentColor; opacity: 0.35; }
-.ldp-term__bar i:nth-child(3) { margin-right: 0.4rem; }
-.ldp-term__bar span { opacity: 0.75; }
-.ldp-term__bar button {
-  margin-left: auto; font: inherit; color: inherit; cursor: pointer;
-  background: transparent; border: 1px solid rgba(255,255,255,0.25); border-radius: 3px;
-  padding: 0.1rem 0.45rem; opacity: 0.8;
-}
-.ldp-term__bar button:hover, .ldp-term__bar button:focus-visible { opacity: 1; outline: 2px solid var(--ldp-amber); outline-offset: 1px; }
-.ldp-term__body {
-  height: 16.5rem;
-  padding: 0.6rem 0.8rem 0.7rem;
-  overflow: hidden;
-  display: flex; flex-direction: column; justify-content: flex-end;
-  container-type: inline-size;
-}
-.ldp-term pre { flex-shrink: 0; margin: 0; padding: 0; background: transparent; color: inherit; white-space: pre-wrap; overflow: hidden;
-  /* The URL table is 49 chars; a mono glyph is ~0.6em, so 3.3cqi keeps it on one line at any width. */
-  font-size: min(1em, 3.3cqi); }
-.t-cmd { color: #fff; }
-.t-cmd::before { content: "$ "; color: #7f8fb0; }
-.t-step { color: #8fb3ff; font-weight: 500; }
-.t-ok { color: #6fd39a; }
-.t-warn, .t-url { color: var(--ldp-amber); }
-.t-spin { color: #8fb3ff; }
-.t-dim { color: #7f8fb0; }
-.t-ready { color: #6fd39a; font-weight: 500; }
-.t-hd { color: #fff; font-weight: 500; }
-.t-tbl {
-  display: inline-grid;
-  grid-template-columns: auto auto;
-  margin-left: 2ch;
-  border: 1px solid #7f8fb0;
-  border-radius: 2px;
-}
-.t-tbl > span { padding: 0 1ch; }
-.t-tbl > span:nth-child(odd) { border-right: 1px solid #7f8fb0; }
-.t-tbl > .t-th { color: #fff; padding-block: 0.15em; border-bottom: 1px solid #7f8fb0; margin-bottom: 0.15em; }
-.t-cursor::after { content: "▍"; color: var(--ldp-amber); animation: ldp-blink 1s steps(1, end) infinite; }
-@keyframes ldp-blink { 50% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .t-cursor::after { animation: none; } }
-
 @media (max-width: 56em) {
   .ldp-hero__inner { grid-template-columns: minmax(0, 1fr); gap: 1.6rem; padding-top: 1.8rem; }
   .ldp-hero h1 { max-width: none; }
-  .ldp-term__body { height: 15rem; }
 }
 
 /* Home body: plain sections, no card grid. */
