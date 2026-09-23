@@ -252,7 +252,7 @@ run_step "Enabling ApplicationSets" \
 #   wave-2: crossplane-compositions                     (XRDs & compositions)
 #   wave-3: traefik, trust-manager, lldap, reloader,    (core infra)
 #           kubernetes-replicator, argocd
-#   wave-4: authelia, cloudnative-pg                     (OIDC & operators)
+#   wave-4: authelia, cloudnative-pg, keda               (OIDC & operators)
 #   wave-5: gitea, kargo                                (VCS & delivery)
 #   wave-6: backstage, gitea-actions, kagent            (portal, CI runner, agents)
 # ============================================================================

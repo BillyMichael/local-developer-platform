@@ -7,6 +7,9 @@ spec:
   - secret:
       name: "root-ca"
       key: "tls.crt"
+  # Public roots too: consumers point SSL_CERT_FILE at this bundle (Gitea, Actions jobs),
+  # which replaces the system store, so without them nothing can reach the internet
+  - useDefaultCAs: true
   target:
     configMap:
       key: "trust-bundle.pem"

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: ${{ values.name }}
+description: LangGraph agent ${{ values.name }} on kagent
+version: 0.1.0
+appVersion: "0.1.0"
+
+dependencies:
+  # Job queue for webhook-triggered runs; only deployed with queue.enabled
+  - name: rabbitmq
+    version: 0.21.28
+    repository: oci://registry-1.docker.io/cloudpirates
+    condition: queue.enabled

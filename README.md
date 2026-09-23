@@ -86,7 +86,7 @@ local-developer-platform/
 │   ├── networking/            # Traefik (Ingress Controller)
 │   ├── pki/                   # Cert-Manager, Trust-Manager
 │   ├── secrets/               # External-Secrets, Reloader, Replicator
-│   ├── orchestration/         # ArgoCD, Crossplane, Kargo
+│   ├── orchestration/         # ArgoCD, Crossplane, Kargo, KEDA
 │   ├── storage/               # CloudNativePG
 │   ├── vcs/                   # Gitea (Git server)
 │   ├── portal/                # Backstage developer portal

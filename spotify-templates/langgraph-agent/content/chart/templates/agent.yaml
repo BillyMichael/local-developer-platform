@@ -1,0 +1,43 @@
+# API key: an empty stub that kubernetes-replicator fills from the platform copy.
+# ArgoCD leaves the replicated data alone because it is not part of the desired manifest.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kagent-anthropic
+  annotations:
+    replicator.v1.mittwald.de/replicate-from: devtools/kagent-anthropic
+type: Opaque
+---
+# BYO agent: the kagent controller turns this into a Deployment and Service (both named
+# after the release, port 8080) and mounts the generated agent card at /config.
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  description: {{ .Values.agent.description | quote }}
+  type: BYO
+  byo:
+    deployment:
+      image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      # No `replicas`: unset, the controller creates 1 and then leaves the count alone,
+      # which is what lets KEDA scale this Deployment. Setting it makes the two fight.
+      resources:
+        {{- toYaml .Values.resources | nindent 8 }}
+      env:
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kagent-anthropic
+              key: ANTHROPIC_API_KEY
+        - name: AGENT_MODEL
+          value: {{ .Values.agent.model | quote }}
+        - name: AGENT_VERSION
+          value: {{ .Values.image.tag | quote }}
+        - name: AGENT_EXECUTION_TIMEOUT
+          value: {{ .Values.agent.executionTimeout | quote }}
+        - name: AGENT_RECURSION_LIMIT
+          value: {{ .Values.agent.recursionLimit | quote }}
+        - name: AGENT_MAX_INFLIGHT
+          value: {{ .Values.agent.maxInflight | quote }}

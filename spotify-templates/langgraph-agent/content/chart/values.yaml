@@ -1,0 +1,64 @@
+agent:
+  # Shown in the kagent UI and used as the A2A agent card description
+  description: ${{ values.description | dump }}
+  # Anthropic model id, read by graph.py (AGENT_MODEL)
+  model: ${{ values.model }}
+  # Seconds kagent allows one graph run before failing it (its default, 300, fits a chat turn)
+  executionTimeout: 900
+  # LangGraph steps per run, ~2 per tool call
+  recursionLimit: 50
+  # A2A requests one pod runs at once; past it the pod answers 503 and the dispatcher
+  # retries. Also KEDA's per-pod target, so size it against resources.limits.memory.
+  maxInflight: 4
+
+image:
+  repository: vcs-127-0-0-1.nip.io/local-developer-platform/${{ values.name }}
+  # CI rewrites this to the commit SHA after every image build on main
+  tag: latest
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    memory: 1Gi
+
+# Gitea webhook -> RabbitMQ -> dispatcher -> this agent, with KEDA scaling the agent's pods
+# on queue depth. Off: the agent is interactive-only (kagent UI and A2A).
+queue:
+  enabled: ${{ values.queue }}
+  # Only enqueue pull requests whose source branch starts with this, e.g. "renovate/"
+  branchPrefix: ""
+  dispatch:
+    # Jobs relayed at once. Keep >= keda.maxReplicas x agent.maxInflight or scale-out
+    # adds pods that never get work.
+    concurrency: 20
+    # Seconds for one relay: waiting for a free pod plus the run itself
+    timeout: 3600
+  keda:
+    # 1, not 0: the pods also serve the kagent UI, and a Service with no endpoints can't
+    # be woken by the relays failing against it
+    minReplicas: 1
+    maxReplicas: 5
+
+# Subchart (CloudPirates, official rabbitmq image). Credentials come from the
+# ExternalSecret in templates/queue.yaml so they survive ArgoCD re-renders.
+rabbitmq:
+  fullnameOverride: rabbitmq
+  auth:
+    username: admin
+    existingSecret: queue-credentials
+  config:
+    # Above queue.dispatch.timeout (ms): RabbitMQ closes a channel whose delivery stays
+    # unacked longer than this, and a relay holds its delivery for the whole run
+    extraConfiguration: |
+      consumer_timeout = 7200000
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
