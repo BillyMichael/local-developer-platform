@@ -86,19 +86,12 @@ printf "  └──────────────────┴───�
 # ============================================================================
 # CA TRUST NOTICE
 # ============================================================================
-# Probe a platform URL using only the OS trust store. curl exit 60 means the
-# platform CA is not trusted yet, so every browser hit will warn. Any other
-# outcome (trusted, or the endpoint not up yet) prints nothing: the aim is to
-# answer "why is my browser shouting at me", not to nag on every run.
-#
-# On WSL the CA is imported into Windows, where the browser runs, so a Linux
-# curl still fails after `make trust-ca`. Word the notice for that case rather
-# than claiming the CA is definitely untrusted.
+# curl exit 60 = the OS trust store lacks the platform CA; anything else prints nothing.
+# Under WSL the CA lives in Windows, so Linux curl fails even after `make trust-ca`.
 
 if command -v curl >/dev/null 2>&1; then
-  # `|| rc=$?` keeps set -e from aborting here: a failing probe is the interesting case
   ca_rc=0
-  curl -s -o /dev/null --max-time 5 https://portal-127-0-0-1.nip.io >/dev/null 2>&1 || ca_rc=$?
+  curl -s -o /dev/null --max-time 5 https://portal-127-0-0-1.nip.io || ca_rc=$?
   if [ "$ca_rc" -eq 60 ]; then
     warn "Browsers will show TLS warnings until the platform CA is trusted."
     printf "  ${BLUE}\u279c${NC}  Run ${DIM}\`${NC}${BOLD}${YELLOW}make trust-ca${NC}${DIM}\`${NC}, then restart your browser.\n"

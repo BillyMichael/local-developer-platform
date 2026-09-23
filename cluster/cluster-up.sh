@@ -180,16 +180,7 @@ step 3 $TOTAL_STEPS "Optional Credentials"
 if kubectl --context "$CONTEXT_NAME" -n portal get secret github-token >/dev/null 2>&1; then
   ok "GitHub token secret already exists"
 else
-  gh_token="${GITHUB_TOKEN:-}"
-  if [ -z "$gh_token" ] && [ -t 0 ]; then
-    printf "  ${BLUE}?${NC}  Provide a GitHub token for Backstage catalog reads? [y/N] "
-    read -r gh_reply || gh_reply=""
-    if [[ "$gh_reply" =~ ^[Yy] ]]; then
-      printf "  ${BLUE}➜${NC}  Enter token (input hidden): "
-      read -rs gh_token || gh_token=""
-      printf "\n"
-    fi
-  fi
+  gh_token="$(prompt_secret "${GITHUB_TOKEN:-}" "GitHub token for Backstage catalog reads")"
   if [ -n "$gh_token" ]; then
     kubectl --context "$CONTEXT_NAME" create namespace portal --dry-run=client -o yaml |
       kubectl --context "$CONTEXT_NAME" apply -f - >/dev/null
@@ -208,16 +199,7 @@ fi
 if kubectl --context "$CONTEXT_NAME" -n devtools get secret kagent-anthropic >/dev/null 2>&1; then
   ok "Anthropic API key secret already exists"
 else
-  anthropic_key="${ANTHROPIC_API_KEY:-}"
-  if [ -z "$anthropic_key" ] && [ -t 0 ]; then
-    printf "  ${BLUE}?${NC}  Provide an Anthropic API key for kagent agents? [y/N] "
-    read -r ak_reply || ak_reply=""
-    if [[ "$ak_reply" =~ ^[Yy] ]]; then
-      printf "  ${BLUE}➜${NC}  Enter key (input hidden): "
-      read -rs anthropic_key || anthropic_key=""
-      printf "\n"
-    fi
-  fi
+  anthropic_key="$(prompt_secret "${ANTHROPIC_API_KEY:-}" "Anthropic API key for kagent agents")"
   kubectl --context "$CONTEXT_NAME" create namespace devtools --dry-run=client -o yaml |
     kubectl --context "$CONTEXT_NAME" apply -f - >/dev/null
   kubectl --context "$CONTEXT_NAME" -n devtools create secret generic kagent-anthropic \
