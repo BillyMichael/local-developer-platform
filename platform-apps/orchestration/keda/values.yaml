@@ -1,0 +1,17 @@
+ldp:
+  syncWave: wave-4
+  # KEDA's CRDs exceed the 256KiB last-applied-configuration annotation limit
+  serverSideApply: true
+
+keda:
+  # The platform runs on a laptop: trim the chart's 1 CPU / 1000Mi limits
+  resources:
+    operator:
+      requests: { cpu: 20m, memory: 64Mi }
+      limits: { memory: 256Mi }
+    metricServer:
+      requests: { cpu: 20m, memory: 64Mi }
+      limits: { memory: 256Mi }
+    webhooks:
+      requests: { cpu: 10m, memory: 32Mi }
+      limits: { memory: 128Mi }

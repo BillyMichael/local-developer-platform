@@ -15,33 +15,10 @@ spec:
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
-  namespaceResourceWhitelist:
-    - group: ""
-      kind: Service
-    - group: ""
-      kind: ConfigMap
-    - group: ""
-      kind: Secret
-    - group: ""
-      kind: ServiceAccount
-    - group: apps
-      kind: Deployment
-    - group: apps
-      kind: StatefulSet
-    - group: apps
-      kind: ReplicaSet
-    - group: batch
-      kind: Job
-    - group: batch
-      kind: CronJob
-    - group: networking.k8s.io
-      kind: Ingress
-    - group: networking.k8s.io
-      kind: NetworkPolicy
-    - group: postgresql.cnpg.io
-      kind: Cluster
-    # Agent, ModelConfig, RemoteMCPServer, MCPServer (spotify-templates/agent)
-    - group: kagent.dev
+  # Tenants are pinned to their own namespace by destinations above; within it,
+  # allow everything except RBAC so a tenant repo cannot grant itself more
+  namespaceResourceBlacklist:
+    - group: rbac.authorization.k8s.io
       kind: "*"
   orphanedResources:
     warn: true
