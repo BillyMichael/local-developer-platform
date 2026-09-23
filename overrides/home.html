@@ -1,0 +1,144 @@
+{% extends "main.html" %}
+
+{% block tabs %}
+  {{ super() }}
+  <section class="ldp-hero md-typeset">
+    <div class="ldp-hero__inner">
+      <div>
+        <h1>An internal developer platform that runs on your laptop.</h1>
+        <p>
+          <code>make up</code> creates a kind cluster and hands it to ArgoCD,
+          which installs Git hosting, single sign-on, CI runners, a developer
+          portal, and an AI agent runtime. Every URL resolves to 127.0.0.1.
+        </p>
+        <div class="ldp-hero__actions">
+          <a href="getting-started/overview/" class="md-button md-button--primary">Get started</a>
+          <a href="{{ config.repo_url }}" class="md-button">View on GitHub</a>
+        </div>
+      </div>
+
+      <figure class="ldp-term" aria-label="Replay of make up">
+        <div class="ldp-term__bar"><i></i><i></i><i></i><span>make up</span>
+          <button type="button" id="ldp-replay">Replay</button></div>
+        <div class="ldp-term__body"><pre id="ldp-out" aria-live="off"></pre></div>
+      </figure>
+    </div>
+  </section>
+
+  <script>
+  (function () {
+    // ponytail: hand-mirrored from cluster/cluster-up.sh, common.sh and show-info.sh.
+    // Update this list when steps change. Durations are illustrative.
+    var S = [
+      ['cmd',  'make up'], ['gap'],
+      ['step', '==> [1/10] Preflight Checks'],
+      ['ok', 'docker found'], ['ok', 'kind found'], ['ok', 'kubectl found'], ['ok', 'helm found'],
+      ['ok', '15GB RAM available to docker'], ['gap'],
+      ['step', '==> [2/10] Creating Kind Cluster'],
+      ['run', "Creating cluster 'ldp'", 38],
+      ['run', "Setting kubectl context to 'kind-ldp'", 0],
+      ['run', 'Patching CoreDNS for nip.io resolution', 2], ['gap'],
+      ['step', '==> [3/10] Optional Credentials'],
+      ['warn', 'No GitHub token provided; GitHub reads run anonymously (60 req/hr)'], ['gap'],
+      ['step', '==> [4/10] Installing Argo CD'],
+      ['run', 'Deploying Argo CD (without ApplicationSets)', 41],
+      ['run', 'Enabling ApplicationSets', 6], ['gap'],
+      ['step', '==> [5/10] Wave 1: Foundations'],
+      ['wait', ['cert-manager', 'external-secrets'], [24, 31]], ['gap'],
+      ['step', '==> [6/10] Wave 2: Crossplane Compositions'],
+      ['wait', ['Crossplane provider-kubernetes'], [52]], ['gap'],
+      ['step', '==> [7/10] Wave 3: Core Infrastructure'],
+      ['wait', ['Traefik service', 'LLDAP'], [18, 44]], ['gap'],
+      ['step', '==> [8/10] Wave 4: Authentication & Operators'],
+      ['wait', ['Authelia'], [37]], ['gap'],
+      ['step', '==> [9/10] Wave 5: Version Control & Delivery'],
+      ['wait', ['Gitea'], [96]], ['gap'],
+      ['step', '==> [10/10] Wave 6: Developer Portal'],
+      ['wait', ['Backstage', 'kagent'], [142, 63]], ['gap'],
+      ['ready', 'Platform ready in 7m42s'], ['gap'],
+      ['cmd', 'make info'], ['gap'],
+      ['table']
+    ];
+    var URLS = [
+      ['ArgoCD', 'https://cd-127-0-0-1.nip.io'],
+      ['Authelia', 'https://auth-127-0-0-1.nip.io'],
+      ['Gitea', 'https://vcs-127-0-0-1.nip.io'],
+      ['Backstage', 'https://portal-127-0-0-1.nip.io'],
+      ['kagent', 'https://agents-127-0-0-1.nip.io']
+    ];
+    var FRAMES = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
+    var out = document.getElementById('ldp-out');
+    var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var timers = [];
+
+    function esc(s) { return s.replace(/[&<>]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+    function pad(s, n) { return s + ' '.repeat(Math.max(0, n - s.length)); }
+    function line(cls, html) { var el = document.createElement('span'); el.className = cls; el.innerHTML = html + '\n'; out.appendChild(el); return el; }
+    function okText(msg, d) { return '  <span class="t-ok">✔</span>  ' + esc(msg) + ' <span class="t-dim">(' + d + 's)</span>'; }
+
+    function table() {
+      var w1 = Math.max.apply(null, URLS.map(function (r) { return r[0].length; }).concat(['Service'.length])) + 2;
+      var w2 = Math.max.apply(null, URLS.map(function (r) { return r[1].length; }).concat(['URL'.length])) + 2;
+      var bar = function (l, m, r) { return '  ' + l + '─'.repeat(w1) + m + '─'.repeat(w2) + r; };
+      var v = '<span class="t-dim">│</span>';
+      line('t-hd', 'URLs:'); line('', '');
+      line('t-dim', bar('┌','┬','┐'));
+      line('', '  ' + v + ' ' + pad('Service', w1 - 1) + v + ' ' + pad('URL', w2 - 1) + v);
+      line('t-dim', bar('├','┼','┤'));
+      URLS.forEach(function (r) {
+        line('', '  ' + v + ' ' + pad(r[0], w1 - 1) + v + ' <span class="t-url">' + r[1] + '</span>' + ' '.repeat(w2 - 1 - r[1].length) + v);
+      });
+      line('t-dim', bar('└','┴','┘'));
+    }
+
+    function render(upTo, instant) {
+      out.innerHTML = '';
+      for (var i = 0; i < upTo; i++) {
+        var k = S[i][0], a = S[i][1], b = S[i][2];
+        if (k === 'gap') line('', '');
+        else if (k === 'cmd') line('t-cmd', esc(a));
+        else if (k === 'step') line('t-step', esc(a));
+        else if (k === 'ok') line('', '  <span class="t-ok">✔</span>  ' + esc(a));
+        else if (k === 'warn') line('', '  <span class="t-warn">!</span>  ' + esc(a));
+        else if (k === 'run') line('', okText(a, b));
+        else if (k === 'wait') a.forEach(function (l, j) { line('', okText(l, b[j])); });
+        else if (k === 'ready') line('t-ready', esc(a));
+        else if (k === 'table') table();
+      }
+      if (!instant) line('t-cursor', '');
+    }
+
+    function play() {
+      timers.forEach(clearTimeout); timers.forEach(clearInterval); timers = [];
+      if (reduced) { render(S.length, true); return; }
+      var i = 0;
+      var at = function (ms, fn) { timers.push(setTimeout(fn, ms)); };
+      var next = function () {
+        if (i >= S.length) { render(S.length, false); return; }
+        var k = S[i][0], a = S[i][1];
+        if (k === 'run' || k === 'wait') {
+          var labels = k === 'run' ? [a] : a;
+          render(i, false); out.lastChild.remove();
+          var els = labels.map(function (l) { return line('', '  <span class="t-spin">' + FRAMES[0] + '</span>  ' + esc(l) + '...'); });
+          var f = 0;
+          var spin = setInterval(function () { f++; els.forEach(function (el) { el.querySelector('.t-spin').textContent = FRAMES[f % FRAMES.length]; }); }, 80);
+          timers.push(spin);
+          at(k === 'run' ? 650 : 900, function () { clearInterval(spin); i++; next(); });
+        } else {
+          i++; render(i, false);
+          at(k === 'gap' ? 60 : k === 'step' ? 320 : k === 'table' ? 0 : 140, next);
+        }
+      };
+      at(400, next);
+    }
+
+    document.getElementById('ldp-replay').addEventListener('click', play);
+    play();
+  })();
+  </script>
+{% endblock %}
+
+{# Home has no page title heading; the hero carries the h1. #}
+{% block content %}
+  {{ page.content }}
+{% endblock %}
