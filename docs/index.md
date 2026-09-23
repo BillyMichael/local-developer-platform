@@ -1,55 +1,32 @@
-# Local Developer Platform
+---
+title: Local Developer Platform
+template: home.html
+hide:
+  - navigation
+  - toc
+---
 
-Welcome to the Local Developer Platform documentation. This platform provides a complete, self-contained development environment running on Kubernetes.
+## What `make up` installs
 
-## What is the Local Developer Platform?
+Every component is a Helm chart under `platform-apps/`, deployed by ArgoCD
+into a namespace named after its folder. Add a chart, push, and it appears.
 
-The Local Developer Platform (LDP) is a GitOps-managed Kubernetes platform that brings together essential development tools:
+| Layer | Components | What it does |
+|-------|------------|--------------|
+| Networking | Traefik | Ingress for `*.127-0-0-1.nip.io` |
+| PKI | cert-manager, trust-manager | Local CA and TLS for every service |
+| Secrets | External Secrets, Reloader, Replicator | Generate, sync, and roll out secrets |
+| Auth | LLDAP, Authelia | Directory and single sign-on |
+| Storage | CloudNativePG | PostgreSQL for the platform apps |
+| VCS | Gitea, Gitea Actions | Git hosting and CI runners |
+| Orchestration | ArgoCD, Crossplane, Kargo | GitOps, infrastructure, promotion |
+| Portal | Backstage | Service catalog and scaffolder |
+| Devtools | kagent | AI agent runtime |
 
-- **Version Control**: Gitea for Git repository hosting
-- **CI/CD**: ArgoCD for GitOps-based continuous delivery
-- **Developer Portal**: Backstage for service catalog and developer experience
-- **Authentication**: Authelia with LDAP for single sign-on
-- **Infrastructure**: Crossplane for infrastructure as code
-- **Storage**: CloudNativePG for PostgreSQL
+## Where to next
 
-## Quick Links
-
-<div class="grid cards" markdown>
-
--   :material-rocket-launch:{ .lg .middle } **Getting Started**
-
-    ---
-
-    Learn how to set up and run the platform locally
-
-    [:octicons-arrow-right-24: Getting Started](getting-started/overview.md)
-
--   :material-kubernetes:{ .lg .middle } **Add a Helm Chart**
-
-    ---
-
-    Step-by-step guide to adding new applications to the platform
-
-    [:octicons-arrow-right-24: Adding Helm Charts](guides/adding-helm-charts.md)
-
--   :material-chart-arc:{ .lg .middle } **Architecture**
-
-    ---
-
-    Understand how the platform components work together
-
-    [:octicons-arrow-right-24: Architecture Overview](architecture/overview.md)
-
-</div>
-
-## Platform Components
-
-| Category | Components | Description |
-|----------|------------|-------------|
-| **Core** | Traefik, Cert-Manager, External-Secrets | Ingress, TLS, and secrets management |
-| **Auth** | Authelia, LLDAP | Authentication and directory services |
-| **VCS** | Gitea | Git repository hosting |
-| **Orchestration** | ArgoCD, Crossplane, Kargo | GitOps and infrastructure management |
-| **Portal** | Backstage | Developer portal and service catalog |
-| **Storage** | CloudNativePG | Database |
+<ul class="ldp-next" markdown>
+<li markdown>[Getting started](getting-started/overview.md): prerequisites, `make up`, and the first login.</li>
+<li markdown>[Adding a Helm chart](guides/adding-helm-charts.md): how a new folder becomes a running app.</li>
+<li markdown>[Architecture](architecture/overview.md): how the components depend on each other.</li>
+</ul>
