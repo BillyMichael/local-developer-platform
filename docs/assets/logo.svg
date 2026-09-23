@@ -1,4 +1,4 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="82 72 360 360" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- LDP Local Developer Platform icon -->
   <g stroke-linejoin="round" stroke-linecap="round">
     <!-- Top face: amber -->
@@ -23,7 +23,7 @@
              C252 420 238 427 227 421
              L119 360
              C110 355 105 345 105 334Z"
-          fill="#2d4270"/>
+          fill="#8fb3ff"/>
 
     <!-- Right face -->
     <path d="M260 264
@@ -37,7 +37,7 @@
              C319 397 313 407 303 413
              L284 424
              C273 430 260 423 260 411Z"
-          fill="#3d5385"/>
+          fill="#4f6fb8"/>
 
     <!-- Code mark -->
     <path d="M176 256 L145 287 L176 318" stroke="white" stroke-width="18"/>
