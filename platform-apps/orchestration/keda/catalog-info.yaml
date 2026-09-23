@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: keda
+  description: Event-driven autoscaling for tenant workloads.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform_maintainers
+  system: developer_platform

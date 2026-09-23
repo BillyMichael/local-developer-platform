@@ -134,5 +134,21 @@ spec:
                 --post-data='{"username":"local-developer-platform","full_name":"Local Developer Platform","description":"Platform infrastructure and services","visibility":"public"}' \
                 http://localhost:3000/api/v1/orgs 2>/dev/null || echo "Organization may already exist"
 
+              # Registry push credential for Actions jobs: Gitea's automatic job token is not
+              # accepted by its container registry. A write:package-only token, published as
+              # an org Actions secret so every repo's workflow can `docker push`.
+              if kubectl get secret gitea-registry-token -n $NAMESPACE >/dev/null 2>&1; then
+                REGISTRY_TOKEN=$(kubectl get secret gitea-registry-token -n $NAMESPACE -o jsonpath='{.data.token}' | base64 -d)
+              else
+                echo "Generating registry token..."
+                REGISTRY_TOKEN=$(kubectl exec -n $NAMESPACE deploy/gitea -- /usr/local/bin/gitea admin user generate-access-token --username gitea_admin --token-name actions-registry --scopes write:package --raw)
+                [ -n "$REGISTRY_TOKEN" ] || { echo "Failed to generate registry token"; exit 1; }
+                kubectl create secret generic gitea-registry-token -n $NAMESPACE --from-literal=token="$REGISTRY_TOKEN"
+              fi
+              kubectl exec -n $NAMESPACE deploy/gitea -- curl -sf -X PUT \
+                -H "Authorization: token $TOKEN" -H "Content-Type: application/json" \
+                -d "{\"data\":\"$REGISTRY_TOKEN\"}" \
+                http://localhost:3000/api/v1/orgs/local-developer-platform/actions/secrets/REGISTRY_TOKEN
+
               echo "Setup complete!"
       restartPolicy: OnFailure

@@ -43,5 +43,15 @@ spec:
     # Agent, ModelConfig, RemoteMCPServer, MCPServer (spotify-templates/agent)
     - group: kagent.dev
       kind: "*"
+    # Queue-backed agents (spotify-templates/langgraph-agent): KEDA scaling and
+    # ESO-generated RabbitMQ / webhook credentials
+    - group: keda.sh
+      kind: ScaledObject
+    - group: keda.sh
+      kind: TriggerAuthentication
+    - group: external-secrets.io
+      kind: ExternalSecret
+    - group: generators.external-secrets.io
+      kind: Password
   orphanedResources:
     warn: true

@@ -1,0 +1,46 @@
+# Test, build and push the image to Gitea's registry, then pin chart/values.yaml to the new
+# tag so ArgoCD rolls it out. The pin commit only touches chart/, which is ignored below,
+# so it does not trigger another build.
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "chart/**"
+      - "*.md"
+      - catalog-info.yaml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Lint and test
+        run: |
+          uv sync --locked
+          uv run ruff check .
+          uv run pytest -q
+
+      - name: Build and push
+        run: |
+          # Not GITHUB_SERVER_URL: jobs see Gitea's in-cluster http:// address
+          host=vcs-127-0-0-1.nip.io
+          image="$host/${GITHUB_REPOSITORY,,}"
+          tag="${GITHUB_SHA::12}"
+          # Org secret from the Gitea bootstrap job; the automatic job token can't push images
+          echo "${{ secrets.REGISTRY_TOKEN }}" | docker login "$host" -u gitea_admin --password-stdin
+          docker build -t "$image:$tag" -t "$image:latest" .
+          docker push --all-tags "$image"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+
+      - name: Deploy new tag
+        run: |
+          sed -i "s/^  tag: .*/  tag: \"$TAG\"/" chart/values.yaml
+          git config user.name "gitea-actions"
+          git config user.email "gitea-actions@localhost"
+          git commit -am "deploy: image $TAG"
+          git push

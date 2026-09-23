@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.name | dump }}
+  description: ${{ values.description | dump }}
+  tags:
+    - agent
+    - langgraph
+  annotations:
+    backstage.io/kubernetes-namespace: ${{ values.name | dump }}
+  links:
+    - url: https://agents-127-0-0-1.nip.io
+      title: kagent UI
+spec:
+  type: service
+  owner: ${{ values.owner | dump }}
+  lifecycle: experimental
+  dependsOn:
+    - component:default/kagent

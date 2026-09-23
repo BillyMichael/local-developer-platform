@@ -1,0 +1,10 @@
+apiVersion: v2
+name: keda
+description: Event-driven autoscaling (scales tenant agents on queue depth)
+version: 1.0.0
+type: application
+
+dependencies:
+  - name: keda
+    version: 2.20.2
+    repository: https://kedacore.github.io/charts
