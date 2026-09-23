@@ -23,16 +23,13 @@ section() {
 # step <current> <total> <description>
 # Prints a section header with a progress counter, e.g. [3/9] Deploying ...
 step() {
-  local current="$1"; shift
-  local total="$1"; shift
-  printf "\n${BOLD}${BLUE}==> [%s/%s] %s${NC}\n\n" "$current" "$total" "$1"
+  printf "\n${BOLD}${BLUE}==> [%s/%s] %s${NC}\n\n" "$1" "$2" "$3"
 }
 
 subsection() {
   printf "${BOLD}%s${NC}\n\n" "$1"
 }
 
-info()  { printf "  ${BLUE}➜${NC} %s\n" " $1"; }
 ok()    { printf "  ${GREEN}✔${NC} %s\n" " $1"; }
 warn()  { printf "  ${YELLOW}!${NC} %s\n" " $1"; }
 error() { printf "  ${RED}✖${NC} %s\n" " $1"; }

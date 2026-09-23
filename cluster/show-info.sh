@@ -20,14 +20,8 @@ subsection "User Credentials:"
 # ============================================================================
 
 get_secret_field() {
-  local secret="$1"
-  local field="$2"
-
-  if kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" get secret "$secret" >/dev/null 2>&1; then
-    kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" get secret "$secret" -o jsonpath="{.data.$field}" 2>/dev/null | base64 -d
-  else
+  kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" get secret "$1" -o jsonpath="{.data.$2}" 2>/dev/null | base64 -d ||
     printf "(not yet available)"
-  fi
 }
 
 MAINT_USER=$(get_secret_field "lldap-maintainer-credentials" "id")

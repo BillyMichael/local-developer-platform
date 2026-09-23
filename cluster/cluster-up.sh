@@ -15,7 +15,6 @@ ARGOCD_CHART_DIR="${CHART_DIR:-platform-apps/orchestration/argocd}"
 ARGOCD_RELEASE="${ARGOCD_RELEASE:-argocd}"
 
 TOTAL_STEPS=10
-LDP_START_TS=$(date +%s)
 
 # ============================================================================
 # COREDNS PATCHING FUNCTION
@@ -336,11 +335,7 @@ wait_for 300 \
 # DONE
 # ============================================================================
 
-LDP_END_TS=$(date +%s)
-LDP_DURATION=$(( LDP_END_TS - LDP_START_TS ))
-LDP_MINUTES=$(( LDP_DURATION / 60 ))
-LDP_SECONDS=$(( LDP_DURATION % 60 ))
-
-printf "\n${GREEN}${BOLD}Platform ready in ${LDP_MINUTES}m${LDP_SECONDS}s${NC}\n"
+# $SECONDS: bash's count of seconds since this script started
+printf "\n${GREEN}${BOLD}Platform ready in %dm%ds${NC}\n" $(( SECONDS / 60 )) $(( SECONDS % 60 ))
 
 bash "${SCRIPT_DIR}/show-info.sh"

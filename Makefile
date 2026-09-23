@@ -17,9 +17,7 @@ up: _banner ## Create the kind cluster
 down: _banner ## Delete the kind cluster
 	@bash cluster/cluster-down.sh
 
-restart: _banner ## Restart the cluster
-	@bash cluster/cluster-down.sh
-	@bash cluster/cluster-up.sh
+restart: down up ## Restart the cluster
 
 
 # ------------------------------------------------------------------------------
@@ -39,10 +37,8 @@ trust-ca: ## Trust the platform CA certificate (eliminates TLS warnings)
 	@bash cluster/trust-ca.sh
 
 status: ## Show platform health status
-	@kubectl --context kind-$${CLUSTER_NAME:-ldp} get pods -A --no-headers 2>/dev/null | \
-		awk '$$4 != "Running" && $$4 != "Completed" && $$4 != "Succeeded" {print}' | \
-		{ result=$$(cat); if [ -z "$$result" ]; then echo "All pods healthy"; else echo "$$result"; fi; } || \
-		echo "Cluster not running"
+	@pods=$$(kubectl --context kind-$${CLUSTER_NAME:-ldp} get pods -A --no-headers 2>/dev/null) || { echo "Cluster not running"; exit 0; }; \
+		echo "$$pods" | awk '$$4 != "Running" && $$4 != "Completed" && $$4 != "Succeeded"' | grep . || echo "All pods healthy"
 
 
 # ------------------------------------------------------------------------------
