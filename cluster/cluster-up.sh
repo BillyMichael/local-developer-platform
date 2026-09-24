@@ -121,10 +121,10 @@ trust_registry_on_nodes() {
 
 
 # ============================================================================
-# CORPORATE CA TRUST
+# PROXY CA TRUST
 # ============================================================================
 
-# Corporate networks often run a TLS-inspecting proxy (Netskope, Zscaler, ...)
+# Some networks run a TLS-inspecting proxy (Netskope, Zscaler, ...)
 # that re-signs every HTTPS connection with a private CA. The host trusts it
 # through the OS keychain, but nothing inside the cluster does: the kind nodes
 # (image pulls), the Argo CD repo-server (git and helm fetches) and Crossplane
@@ -133,7 +133,7 @@ trust_registry_on_nodes() {
 # Any such CA is installed in three places:
 #   1. each node's system trust store, so containerd trusts it
 #   2. ConfigMap ldp-ca-bundle in the Argo CD namespace, holding the node's full
-#      bundle (public roots + corporate CA). The Argo CD and Crossplane charts
+#      bundle (public roots + proxy CA). The Argo CD and Crossplane charts
 #      mount it over /etc/ssl/certs/ca-certificates.crt, which is the one file
 #      Go, GnuTLS (git) and helm all read. It is published even when no proxy
 #      is found so those mounts always resolve.
@@ -223,7 +223,7 @@ _trust_extra_ca_on_node() {
 trust_extra_ca_on_nodes() {
   local ca_file="$1" node
   for node in $(kind get nodes --name "$CLUSTER_NAME" 2>/dev/null); do
-    run_step "Trusting corporate CA on $node" _trust_extra_ca_on_node "$node" "$ca_file"
+    run_step "Trusting proxy CA on $node" _trust_extra_ca_on_node "$node" "$ca_file"
   done
 }
 
@@ -306,10 +306,10 @@ wait_for 60 \
 
 
 # ============================================================================
-# [3/11] CORPORATE CA TRUST
+# [3/11] PROXY CA TRUST
 # ============================================================================
 
-step 3 $TOTAL_STEPS "Trusting Corporate CA"
+step 3 $TOTAL_STEPS "Trusting TLS Proxy CA"
 
 extra_ca_file=$(mktemp "/tmp/ldp-extra-ca-XXXXXX")
 extra_ca_count=$(collect_extra_cas "$extra_ca_file")
