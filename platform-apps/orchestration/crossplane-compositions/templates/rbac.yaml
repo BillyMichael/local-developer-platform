@@ -1,0 +1,18 @@
+# Crossplane v2 composes arbitrary Kubernetes kinds, but only those it has RBAC
+# for. The crossplane ClusterRole aggregates every role carrying this label, so
+# this grants exactly the kinds the oidc.ldp compositions create.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crossplane:compose-external-secrets
+  labels:
+    rbac.crossplane.io/aggregate-to-crossplane: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: '-2'
+rules:
+  - apiGroups: ["external-secrets.io"]
+    resources: ["externalsecrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["generators.external-secrets.io"]
+    resources: ["passwords"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

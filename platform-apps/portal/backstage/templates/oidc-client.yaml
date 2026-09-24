@@ -1,7 +1,8 @@
 apiVersion: oidc.ldp/v1alpha1
-kind: ClientClaim
+kind: Client
 metadata:
   name: backstage
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-spec: {}
+spec:
+  replicateTo: {{ .Release.Namespace }}

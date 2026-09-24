@@ -1,3 +1,6 @@
+# Crossplane v2 composes the External Secrets resources directly; no
+# provider-kubernetes Object wrapper. Crossplane's permission to manage them
+# comes from rbac.yaml.
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
@@ -20,28 +23,21 @@ spec:
         resources:
           - name: password-generator
             base:
-              apiVersion: kubernetes.crossplane.io/v1alpha2
-              kind: Object
+              apiVersion: generators.external-secrets.io/v1alpha1
+              kind: Password
+              metadata:
+                name: ""
+                namespace: auth
               spec:
-                forProvider:
-                  manifest:
-                    apiVersion: generators.external-secrets.io/v1alpha1
-                    kind: Password
-                    metadata:
-                      name: ""
-                      namespace: auth
-                      annotations:
-                        argocd.argoproj.io/sync-wave: "-1"
-                    spec:
-                      length: 32
-                      noUpper: false
-                      symbols: 0
-                      symbolCharacters: ""
-                      allowRepeat: true
+                length: 32
+                noUpper: false
+                symbols: 0
+                symbolCharacters: ""
+                allowRepeat: true
             patches:
               - type: FromCompositeFieldPath
-                fromFieldPath: spec.claimRef.name
-                toFieldPath: spec.forProvider.manifest.metadata.name
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
@@ -49,48 +45,44 @@ spec:
                       fmt: "lldap-%s-password"
               - type: FromCompositeFieldPath
                 fromFieldPath: spec.sourceNamespace
-                toFieldPath: spec.forProvider.manifest.metadata.namespace
+                toFieldPath: metadata.namespace
               - type: FromCompositeFieldPath
                 fromFieldPath: spec.passwordLength
-                toFieldPath: spec.forProvider.manifest.spec.length
+                toFieldPath: spec.length
               - type: FromCompositeFieldPath
                 fromFieldPath: spec.passwordSymbols
-                toFieldPath: spec.forProvider.manifest.spec.symbols
+                toFieldPath: spec.symbols
+            # A generator has no status; ready once it exists.
+            readinessChecks:
+              - type: None
 
           - name: external-secret
             base:
-              apiVersion: kubernetes.crossplane.io/v1alpha2
-              kind: Object
+              apiVersion: external-secrets.io/v1
+              kind: ExternalSecret
+              metadata:
+                name: ""
+                namespace: auth
               spec:
-                forProvider:
-                  manifest:
-                    apiVersion: external-secrets.io/v1
-                    kind: ExternalSecret
-                    metadata:
-                      name: ""
-                      namespace: auth
-                      annotations:
-                        argocd.argoproj.io/sync-wave: "-1"
-                    spec:
-                      refreshInterval: 24h
-                      refreshPolicy: CreatedOnce
-                      target:
+                refreshInterval: 24h
+                refreshPolicy: CreatedOnce
+                target:
+                  name: ""
+                  template:
+                    type: Opaque
+                    data:
+                      id: ""
+                      password: '{{`{{ .password }}`}}'
+                dataFrom:
+                  - sourceRef:
+                      generatorRef:
+                        apiVersion: generators.external-secrets.io/v1alpha1
+                        kind: Password
                         name: ""
-                        template:
-                          type: Opaque
-                          data:
-                            id: ""
-                            password: '{{`{{ .password }}`}}'
-                      dataFrom:
-                        - sourceRef:
-                            generatorRef:
-                              apiVersion: generators.external-secrets.io/v1alpha1
-                              kind: Password
-                              name: ""
             patches:
               - type: FromCompositeFieldPath
-                fromFieldPath: spec.claimRef.name
-                toFieldPath: spec.forProvider.manifest.metadata.name
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
@@ -98,10 +90,10 @@ spec:
                       fmt: "lldap-%s-credentials"
               - type: FromCompositeFieldPath
                 fromFieldPath: spec.sourceNamespace
-                toFieldPath: spec.forProvider.manifest.metadata.namespace
+                toFieldPath: metadata.namespace
               - type: FromCompositeFieldPath
-                fromFieldPath: spec.claimRef.name
-                toFieldPath: spec.forProvider.manifest.spec.target.name
+                fromFieldPath: metadata.name
+                toFieldPath: spec.target.name
                 transforms:
                   - type: string
                     string:
@@ -109,15 +101,20 @@ spec:
                       fmt: "lldap-%s-credentials"
               - type: FromCompositeFieldPath
                 fromFieldPath: spec.replicateTo
-                toFieldPath: spec.forProvider.manifest.spec.target.template.metadata.annotations["replicator.v1.mittwald.de/replicate-to"]
+                toFieldPath: spec.target.template.metadata.annotations["replicator.v1.mittwald.de/replicate-to"]
               - type: FromCompositeFieldPath
                 fromFieldPath: spec.userId
-                toFieldPath: spec.forProvider.manifest.spec.target.template.data.id
+                toFieldPath: spec.target.template.data.id
               - type: FromCompositeFieldPath
-                fromFieldPath: spec.claimRef.name
-                toFieldPath: spec.forProvider.manifest.spec.dataFrom[0].sourceRef.generatorRef.name
+                fromFieldPath: metadata.name
+                toFieldPath: spec.dataFrom[0].sourceRef.generatorRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
                       fmt: "lldap-%s-password"
+            readinessChecks:
+              - type: MatchCondition
+                matchCondition:
+                  type: Ready
+                  status: "True"

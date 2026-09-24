@@ -1,4 +1,8 @@
-apiVersion: apiextensions.crossplane.io/v1
+# Cluster-scoped so the composition can place the generated secret in the auth
+# namespace (where Authelia reads it) and replicate it out to the consumer. A
+# namespaced XR can only compose into its own namespace. No claims: in
+# Crossplane v2 platform charts create the Client directly.
+apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
   name: clients.oidc.ldp
@@ -6,13 +10,11 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
     argocd.argoproj.io/sync-wave: '-1'
 spec:
+  scope: Cluster
   group: oidc.ldp
   names:
     kind: Client
     plural: clients
-  claimNames:
-    kind: ClientClaim
-    plural: clientclaims
   versions:
     - name: v1alpha1
       served: true
@@ -24,6 +26,9 @@ spec:
             spec:
               type: object
               properties:
+                replicateTo:
+                  type: string
+                  description: Namespace the client secret is replicated to (the consuming app's namespace)
                 sourceNamespace:
                   type: string
                   description: Namespace where the secret is created
@@ -41,3 +46,5 @@ spec:
                 symbolCharacters:
                   type: string
                   default: "-_~."
+              required:
+                - replicateTo

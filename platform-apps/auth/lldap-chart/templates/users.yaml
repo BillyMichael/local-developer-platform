@@ -1,6 +1,6 @@
 ---
 apiVersion: oidc.ldp/v1alpha1
-kind: UserClaim
+kind: User
 metadata:
   name: authelia
   annotations:
@@ -11,7 +11,7 @@ spec:
   groupName: lldap_password_manager
 ---
 apiVersion: oidc.ldp/v1alpha1
-kind: UserClaim
+kind: User
 metadata:
   name: maintainer
   annotations:
@@ -22,7 +22,7 @@ spec:
   groupName: platform_maintainers
 ---
 apiVersion: oidc.ldp/v1alpha1
-kind: UserClaim
+kind: User
 metadata:
   name: backstage
   annotations:
@@ -34,7 +34,7 @@ spec:
   replicateTo: portal
 ---
 apiVersion: oidc.ldp/v1alpha1
-kind: UserClaim
+kind: User
 metadata:
   name: user
   annotations:
