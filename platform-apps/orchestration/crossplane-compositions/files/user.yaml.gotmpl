@@ -1,0 +1,57 @@
+{{- /*
+  Rendered by function-go-templating, not Helm: the composition pulls this file
+  in with .Files.Get, which does not template it.
+*/ -}}
+{{- $xr := getCompositeResource . }}
+{{- $name := $xr.metadata.name }}
+{{- $spec := $xr.spec }}
+{{- $generator := printf "lldap-%s-password" $name }}
+{{- $credentials := printf "lldap-%s-credentials" $name }}
+{{- $secret := getComposedResource . "external-secret" }}
+---
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: {{ $generator }}
+  namespace: {{ $spec.sourceNamespace }}
+  annotations:
+    gotemplating.fn.crossplane.io/composition-resource-name: password-generator
+    # A generator has no status; ready once it exists.
+    gotemplating.fn.crossplane.io/ready: "True"
+spec:
+  length: {{ $spec.passwordLength }}
+  symbols: {{ $spec.passwordSymbols }}
+  symbolCharacters: ""
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ $credentials }}
+  namespace: {{ $spec.sourceNamespace }}
+  annotations:
+    gotemplating.fn.crossplane.io/composition-resource-name: external-secret
+    gotemplating.fn.crossplane.io/ready: {{ if eq (getResourceCondition "Ready" $secret).Status "True" }}"True"{{ else }}"False"{{ end }}
+spec:
+  refreshInterval: 24h
+  refreshPolicy: CreatedOnce
+  target:
+    name: {{ $credentials }}
+    template:
+      type: Opaque
+      {{- with $spec.replicateTo }}
+      metadata:
+        annotations:
+          replicator.v1.mittwald.de/replicate-to: {{ . | quote }}
+      {{- end }}
+      data:
+        id: {{ $spec.userId | quote }}
+        # Literal ExternalSecret template, resolved by External Secrets.
+        password: '{{ "{{ .password }}" }}'
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: {{ $generator }}
