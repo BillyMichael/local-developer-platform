@@ -1,4 +1,7 @@
-apiVersion: apiextensions.crossplane.io/v1
+# Cluster-scoped for the same reason as clients.oidc.ldp: credentials are born
+# in the auth namespace and replicated out. Platform charts create the User
+# directly (no claims in Crossplane v2).
+apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
   name: users.oidc.ldp
@@ -6,13 +9,11 @@ metadata:
     argocd.argoproj.io/sync-wave: '-1'
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
+  scope: Cluster
   group: oidc.ldp
   names:
     kind: User
     plural: users
-  claimNames:
-    kind: UserClaim
-    plural: userclaims
   versions:
     - name: v1alpha1
       served: true

@@ -439,7 +439,8 @@ wait_for 180 \
 step 7 $TOTAL_STEPS "Wave 2: Crossplane Compositions"
 
 wait_for 180 \
-  "Crossplane provider-kubernetes" "kubectl --context '$CONTEXT_NAME' wait --for=condition=Healthy provider/provider-kubernetes --timeout=1s"
+  "Crossplane function-patch-and-transform" "kubectl --context '$CONTEXT_NAME' wait --for=condition=Healthy function/function-patch-and-transform --timeout=1s" \
+  "oidc.ldp XRDs"                           "kubectl --context '$CONTEXT_NAME' wait --for=condition=Established xrd/clients.oidc.ldp xrd/users.oidc.ldp --timeout=1s"
 
 
 # ============================================================================
