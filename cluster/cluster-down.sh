@@ -24,7 +24,7 @@ check_required_tools "kind"
 
 step 2 $TOTAL_STEPS "Deleting Kind Cluster"
 
-if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
+if cluster_exists; then
   run_step "Deleting cluster '$CLUSTER_NAME'" \
     kind delete cluster --name "$CLUSTER_NAME"
 else

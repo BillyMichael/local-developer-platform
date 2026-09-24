@@ -195,6 +195,19 @@ engine_works() {
   command -v "$1" >/dev/null 2>&1 && "$1" info >/dev/null 2>&1
 }
 
+# True if kind node containers for CLUSTER_NAME exist in the engine.
+#
+# Deliberately not `kind get clusters`: that shells out to `<engine> ps` with a
+# Go template that indexes .Labels, which podman >= 5.8 rejects ("cannot index
+# slice/array with type string"). The call then fails silently and every
+# "does it exist?" check says no, while `kind create` (which uses a plain
+# label filter) still sees the old nodes and refuses with "node(s) already
+# exist". Asking the engine directly with the same label filter kind uses
+# keeps up/down/preflight in agreement.
+cluster_exists() {
+  [ -n "$("$CE" ps -a --filter "label=io.x-k8s.kind.cluster=${CLUSTER_NAME}" --format '{{.Names}}' 2>/dev/null)" ]
+}
+
 # ============================================================================
 # PORT AVAILABILITY CHECK
 # ============================================================================
@@ -385,7 +398,7 @@ preflight() {
   check_required_tools kind kubectl helm
   # A running cluster legitimately holds the ingress ports, so only demand
   # they be free when we'd actually be creating the cluster.
-  if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
+  if cluster_exists; then
     ok "Ports 80/443/9000 belong to the existing '$CLUSTER_NAME' cluster"
   else
     check_port_availability 80 443 9000
