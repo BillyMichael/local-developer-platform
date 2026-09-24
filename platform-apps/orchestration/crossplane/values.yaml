@@ -2,6 +2,12 @@ ldp:
   syncWave: wave-1
 
 crossplane:
+  # Package manager pulls xpkg images itself rather than through containerd, so
+  # it needs the corporate CA too. ldp-ca-bundle is published into this
+  # namespace by cluster-up.sh before Argo CD starts.
+  registryCaBundleConfig:
+    name: ldp-ca-bundle
+    key: ca-certificates.crt
   resources:
     requests:
       cpu: 50m

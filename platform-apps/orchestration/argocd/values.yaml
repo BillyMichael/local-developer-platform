@@ -40,6 +40,11 @@ argo-cd:
         memory: 512Mi
       limits:
         memory: 1536Mi
+  # ldp-ca-bundle is published by cluster-up.sh: the node's system bundle plus
+  # any corporate TLS-inspection CA. Mounted over the one file Go (go-git,
+  # helm), GnuTLS (git) and the Argo CD binaries all read, so git and chart
+  # fetches through a re-signing proxy verify. Per-host configs.tls.certificates
+  # would not cover `helm dependency build` of the umbrella charts.
   repoServer:
     resources:
       requests:
@@ -47,6 +52,15 @@ argo-cd:
         memory: 256Mi
       limits:
         memory: 768Mi
+    volumes:
+      - name: ldp-ca-bundle
+        configMap:
+          name: ldp-ca-bundle
+    volumeMounts:
+      - name: ldp-ca-bundle
+        mountPath: /etc/ssl/certs/ca-certificates.crt
+        subPath: ca-certificates.crt
+        readOnly: true
   applicationSet:
     resources:
       requests:
@@ -54,6 +68,15 @@ argo-cd:
         memory: 64Mi
       limits:
         memory: 128Mi
+    extraVolumes:
+      - name: ldp-ca-bundle
+        configMap:
+          name: ldp-ca-bundle
+    extraVolumeMounts:
+      - name: ldp-ca-bundle
+        mountPath: /etc/ssl/certs/ca-certificates.crt
+        subPath: ca-certificates.crt
+        readOnly: true
 
   dex:
     enabled: false

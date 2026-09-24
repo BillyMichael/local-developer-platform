@@ -27,6 +27,13 @@ Before you begin, ensure you have the following installed:
     rootful Podman via `sudo systemctl start podman.socket` and
     `export CONTAINER_HOST=unix:///run/podman/podman.sock`.
 
+!!! tip "Corporate proxies"
+    On networks with a TLS-inspecting proxy (Netskope, Zscaler, ...) every
+    HTTPS connection is re-signed by a private CA that only the host trusts.
+    `make up` detects this on the path to github.com and trusts the CA on the
+    kind nodes, in Argo CD, in Crossplane and in the platform trust bundle. If
+    detection misses your proxy, point `LDP_EXTRA_CA_FILE` at its PEM file.
+
 **System Requirements:**
 
 - 12GB+ RAM available for the container runtime
