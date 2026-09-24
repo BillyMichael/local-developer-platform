@@ -1,6 +1,7 @@
-# Crossplane v2 composes the External Secrets resources directly; no
-# provider-kubernetes Object wrapper. Crossplane's permission to manage them
-# comes from rbac.yaml.
+# Crossplane v2 composes the External Secrets resources directly. The resources
+# live in files/client.yaml.gotmpl, rendered by function-go-templating; keeping
+# them out of templates/ means Helm never parses their template expressions.
+# Crossplane's permission to manage them comes from rbac.yaml.
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
@@ -14,119 +15,13 @@ spec:
     kind: Client
   mode: Pipeline
   pipeline:
-    - step: patch-and-transform
+    - step: render
       functionRef:
-        name: function-patch-and-transform
+        name: function-go-templating
       input:
-        apiVersion: pt.fn.crossplane.io/v1beta1
-        kind: Resources
-        resources:
-          - name: password-generator
-            base:
-              apiVersion: generators.external-secrets.io/v1alpha1
-              kind: Password
-              metadata:
-                name: ""
-                namespace: auth
-              spec:
-                length: 72
-                digits: 10
-                symbols: 5
-                symbolCharacters: "-_~."
-                noUpper: false
-                allowRepeat: true
-            patches:
-              - type: FromCompositeFieldPath
-                fromFieldPath: metadata.name
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-oidc-client-secret-generator"
-              - type: FromCompositeFieldPath
-                fromFieldPath: spec.sourceNamespace
-                toFieldPath: metadata.namespace
-              - type: FromCompositeFieldPath
-                fromFieldPath: spec.secretLength
-                toFieldPath: spec.length
-              - type: FromCompositeFieldPath
-                fromFieldPath: spec.digits
-                toFieldPath: spec.digits
-              - type: FromCompositeFieldPath
-                fromFieldPath: spec.symbols
-                toFieldPath: spec.symbols
-              - type: FromCompositeFieldPath
-                fromFieldPath: spec.symbolCharacters
-                toFieldPath: spec.symbolCharacters
-            # A generator has no status; ready once it exists.
-            readinessChecks:
-              - type: None
-
-          - name: external-secret
-            base:
-              apiVersion: external-secrets.io/v1
-              kind: ExternalSecret
-              metadata:
-                name: ""
-                namespace: auth
-              spec:
-                refreshInterval: 24h
-                target:
-                  name: ""
-                  template:
-                    metadata:
-                      labels: {}
-                      annotations: {}
-                    data:
-                      key: ""
-                      password: '{{`{{ .password }}`}}'
-                      secret: '{{`{{ .password }}`}}'
-                dataFrom:
-                  - sourceRef:
-                      generatorRef:
-                        apiVersion: generators.external-secrets.io/v1alpha1
-                        kind: Password
-                        name: ""
-            patches:
-              - type: FromCompositeFieldPath
-                fromFieldPath: metadata.name
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-oidc-client-secret-generator"
-              - type: FromCompositeFieldPath
-                fromFieldPath: spec.sourceNamespace
-                toFieldPath: metadata.namespace
-              - type: FromCompositeFieldPath
-                fromFieldPath: metadata.name
-                toFieldPath: spec.target.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-oidc-client-secret"
-              - type: FromCompositeFieldPath
-                fromFieldPath: metadata.name
-                toFieldPath: spec.target.template.metadata.labels["app.kubernetes.io/part-of"]
-              - type: FromCompositeFieldPath
-                fromFieldPath: spec.replicateTo
-                toFieldPath: spec.target.template.metadata.annotations["replicator.v1.mittwald.de/replicate-to"]
-              - type: FromCompositeFieldPath
-                fromFieldPath: metadata.name
-                toFieldPath: spec.target.template.data.key
-              - type: FromCompositeFieldPath
-                fromFieldPath: metadata.name
-                toFieldPath: spec.dataFrom[0].sourceRef.generatorRef.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-oidc-client-secret-generator"
-            readinessChecks:
-              - type: MatchCondition
-                matchCondition:
-                  type: Ready
-                  status: "True"
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+{{ .Files.Get "files/client.yaml.gotmpl" | indent 12 }}
