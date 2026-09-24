@@ -112,7 +112,7 @@ trust_registry_on_nodes() {
   kubectl --context "$CONTEXT_NAME" -n pki get secret root-ca -o jsonpath='{.data.tls\.crt}' | base64 -d > "$ca_file"
 
   local node
-  for node in $(kind get nodes --name "$CLUSTER_NAME"); do
+  for node in $(kind get nodes --name "$CLUSTER_NAME" 2>/dev/null); do
     run_step "Trusting Gitea registry on $node" \
       _trust_registry_on_node "$node" "$REGISTRY_HOST" "$traefik_ip" "$ca_file"
   done
