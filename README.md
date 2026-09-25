@@ -88,6 +88,7 @@ local-developer-platform/
 │   ├── secrets/               # External-Secrets, Reloader, Replicator
 │   ├── orchestration/         # ArgoCD, Crossplane, Kargo, KEDA
 │   ├── storage/               # CloudNativePG
+│   ├── observability/         # metrics-server
 │   ├── vcs/                   # Gitea (Git server)
 │   ├── portal/                # Backstage developer portal
 │   └── devtools/              # kagent (AI agent runtime)

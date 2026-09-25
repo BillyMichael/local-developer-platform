@@ -1,0 +1,17 @@
+# Resource metrics API (kubectl top, KEDA CPU/memory scalers, and the
+# CPU/memory figures on Backstage's Kubernetes tab). No dependencies, so it
+# rolls out with the first wave.
+ldp:
+  syncWave: wave-1
+
+metrics-server:
+  # KIND's kubelets serve self-signed certificates that metrics-server
+  # cannot verify.
+  args:
+    - --kubelet-insecure-tls
+  resources:
+    requests:
+      cpu: 10m
+      memory: 48Mi
+    limits:
+      memory: 96Mi
