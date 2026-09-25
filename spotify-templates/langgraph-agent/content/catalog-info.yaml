@@ -7,6 +7,9 @@ metadata:
     - agent
     - langgraph
   annotations:
+    argocd/app-name: ${{ values.name }}
+    backstage.io/kubernetes-label-selector: kagent=${{ values.name }}
+    backstage.io/techdocs-ref: dir:.
     backstage.io/kubernetes-namespace: ${{ values.name | dump }}
   links:
     - url: https://agents-127-0-0-1.nip.io

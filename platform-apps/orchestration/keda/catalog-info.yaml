@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: keda
+  annotations:
+    argocd/app-name: keda
+    backstage.io/kubernetes-namespace: orchestration
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=keda
   description: Event-driven autoscaling for tenant workloads.
 spec:
   type: infrastructure

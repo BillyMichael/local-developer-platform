@@ -89,6 +89,9 @@ argo-cd:
       create: true
       oidc.tls.insecure.skip.verify: 'true'
       application.resourceTrackingMethod: annotation
+      # Local API-key account for the Backstage Argo CD plugin; its token is
+      # minted by templates/job-backstage-token.yaml.
+      accounts.backstage: apiKey
       resource.customizations: |
         "*.crossplane.io/*":
           health.lua: |
@@ -170,4 +173,7 @@ argo-cd:
         g, platform_maintainers, role:admin
 
         # Platform users get read-only access (default policy)
+
+        # Backstage reads application status for the portal's Argo CD cards
+        g, backstage, role:readonly
        

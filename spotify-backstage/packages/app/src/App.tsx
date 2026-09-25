@@ -14,6 +14,7 @@ import kubernetesPlugin from '@backstage/plugin-kubernetes/alpha';
 import appVisualizerPlugin from '@backstage/plugin-app-visualizer';
 import appModuleUserSettings from '@backstage/plugin-app-module-user-settings';
 import readmePlugin from '@axis-backstage/plugin-readme/alpha';
+import argoCdPlugin from '@roadiehq/backstage-plugin-argo-cd/alpha';
 import { apisModule } from './modules/apis';
 import { appModule } from './modules/app';
 import { homePluginWithLdpHome } from './modules/pages';
@@ -40,6 +41,7 @@ export default createApp({
     signalsPlugin,
     kubernetesPlugin,
     readmePlugin,
+    argoCdPlugin,
     homePluginWithLdpHome,
     appVisualizerPlugin,
     appModuleUserSettings,

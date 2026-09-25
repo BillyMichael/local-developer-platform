@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: kagent
+  annotations:
+    argocd/app-name: kagent
+    backstage.io/kubernetes-namespace: devtools
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=kagent
   description: Kubernetes-native runtime for AI agents. Agents are CRDs; no image build needed.
   tags:
     - ai

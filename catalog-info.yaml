@@ -2,6 +2,9 @@ apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
   name: developer_platform
+  annotations:
+    # mkdocs.yml and docs/ at the repo root, published as the platform docs
+    backstage.io/techdocs-ref: dir:.
   description: Local Developer Platform — GitOps-managed core services for auth, ingress, secrets, VCS, delivery, and the developer portal.
 spec:
   owner: group:default/platform_maintainers

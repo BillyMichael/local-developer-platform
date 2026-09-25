@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: gitea
+  annotations:
+    argocd/app-name: gitea
+    backstage.io/kubernetes-namespace: vcs
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=gitea
   description: A painless self-hosted Git service.
 spec:
   type: website

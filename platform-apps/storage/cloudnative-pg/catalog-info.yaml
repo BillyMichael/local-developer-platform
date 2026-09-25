@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
   name: cloudnative-pg
+  annotations:
+    argocd/app-name: cloudnative-pg
+    backstage.io/kubernetes-namespace: storage
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=cloudnative-pg
   description: PostgreSQL operator.
 spec:
   type: database

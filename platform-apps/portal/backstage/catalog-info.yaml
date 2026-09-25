@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: backstage
+  annotations:
+    argocd/app-name: backstage
+    backstage.io/kubernetes-namespace: portal
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=backstage
   description: The developer portal.
 spec:
   type: website

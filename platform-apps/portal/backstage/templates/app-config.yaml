@@ -97,6 +97,34 @@ data:
         - type: url
           target: https://github.com/BillyMichael/local-developer-platform/blob/main/spotify-templates/langgraph-agent/template.yaml
     
+    # The cluster Backstage runs in, read with the pod's own service-account
+    # token (read-only, see kubernetes-rbac.yaml). Entities opt in with
+    # backstage.io/kubernetes-namespace + kubernetes-label-selector or -id.
+    kubernetes:
+      serviceLocatorMethod:
+        type: multiTenant
+      clusterLocatorMethods:
+        - type: config
+          clusters:
+            - name: ldp
+              url: https://kubernetes.default.svc
+              authProvider: serviceAccount
+              caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+    # Argo CD API for the Argo CD entity cards, authenticated as the
+    # read-only `backstage` account. The token is dropped (and the cards show
+    # an error) until the argocd chart's token job has run.
+    proxy:
+      endpoints:
+        '/argocd/api':
+          target: http://argocd-server.orchestration.svc.cluster.local/api/v1/
+          changeOrigin: true
+          allowedMethods: ['GET']
+          headers:
+            Cookie: argocd.token=${ARGOCD_TOKEN}
+    argocd:
+      baseUrl: https://cd-127-0-0-1.nip.io
+
     techdocs:
       builder: 'local'
       generator:

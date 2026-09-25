@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: cert-manager
+  annotations:
+    argocd/app-name: cert-manager
+    backstage.io/kubernetes-namespace: pki
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=cert-manager
   description: Manages TLS certificates in Kubernetes.
 spec:
   type: infrastructure

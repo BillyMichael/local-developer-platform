@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: trust-manager
+  annotations:
+    argocd/app-name: trust-manager
+    backstage.io/kubernetes-namespace: pki
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=trust-manager
   description: Manages trust bundles in Kubernetes.
 spec:
   type: infrastructure
