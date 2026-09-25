@@ -1,5 +1,40 @@
 app:
   title: Backstage | Local Developer Portal
+  # Scopes the plugins' own extensions (new frontend system). Features are
+  # listed in packages/app/src/App.tsx.
+  extensions:
+    # Only on entities with a README beside catalog-info.yaml, and in the
+    # overview's side rail rather than above everything else.
+    - entity-card:readme:
+        config:
+          hideIfNotFound: true
+          type: info
+    # Relationship cards only where the entity declares the relationship,
+    # instead of an empty-state card on every leaf component.
+    - entity-card:catalog/depends-on-components:
+        config:
+          filter: { spec.dependsOn: { $exists: true } }
+    - entity-card:catalog/depends-on-resources:
+        config:
+          filter: { spec.dependsOn: { $exists: true } }
+    - entity-card:api-docs/provided-apis:
+        config:
+          filter: { spec.providesApis: { $exists: true } }
+    - entity-card:api-docs/consumed-apis:
+        config:
+          filter: { spec.consumesApis: { $exists: true } }
+    # Subcomponents declare the relation on themselves, so the parent has
+    # nothing to filter on; nothing in LDP uses them.
+    - entity-card:catalog/has-subcomponents: false
+    # Upstream ships the entity Docs tab unfiltered; only show it where
+    # the entity actually publishes TechDocs.
+    - entity-content:techdocs:
+        config:
+          filter:
+            metadata.annotations.backstage.io/techdocs-ref: { $exists: true }
+    - entity-card:catalog-graph/relations:
+        config:
+          height: 320
 
 organization:
   name: Local Developer Portal

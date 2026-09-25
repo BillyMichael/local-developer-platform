@@ -1,74 +1,17 @@
-/*
- * Hi!
- *
- * Note that this is an EXAMPLE Backstage backend. Please check the README.
- *
- * Happy hacking!
- */
-
 import { createBackend } from '@backstage/backend-defaults';
-
-import { createBackendModule } from '@backstage/backend-plugin-api';
-import {
-  authProvidersExtensionPoint,
-  createOAuthProviderFactory,
-} from '@backstage/plugin-auth-node';
-import { oidcAuthenticator } from '@backstage/plugin-auth-backend-module-oidc-provider';
-import { DEFAULT_NAMESPACE, stringifyEntityRef } from '@backstage/catalog-model';
+import { oidcAuthProviderModule } from './authProvider';
 import { platformPermissionModule } from './permissionPolicy';
 
-
-
 const backend = createBackend();
-
-const myAuthProviderModule = createBackendModule({
-  // This ID must be exactly "auth" because that's the plugin it targets
-  pluginId: 'auth',
-  // This ID must be unique, but can be anything
-  moduleId: 'oidc-auth-provider',
-  register(reg) {
-    reg.registerInit({
-      deps: { providers: authProvidersExtensionPoint },
-      async init({ providers }) {
-        providers.registerProvider({
-          // This ID must match the actual provider config, e.g. addressing
-          // auth.providers.keycloak means that this must be "keycloak".
-          providerId: 'oidc',
-          // Use createProxyAuthProviderFactory instead if it's one of the proxy
-          // based providers rather than an OAuth based one
-          factory: createOAuthProviderFactory({
-            // For more info about authenticators please see https://backstage.io/docs/auth/add-auth-provider/#adding-an-oauth-based-provider
-            authenticator: oidcAuthenticator,
-            async signInResolver(info, ctx) {
-              const userinfo = info?.result.fullProfile.userinfo;
-              const userRef = stringifyEntityRef({
-                kind: 'User',
-                name: (userinfo?.preferred_username ??
-                  userinfo?.name) as string,
-                namespace: DEFAULT_NAMESPACE,
-              });
-              return ctx.issueToken({
-                claims: {
-                  sub: userRef, // The user's own identity
-                  ent: [userRef], // A list of identities that the user claims ownership through
-                },
-              });
-            },
-          }),
-        });
-      },
-    });
-  },
-});
 
 backend.add(import('@backstage/plugin-app-backend'));
 backend.add(import('@backstage/plugin-proxy-backend'));
 
+// auth — OIDC only; there is deliberately no guest provider
+backend.add(import('@backstage/plugin-auth-backend'));
+backend.add(oidcAuthProviderModule);
 
-// Auth
-backend.add(myAuthProviderModule);
-
-// scaffolder plugin
+// scaffolder — publishes to Gitea or GitHub
 backend.add(import('@backstage/plugin-scaffolder-backend'));
 backend.add(import('@backstage/plugin-scaffolder-backend-module-gitea'));
 backend.add(import('@backstage/plugin-scaffolder-backend-module-github'));
@@ -76,53 +19,41 @@ backend.add(
   import('@backstage/plugin-scaffolder-backend-module-notifications'),
 );
 
-// techdocs plugin
+// techdocs
 backend.add(import('@backstage/plugin-techdocs-backend'));
 
-// auth plugin
-backend.add(import('@backstage/plugin-auth-backend'));
-// See https://backstage.io/docs/backend-system/building-backends/migrating#the-auth-plugin
-
-// catalog plugin
+// catalog
 backend.add(import('@backstage/plugin-catalog-backend'));
 backend.add(
   import('@backstage/plugin-catalog-backend-module-scaffolder-entity-model'),
 );
-
-// See https://backstage.io/docs/features/software-catalog/configuration#subscribing-to-catalog-errors
 backend.add(import('@backstage/plugin-catalog-backend-module-logs'));
+backend.add(import('@backstage/plugin-catalog-backend-module-github'));
+// Gitea discovery: registers repos from catalog.providers.gitea
+backend.add(import('@backstage/plugin-catalog-backend-module-gitea'));
+// LLDAP users and groups from catalog.providers.ldapOrg
+backend.add(import('@backstage/plugin-catalog-backend-module-ldap'));
 
-// permission plugin
+// permission
 backend.add(import('@backstage/plugin-permission-backend'));
 backend.add(platformPermissionModule);
 
-// search plugin
+// search, on the Postgres engine
 backend.add(import('@backstage/plugin-search-backend'));
-
-// search engine
-// See https://backstage.io/docs/features/search/search-engines
 backend.add(import('@backstage/plugin-search-backend-module-pg'));
-
-// search collators
 backend.add(import('@backstage/plugin-search-backend-module-catalog'));
 backend.add(import('@backstage/plugin-search-backend-module-techdocs'));
 
-// kubernetes plugin
+// kubernetes
 backend.add(import('@backstage/plugin-kubernetes-backend'));
 
-// notifications and signals plugins
+// README tab: serves the README.md beside each entity's catalog-info.yaml,
+// read through the Gitea/GitHub integrations
+backend.add(import('@axis-backstage/plugin-readme-backend'));
+
+// user settings, notifications and signals
+backend.add(import('@backstage/plugin-user-settings-backend'));
 backend.add(import('@backstage/plugin-notifications-backend'));
 backend.add(import('@backstage/plugin-signals-backend'));
-
-// github
-backend.add(import('@backstage/plugin-catalog-backend-module-github'));
-
-// gitea discovery — auto-registers repos from the Gitea org configured
-// under catalog.providers.gitea in app-config
-backend.add(import('@backstage/plugin-catalog-backend-module-gitea'));
-
-// ldap org discovery — imports users/groups from LLDAP configured
-// under catalog.providers.ldapOrg in app-config
-backend.add(import('@backstage/plugin-catalog-backend-module-ldap'));
 
 backend.start();

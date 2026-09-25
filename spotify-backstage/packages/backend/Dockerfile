@@ -7,17 +7,19 @@
 # yarn tsc
 # yarn build:backend
 #
+# Host build steps (yarn install, yarn build:backend) must use the same
+# Node version as the FROM image below. Mismatched versions break native modules.
+#
 # Once the commands have been run, you can build the image using `yarn build-image`
 #
 # Alternatively, there is also a multi-stage Dockerfile documented here:
 # https://backstage.io/docs/deployment/docker#multi-stage-build
 
-FROM node:22-bookworm-slim
+FROM node:24-trixie-slim
 
-# Set Python interpreter for `node-gyp` to use
+# Toolchain for native modules (better-sqlite3, isolated-vm) when no prebuilt
+# binary can be fetched, e.g. behind a TLS-inspecting proxy.
 ENV PYTHON=/usr/bin/python3
-
-# Install isolate-vm dependencies, these are needed by the @backstage/plugin-scaffolder-backend.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
@@ -47,9 +49,6 @@ COPY --chown=node:node backstage.json ./
 
 # This switches many Node.js dependencies to production mode.
 ENV NODE_ENV=production
-
-# This disables node snapshot for Node 20 to work with the Scaffolder
-ENV NODE_OPTIONS="--no-node-snapshot"
 
 # Copy repo skeleton first, to avoid unnecessary docker cache invalidation.
 # The skeleton contains the package.json of each package in the monorepo,
