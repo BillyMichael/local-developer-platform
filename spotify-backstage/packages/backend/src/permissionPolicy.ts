@@ -15,7 +15,7 @@ import {
 import { policyExtensionPoint } from '@backstage/plugin-permission-node/alpha';
 import { catalogEntityDeletePermission } from '@backstage/plugin-catalog-common/alpha';
 
-class PlatformPermissionPolicy implements PermissionPolicy {
+export class PlatformPermissionPolicy implements PermissionPolicy {
   async handle(
     request: PolicyQuery,
     user?: PolicyQueryUser,
@@ -38,9 +38,7 @@ class PlatformPermissionPolicy implements PermissionPolicy {
         ref => ref === 'group:default/platform_maintainers',
       );
       return {
-        result: isMaintainer
-          ? AuthorizeResult.ALLOW
-          : AuthorizeResult.DENY,
+        result: isMaintainer ? AuthorizeResult.ALLOW : AuthorizeResult.DENY,
       };
     }
 

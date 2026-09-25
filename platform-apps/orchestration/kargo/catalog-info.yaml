@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: kargo
+  annotations:
+    argocd/app-name: kargo
+    backstage.io/kubernetes-namespace: orchestration
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=kargo
   description: A new way to do continuous delivery.
 spec:
   type: website

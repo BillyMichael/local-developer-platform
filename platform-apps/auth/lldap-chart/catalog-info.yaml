@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: lldap
+  annotations:
+    argocd/app-name: lldap-chart
+    backstage.io/kubernetes-namespace: auth
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=lldap-chart
   description: Lightweight LDAP server for authentication.
 spec:
   type: service

@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-frontend
+  labels:
+    backstage.io/kubernetes-id: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.frontend.replicas }}
   selector:
@@ -11,6 +13,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-frontend
+        backstage.io/kubernetes-id: {{ .Release.Name }}
     spec:
       containers:
         - name: frontend
@@ -22,6 +25,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Release.Name }}-frontend
+  labels:
+    backstage.io/kubernetes-id: {{ .Release.Name }}
 spec:
   selector:
     app: {{ .Release.Name }}-frontend

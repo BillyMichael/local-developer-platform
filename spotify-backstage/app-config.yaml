@@ -32,12 +32,31 @@ app:
         config:
           filter:
             metadata.annotations.backstage.io/techdocs-ref: { $exists: true }
+    # Roadie ships the Argo CD cards on every component and its tab on every
+    # entity; show them only where an Argo CD Application is declared.
+    - entity-card:argocd/overviewCard:
+        config:
+          filter:
+            metadata.annotations.argocd/app-name: { $exists: true }
+    - entity-card:argocd/historyCard:
+        config:
+          filter:
+            metadata.annotations.argocd/app-name: { $exists: true }
+    - entity-content:argocd/ArgoCdPage:
+        config:
+          filter:
+            metadata.annotations.argocd/app-name: { $exists: true }
     - entity-card:catalog-graph/relations:
         config:
           height: 320
 
 organization:
   name: Local Developer Portal
+
+# Enforces packages/backend/src/permissionPolicy.ts; without this the
+# permission backend allows everything and the policy never runs.
+permission:
+  enabled: true
 
 backend:
   listen:

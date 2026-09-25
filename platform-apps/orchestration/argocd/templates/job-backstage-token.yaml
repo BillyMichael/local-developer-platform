@@ -1,0 +1,105 @@
+# Mints an API token for the read-only `backstage` account (configs.cm
+# accounts.backstage) and publishes it as argocd-backstage-token, replicated to
+# the portal namespace where the Backstage Argo CD proxy reads it.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-backstage-token
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argocd-backstage-token
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argocd-backstage-token
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+subjects:
+  - kind: ServiceAccount
+    name: argocd-backstage-token
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: argocd-backstage-token
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: argocd-backstage-token
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      serviceAccountName: argocd-backstage-token
+      restartPolicy: OnFailure
+      containers:
+        - name: kubectl
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+              NAMESPACE="{{ .Release.Namespace }}"
+
+              if kubectl get secret argocd-backstage-token -n "$NAMESPACE" >/dev/null 2>&1; then
+                echo "argocd-backstage-token already exists, nothing to do"
+                exit 0
+              fi
+
+              kubectl rollout status deployment/argocd-server -n "$NAMESPACE" --timeout=300s
+
+              # The admin password goes in on stdin so it never appears in
+              # this job's arguments; the server CLI logs in over loopback.
+              ADMIN_PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n "$NAMESPACE" -o jsonpath='{.data.password}' | base64 -d)
+              TOKEN=$(printf '%s\n' "$ADMIN_PASSWORD" | kubectl exec -i -n "$NAMESPACE" deploy/argocd-server -c server -- sh -c '
+                read -r PW
+                CFG=$(mktemp)
+                argocd login localhost:8080 --plaintext --username admin --password "$PW" --config "$CFG" >/dev/null
+                argocd account generate-token --account backstage --config "$CFG"
+                rm -f "$CFG"')
+              [ -n "$TOKEN" ] || { echo "Failed to generate token"; exit 1; }
+
+              cat <<EOF | kubectl apply -f -
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: argocd-backstage-token
+                namespace: $NAMESPACE
+                annotations:
+                  replicator.v1.mittwald.de/replicate-to: "portal"
+              type: Opaque
+              stringData:
+                token: "$TOKEN"
+              EOF
+              echo "Token published; replicator copies it to portal"

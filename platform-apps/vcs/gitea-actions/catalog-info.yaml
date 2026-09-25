@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: gitea-actions
+  annotations:
+    argocd/app-name: gitea-actions
+    backstage.io/kubernetes-namespace: vcs
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=gitea-actions
   description: CI runner for Gitea Actions (act_runner with docker-in-docker).
   tags:
     - ci

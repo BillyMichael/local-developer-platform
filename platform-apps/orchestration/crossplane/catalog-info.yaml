@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: crossplane
+  annotations:
+    argocd/app-name: crossplane
+    backstage.io/kubernetes-namespace: orchestration
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=crossplane
   description: The cloud native control plane framework.
 spec:
   type: infrastructure

@@ -34,6 +34,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get install -y --no-install-recommends libsqlite3-dev && \
     rm -rf /var/lib/apt/lists/*
 
+# mkdocs for TechDocs, which app-config builds inside the backend
+# (techdocs.generator.runIn: local) rather than in a docker container.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends python3-venv && \
+    rm -rf /var/lib/apt/lists/*
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV && \
+    $VIRTUAL_ENV/bin/pip install --no-cache-dir mkdocs-techdocs-core==1.7.1
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 # From here on we use the least-privileged `node` user to run the backend.
 USER node
 

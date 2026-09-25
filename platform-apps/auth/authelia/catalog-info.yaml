@@ -3,6 +3,9 @@ kind: Component
 metadata:
   name: authelia
   annotations:
+    argocd/app-name: authelia
+    backstage.io/kubernetes-namespace: auth
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=authelia
     terraform/organization: GLUK
     terraform/workspaces: agora-apps
   description: Open-source SSO and MFA gateway providing authentication and authorization.

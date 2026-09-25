@@ -2,6 +2,10 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: argocd
+  annotations:
+    argocd/app-name: argocd
+    backstage.io/kubernetes-namespace: orchestration
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=argocd
   description: Declarative GitOps CD for Kubernetes.
 spec:
   type: website

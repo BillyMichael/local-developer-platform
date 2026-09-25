@@ -11,6 +11,9 @@ backstage:
     tls:
       enabled: true
       secretName: backstage-tls
+  serviceAccount:
+    create: true
+    name: backstage
   backstage:
     resources:
       requests:
@@ -52,6 +55,13 @@ backstage:
         valueFrom:
           secretKeyRef:
             name: github-token
+            key: token
+            optional: true
+      # minted by the argocd chart's backstage-token job
+      - name: ARGOCD_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: argocd-backstage-token
             key: token
             optional: true
       - name: NODE_EXTRA_CA_CERTS
