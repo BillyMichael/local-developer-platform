@@ -57,6 +57,32 @@ backstage:
             name: github-token
             key: token
             optional: true
+      # connection details published by CloudNativePG (templates/database.yaml)
+      - name: POSTGRES_HOST
+        valueFrom:
+          secretKeyRef:
+            name: backstage-db-app
+            key: host
+      - name: POSTGRES_PORT
+        valueFrom:
+          secretKeyRef:
+            name: backstage-db-app
+            key: port
+      - name: POSTGRES_USER
+        valueFrom:
+          secretKeyRef:
+            name: backstage-db-app
+            key: user
+      - name: POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: backstage-db-app
+            key: password
+      - name: POSTGRES_DBNAME
+        valueFrom:
+          secretKeyRef:
+            name: backstage-db-app
+            key: dbname
       # minted by the argocd chart's backstage-token job
       - name: ARGOCD_TOKEN
         valueFrom:

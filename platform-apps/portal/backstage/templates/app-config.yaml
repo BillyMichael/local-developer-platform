@@ -16,6 +16,18 @@ data:
         origin: https://portal-127-0-0-1.nip.io
         methods: [GET, POST, PUT, DELETE]
         credentials: true
+      # Persistent catalog and search index. Plugins share the one database
+      # CloudNativePG creates, a schema each, so the app user needs no
+      # CREATEDB rights.
+      database:
+        client: pg
+        pluginDivisionMode: schema
+        connection:
+          host: ${POSTGRES_HOST}
+          port: ${POSTGRES_PORT}
+          user: ${POSTGRES_USER}
+          password: ${POSTGRES_PASSWORD}
+          database: ${POSTGRES_DBNAME}
     auth:
       environment: production
       session:
