@@ -1,0 +1,26 @@
+# Composes a CloudNativePG Cluster. The resources live in
+# files/postgres.yaml.gotmpl, rendered by function-go-templating; Crossplane's
+# permission to manage them comes from rbac.yaml.
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: postgresdatabase.storage.ldp
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: '-1'
+spec:
+  compositeTypeRef:
+    apiVersion: storage.ldp/v1alpha1
+    kind: PostgresDatabase
+  mode: Pipeline
+  pipeline:
+    - step: render
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+{{ .Files.Get "files/postgres.yaml.gotmpl" | indent 12 }}

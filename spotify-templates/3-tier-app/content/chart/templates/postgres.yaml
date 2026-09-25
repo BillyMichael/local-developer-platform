@@ -1,14 +1,14 @@
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
+# Postgres from the platform's storage.ldp composition (CloudNativePG).
+# Connection details land in the Secret {{ .Release.Name }}-db-app and the
+# primary is served at {{ .Release.Name }}-db-rw.
+apiVersion: storage.ldp/v1alpha1
+kind: PostgresDatabase
 metadata:
   name: {{ .Release.Name }}-db
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  instances: {{ .Values.postgres.instances }}
+  storageSize: {{ .Values.postgres.storageSize }}
   labels:
     backstage.io/kubernetes-id: {{ .Release.Name }}
-spec:
-  # CloudNativePG copies these onto the instance pods and services
-  inheritedMetadata:
-    labels:
-      backstage.io/kubernetes-id: {{ .Release.Name }}
-  instances: {{ .Values.postgres.instances }}
-  storage:
-    size: {{ .Values.postgres.storageSize }}

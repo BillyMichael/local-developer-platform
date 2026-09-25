@@ -1,0 +1,53 @@
+# Namespaced, unlike the oidc.ldp kinds: a database lives beside the app that
+# uses it, so the XR composes straight into its own namespace and a tenant
+# chart can declare one like any other resource.
+#
+# For an XR named <name>, CloudNativePG publishes the connection details in
+# the Secret <name>-app (host, port, dbname, user, password, uri) and serves
+# read-write connections at the Service <name>-rw.
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: postgresdatabases.storage.ldp
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: '-1'
+spec:
+  scope: Namespaced
+  group: storage.ldp
+  names:
+    kind: PostgresDatabase
+    plural: postgresdatabases
+    shortNames: [pgdb]
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      additionalPrinterColumns:
+        - name: Instances
+          type: integer
+          jsonPath: .spec.instances
+        - name: Storage
+          type: string
+          jsonPath: .spec.storageSize
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                instances:
+                  type: integer
+                  description: Number of Postgres instances (1 primary, the rest replicas)
+                  default: 1
+                  minimum: 1
+                storageSize:
+                  type: string
+                  description: Volume size per instance
+                  default: 1Gi
+                labels:
+                  type: object
+                  description: Labels for the cluster, copied onto its pods and services
+                  additionalProperties:
+                    type: string

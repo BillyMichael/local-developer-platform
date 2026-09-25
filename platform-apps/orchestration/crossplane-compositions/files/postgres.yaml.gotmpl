@@ -1,0 +1,31 @@
+{{- /*
+  Rendered by function-go-templating, not Helm: the composition pulls this file
+  in with .Files.Get, which does not template it.
+*/ -}}
+{{- $xr := getCompositeResource . }}
+{{- $name := $xr.metadata.name }}
+{{- $spec := $xr.spec }}
+{{- $cluster := getComposedResource . "cluster" }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $name }}
+  namespace: {{ $xr.metadata.namespace }}
+  {{- with $spec.labels }}
+  labels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+    gotemplating.fn.crossplane.io/composition-resource-name: cluster
+    gotemplating.fn.crossplane.io/ready: {{ if eq (getResourceCondition "Ready" $cluster).Status "True" }}"True"{{ else }}"False"{{ end }}
+spec:
+  instances: {{ $spec.instances }}
+  storage:
+    size: {{ $spec.storageSize }}
+  {{- with $spec.labels }}
+  # CloudNativePG copies these onto the instance pods and services
+  inheritedMetadata:
+    labels:
+      {{- toYaml . | nindent 6 }}
+  {{- end }}

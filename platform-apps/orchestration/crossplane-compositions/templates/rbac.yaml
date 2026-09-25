@@ -16,3 +16,17 @@ rules:
   - apiGroups: ["generators.external-secrets.io"]
     resources: ["passwords"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# Grants the kinds the storage.ldp compositions create.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crossplane:compose-cloudnative-pg
+  labels:
+    rbac.crossplane.io/aggregate-to-crossplane: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: '-2'
+rules:
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
