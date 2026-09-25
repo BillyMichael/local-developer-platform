@@ -1,112 +1,50 @@
-import { Navigate, Route } from 'react-router-dom';
-import { apiDocsPlugin, ApiExplorerPage } from '@backstage/plugin-api-docs';
-import {
-  CatalogEntityPage,
-  CatalogIndexPage,
-  catalogPlugin,
-} from '@backstage/plugin-catalog';
-import {
-  CatalogImportPage,
-  catalogImportPlugin,
-} from '@backstage/plugin-catalog-import';
-import { ScaffolderPage, scaffolderPlugin } from '@backstage/plugin-scaffolder';
-import { orgPlugin } from '@backstage/plugin-org';
-import { SearchPage } from '@backstage/plugin-search';
-import {
-  TechDocsIndexPage,
-  techdocsPlugin,
-  TechDocsReaderPage,
-} from '@backstage/plugin-techdocs';
-import { TechDocsAddons } from '@backstage/plugin-techdocs-react';
-import { ReportIssue } from '@backstage/plugin-techdocs-module-addons-contrib';
-import { UserSettingsPage } from '@backstage/plugin-user-settings';
-import { apis } from './apis';
-import { entityPage } from './components/catalog/EntityPage';
-import { searchPage } from './components/search/SearchPage';
-import { Root } from './components/Root';
+import { createApp } from '@backstage/frontend-defaults';
+import catalogPlugin from '@backstage/plugin-catalog/alpha';
+import catalogGraphPlugin from '@backstage/plugin-catalog-graph/alpha';
+import catalogImportPlugin from '@backstage/plugin-catalog-import/alpha';
+import apiDocsPlugin from '@backstage/plugin-api-docs/alpha';
+import scaffolderPlugin from '@backstage/plugin-scaffolder/alpha';
+import techdocsPlugin from '@backstage/plugin-techdocs/alpha';
+import searchPlugin from '@backstage/plugin-search/alpha';
+import orgPlugin from '@backstage/plugin-org/alpha';
+import userSettingsPlugin from '@backstage/plugin-user-settings/alpha';
+import notificationsPlugin from '@backstage/plugin-notifications/alpha';
+import signalsPlugin from '@backstage/plugin-signals/alpha';
+import kubernetesPlugin from '@backstage/plugin-kubernetes/alpha';
+import appVisualizerPlugin from '@backstage/plugin-app-visualizer';
+import appModuleUserSettings from '@backstage/plugin-app-module-user-settings';
+import readmePlugin from '@axis-backstage/plugin-readme/alpha';
+import { apisModule } from './modules/apis';
+import { appModule } from './modules/app';
+import { homePluginWithLdpHome } from './modules/pages';
+import { techdocsModule } from './modules/techdocs';
 
-import { AlertDisplay, OAuthRequestDialog } from '@backstage/core-components';
-import { createApp } from '@backstage/app-defaults';
-import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
-import { CatalogGraphPage } from '@backstage/plugin-catalog-graph';
-import { RequirePermission } from '@backstage/plugin-permission-react';
-import { catalogEntityCreatePermission } from '@backstage/plugin-catalog-common/alpha';
-import { NotificationsPage } from '@backstage/plugin-notifications';
-import { SignalsDisplay } from '@backstage/plugin-signals';
-
-import { LdpSignInPage } from './components/SignInPage';
-import { ldpThemes } from './theme';
-
-const app = createApp({
-  apis,
-  themes: ldpThemes,
-  bindRoutes({ bind }) {
-    bind(catalogPlugin.externalRoutes, {
-      createComponent: scaffolderPlugin.routes.root,
-      viewTechDoc: techdocsPlugin.routes.docRoot,
-      createFromTemplate: scaffolderPlugin.routes.selectedTemplate,
-    });
-    bind(apiDocsPlugin.externalRoutes, {
-      registerApi: catalogImportPlugin.routes.importPage,
-    });
-    bind(scaffolderPlugin.externalRoutes, {
-      registerComponent: catalogImportPlugin.routes.importPage,
-      viewTechDoc: techdocsPlugin.routes.docRoot,
-    });
-    bind(orgPlugin.externalRoutes, {
-      catalogIndex: catalogPlugin.routes.catalogIndex,
-    });
-  },
-  components: {
-    SignInPage: props => <LdpSignInPage {...props} />,
-  },
+/**
+ * Features are listed explicitly rather than discovered (`app.packages`), so
+ * adding a plugin to package.json does nothing until it is added here. Each
+ * plugin supplies its own pages, entity cards and tabs; app-config.yaml's
+ * `app.extensions` scopes the ones whose defaults are too broad.
+ */
+export default createApp({
+  features: [
+    catalogPlugin,
+    catalogGraphPlugin,
+    catalogImportPlugin,
+    apiDocsPlugin,
+    scaffolderPlugin,
+    techdocsPlugin,
+    searchPlugin,
+    orgPlugin,
+    userSettingsPlugin,
+    notificationsPlugin,
+    signalsPlugin,
+    kubernetesPlugin,
+    readmePlugin,
+    homePluginWithLdpHome,
+    appVisualizerPlugin,
+    appModuleUserSettings,
+    apisModule,
+    appModule,
+    techdocsModule,
+  ],
 });
-
-const routes = (
-  <FlatRoutes>
-    <Route path="/" element={<Navigate to="catalog" />} />
-    <Route path="/catalog" element={<CatalogIndexPage />} />
-    <Route
-      path="/catalog/:namespace/:kind/:name"
-      element={<CatalogEntityPage />}
-    >
-      {entityPage}
-    </Route>
-    <Route path="/docs" element={<TechDocsIndexPage />} />
-    <Route
-      path="/docs/:namespace/:kind/:name/*"
-      element={<TechDocsReaderPage />}
-    >
-      <TechDocsAddons>
-        <ReportIssue />
-      </TechDocsAddons>
-    </Route>
-    <Route path="/create" element={<ScaffolderPage />} />
-    <Route path="/api-docs" element={<ApiExplorerPage />} />
-    <Route
-      path="/catalog-import"
-      element={
-        <RequirePermission permission={catalogEntityCreatePermission}>
-          <CatalogImportPage />
-        </RequirePermission>
-      }
-    />
-    <Route path="/search" element={<SearchPage />}>
-      {searchPage}
-    </Route>
-    <Route path="/settings" element={<UserSettingsPage />} />
-    <Route path="/catalog-graph" element={<CatalogGraphPage />} />
-    <Route path="/notifications" element={<NotificationsPage />} />
-  </FlatRoutes>
-);
-
-export default app.createRoot(
-  <>
-    <AlertDisplay />
-    <OAuthRequestDialog />
-    <SignalsDisplay />
-    <AppRouter>
-      <Root>{routes}</Root>
-    </AppRouter>
-  </>,
-);

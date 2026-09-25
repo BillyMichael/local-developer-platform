@@ -1,0 +1,127 @@
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a,
+button,
+[role='button'] {
+  transition: color 0.1s ease-out, background-color 0.1s ease-out,
+    box-shadow 0.1s ease-out;
+}
+
+/* Visible focus on every interactive element: 2px amber, 2px offset. */
+:focus-visible {
+  outline: 2px solid #f5b335;
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #5b6779;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2d4270;
+}
+
+/*
+ * @backstage/ui ("BUI") — the design system the new frontend system's own
+ * page chrome is built from — is styled only by --bui-* custom properties,
+ * never by the MUI theme. These carry the BRAND values from
+ * theme/tokens.ts; tokens.test.ts fails if the two drift.
+ *
+ * The selectors mirror BUI's own (`[data-theme-mode=...]`). A bare :root is
+ * not enough: wherever data-theme-mode sits below <html>, BUI's declaration
+ * is the nearer ancestor and wins.
+ */
+:root,
+[data-theme-mode='light'],
+[data-theme-mode='dark'] {
+  /* Square corners; --bui-radius-full stays round for avatars and pills. */
+  --bui-radius-1: 0;
+  --bui-radius-2: 0;
+  --bui-radius-3: 0;
+  --bui-radius-4: 0;
+  --bui-radius-5: 0;
+  --bui-radius-6: 0;
+
+  --bui-font-regular: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --bui-font-monospace: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo,
+    monospace;
+  --bui-font-weight-bold: 700;
+
+  /* The one accent, with navy text: white on amber fails AA. */
+  --bui-bg-solid: #f5b335;
+  --bui-bg-solid-hover: #f9c95f;
+  --bui-bg-solid-pressed: #d99a1f;
+  --bui-fg-solid: #0b1629;
+  --bui-ring: #f5b335;
+}
+
+[data-theme-mode='light'] {
+  --bui-bg-app: #e3e8ee;
+  --bui-fg-primary: #14213a;
+  --bui-fg-secondary: #5b6779;
+  --bui-bg-solid-disabled: #cbd4de;
+  --bui-border-1: #e3e8ee;
+  --bui-border-2: #cbd4de;
+  --bui-card-surface: #ffffff;
+}
+
+[data-theme-mode='dark'] {
+  --bui-bg-app: #0b1629;
+  --bui-fg-primary: #eef2f8;
+  --bui-fg-secondary: #a6b3c8;
+  --bui-bg-solid-disabled: #263756;
+  --bui-border-1: #263756;
+  --bui-border-2: #2d4270;
+  --bui-card-surface: #12213b;
+}
+
+/*
+ * BUI Card sets no background or border, expecting the caller to add a
+ * surface; upstream's entity cards don't, so they rendered as bare text
+ * beside the bordered MUI cards in the same grid. --bui-bg-inherit is what
+ * the card body's scroll shadows fade to.
+ */
+[class*='bui-Card__'] {
+  background-color: var(--bui-card-surface);
+  border: 1px solid var(--bui-border-1);
+  --bui-bg-inherit: var(--bui-card-surface);
+}
+
+/*
+ * Page header (BUI PluginHeader, rendered by plugin-app for every page):
+ * the flat navy bar Agora uses in black, with a hairline of amber beneath.
+ * Set through the component's own variables; the fg tokens are redeclared
+ * inside the bar because its title is a BUI <Text> that colours itself.
+ */
+[class*='bui-PluginHeader__'] {
+  --bui-plugin-header-background-color: #0b1629;
+  --bui-plugin-header-toolbar-border-bottom: none;
+  --bui-plugin-header-tabs-border-bottom: none;
+  --bui-fg-primary: #ffffff;
+  --bui-fg-secondary: rgba(255, 255, 255, 0.72);
+  /* The plugin-icon chip fills with neutral-1/3; keep it on the bar. */
+  --bui-bg-neutral-1: #1b2d4f;
+  --bui-bg-neutral-3: #1b2d4f;
+  border-bottom: 1px solid rgba(245, 179, 53, 0.35);
+}
+
+[class*='bui-PluginHeaderToolbar'] h1,
+[class*='bui-PluginHeaderToolbar'] h1 > * {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* MUI buttons in the bar ignore --bui-*; the amber primary keeps its navy. */
+[class*='bui-PluginHeaderToolbarControls'] button:not([data-variant='primary']),
+[class*='bui-PluginHeaderToolbarControls'] a:not([data-variant='primary']) {
+  color: #ffffff;
+}
