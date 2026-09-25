@@ -64,7 +64,8 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: kubectl
-          image: bitnami/kubectl:latest
+          # Pinned to the cluster's Kubernetes minor; has bash, kubectl and curl.
+          image: alpine/k8s:1.34.11
           command:
             - /bin/bash
             - -c
