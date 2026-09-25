@@ -479,8 +479,11 @@ wait_for 300 \
 
 step 10 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
 
-wait_for 300 \
-  "Gitea" "kubectl --context '$CONTEXT_NAME' -n vcs wait --for=condition=Ready pod -l app.kubernetes.io/name=gitea --timeout=1s"
+# Gitea rolls several times while its secrets materialise, and configure-gitea
+# crash-loops until Postgres answers. Follow the Deployment's rollout rather than
+# every pod matching the label, which includes replaced pods still terminating.
+wait_for 600 \
+  "Gitea" "kubectl --context '$CONTEXT_NAME' -n vcs rollout status deployment/gitea --timeout=1s"
 
 
 # ============================================================================
