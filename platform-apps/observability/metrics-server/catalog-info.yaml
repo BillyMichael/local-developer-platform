@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: metrics-server
+  annotations:
+    argocd/app-name: metrics-server
+    backstage.io/kubernetes-namespace: observability
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=metrics-server
+  description: Cluster-wide CPU and memory metrics for kubectl top, autoscaling and the portal.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform_maintainers
+  system: developer_platform
