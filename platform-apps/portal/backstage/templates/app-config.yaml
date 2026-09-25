@@ -100,8 +100,14 @@ data:
               frequency: { minutes: 10 }
               timeout: { minutes: 3 }
       locations:
+        # The System at the root and one Component per platform app. Not a
+        # repo-wide **/catalog-info.yaml: that also matched the templates'
+        # skeleton catalog-info.yaml files and registered unrendered
+        # template placeholders as entities.
         - type: url
-          target: https://github.com/BillyMichael/local-developer-platform/blob/main/**/catalog-info.yaml
+          target: https://github.com/BillyMichael/local-developer-platform/blob/main/catalog-info.yaml
+        - type: url
+          target: https://github.com/BillyMichael/local-developer-platform/blob/main/platform-apps/**/catalog-info.yaml
         - type: url
           target: https://github.com/BillyMichael/local-developer-platform/blob/main/spotify-templates/3-tier-app/template.yaml
         - type: url
