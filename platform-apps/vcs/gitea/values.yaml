@@ -21,12 +21,6 @@ gitea:
         hosts:
           - vcs-127-0-0-1.nip.io
 
-  service:
-    DISABLE_REGISTRATION: true
-
-  oauth2_client:
-    ENABLE_AUTO_REGISTRATION: true
-
   gitea:
     podAnnotations:
       reloader.stakater.com/auto: "true"
@@ -34,11 +28,21 @@ gitea:
       security:
         ROOT_CA: /etc/ssl/certs/ldp-ca.pem
       service:
+        # No local sign-up; accounts are created on first Authelia login.
+        ALLOW_ONLY_EXTERNAL_REGISTRATION: true
         ENABLE_CAPTCHA: false
         SHOW_REGISTRATION_BUTTON: false
         ENABLE_BASIC_AUTHENTICATION: false
         ENABLE_PASSWORD_SIGNIN_FORM: false
         ENABLE_PASSKEY_AUTHENTICATION: false
+      # Create the account on first OAuth login instead of showing Gitea's
+      # "Complete Account" page, named after the LLDAP uid (the same name
+      # Backstage signs in as); an existing account with the same email is
+      # linked rather than duplicated.
+      oauth2_client:
+        ENABLE_AUTO_REGISTRATION: true
+        USERNAME: preferred_username
+        ACCOUNT_LINKING: auto
       openid:
         ENABLE_OPENID_SIGNIN: false
         ENABLE_OPENID_SIGNUP: true
