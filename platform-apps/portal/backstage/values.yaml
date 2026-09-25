@@ -15,6 +15,16 @@ backstage:
     create: true
     name: backstage
   backstage:
+    # The chart's default allows 30s (3 x 10s) to boot; first start on
+    # Postgres runs every plugin's migrations and takes longer, so the probe
+    # killed the pod mid-start. Allow up to 5 minutes.
+    startupProbe:
+      httpGet:
+        path: /.backstage/health/v1/liveness
+        port: 7007
+        scheme: HTTP
+      periodSeconds: 10
+      failureThreshold: 30
     resources:
       requests:
         cpu: 100m
