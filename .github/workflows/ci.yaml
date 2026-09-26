@@ -19,7 +19,7 @@ jobs:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Full history: a secret added and removed in one PR is still leaked
           fetch-depth: 0
@@ -34,7 +34,7 @@ jobs:
     name: Shell scripts (shellcheck)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Preinstalled on ubuntu-latest. -x follows the `source common.sh` lines.
       - run: shellcheck --severity=warning --external-sources cluster/*.sh
 
@@ -42,8 +42,8 @@ jobs:
     name: Helm charts (lint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-helm@v4
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
       - name: helm lint
         run: |
           status=0
@@ -65,7 +65,7 @@ jobs:
     name: Workflows (actionlint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker://rhysd/actionlint:1.7.12
         with:
           args: -color
