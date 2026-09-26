@@ -5,4 +5,4 @@ agent:
   tools: ${{ values.tools | dump }}
 
 model:
-  name: claude-sonnet-5
+  name: ${{ values.model }}

@@ -155,14 +155,14 @@ class Dispatcher:
             self._client = ClientFactory(ClientConfig(httpx_client=self._http)).create(card)
         return self._client
 
-    async def relay(self, job: dict[str, Any], context_id: str) -> str:
-        """One job -> one A2A message -> wait for a terminal state. Raises on failure."""
+    async def relay(self, text: str, context_id: str) -> str:
+        """One A2A message -> wait for a terminal state. Raises on failure."""
         client = await self._a2a_client()
         message = Message(
             role=Role.user,
             message_id=uuid.uuid4().hex,
             context_id=context_id,
-            parts=[Part(root=TextPart(text=prompt_for(job)))],
+            parts=[Part(root=TextPart(text=text))],
         )
         async with asyncio.timeout(self.timeout):
             while True:
@@ -201,7 +201,7 @@ class Dispatcher:
         context_id = f"{msg.message_id}-a{attempt}"
         job = json.loads(msg.body)
         try:
-            note = await self.relay(job, context_id)
+            note = await self.relay(prompt_for(job), context_id)
             await msg.ack()
             log.info("Completed %s: %s", context_id, note[:200])
             return
@@ -296,6 +296,29 @@ def build_app() -> FastAPI:
         return {"queued": job_id, **job}
 
     return app
+
+
+def trigger() -> None:
+    """The CronJob's role: send AGENT_TRIGGER_PROMPT as one A2A message and exit.
+
+    The run happens in the agent's own pods, exactly like a chat turn, and shows up in the
+    kagent UI as a session from `cron@<agent>`. Exits non-zero unless the run completed. No
+    retries: the next tick is the retry, and the CronJob's `Forbid` policy stops overlaps.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    prompt = os.getenv("AGENT_TRIGGER_PROMPT", "").strip()
+    if not prompt:
+        raise SystemExit("AGENT_TRIGGER_PROMPT is unset (the chart sets it from schedule.prompt).")
+    name = app_name()
+    dispatcher = Dispatcher(
+        os.getenv("AGENT_A2A_URL") or f"http://{name}:8080",
+        timeout=float(env_int("AGENT_DISPATCH_TIMEOUT", 1740)),
+        user_id=f"cron@{name}",
+    )
+    # Fresh thread per firing, for the same reason as the dispatcher's fresh thread per attempt
+    context_id = f"cron-{uuid.uuid4().hex}"
+    note = asyncio.run(dispatcher.relay(prompt, context_id))
+    log.info("Completed %s: %s", context_id, note[:200])
 
 
 def serve_receiver() -> None:

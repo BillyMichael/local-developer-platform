@@ -44,7 +44,7 @@ gitea:
         ENABLE_OPENID_SIGNUP: true
       webhook:
         # Gitea blocks webhooks to private addresses by default; queue-backed agents
-        # (spotify-templates/langgraph-agent) receive them on in-cluster Services
+        # (spotify-templates/agent) receive them on in-cluster Services
         ALLOWED_HOST_LIST: "external,*.svc.cluster.local"
 
     oauth:

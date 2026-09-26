@@ -1,0 +1,40 @@
+{{- if .Values.schedule.enabled }}
+# kagent has no scheduler, so a plain CronJob runs the image's `trigger` role: one A2A
+# message to the agent's own Service, exit 0 only if the run completed. The run happens in
+# the agent's pods like any chat turn, so no queue is needed: `Forbid` is the dedupe and
+# the next tick is the retry.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-schedule
+spec:
+  schedule: {{ .Values.schedule.cron | quote }}
+  timeZone: {{ .Values.schedule.timeZone | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: {{ .Values.schedule.activeDeadlineSeconds }}
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: trigger
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args: ["trigger"]
+              env:
+                - name: AGENT_NAME
+                  value: {{ .Release.Name }}
+                - name: AGENT_TRIGGER_PROMPT
+                  value: {{ .Values.schedule.prompt | quote }}
+                # A minute inside the Job's deadline, so the trigger reports the timeout
+                # itself rather than being killed mid-wait
+                - name: AGENT_DISPATCH_TIMEOUT
+                  value: {{ sub (int .Values.schedule.activeDeadlineSeconds) 60 | quote }}
+              resources:
+                requests: { cpu: 25m, memory: 96Mi }
+                limits: { memory: 256Mi }
+{{- end }}
