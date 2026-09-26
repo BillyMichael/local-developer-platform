@@ -13,7 +13,7 @@
   "packageRules": [
     {
       "description": "kagent-crds and kagent must move together; the agent skeleton's kagent-langgraph pin follows by hand",
-      "matchPackageNames": [
+      "matchDepNames": [
         "kagent",
         "kagent-crds"
       ],
