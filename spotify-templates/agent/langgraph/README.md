@@ -8,7 +8,7 @@ A LangGraph agent served by kagent over A2A. Chat with it at <https://agents-127
 
 - `${{ values.pkgName }}/graph.py` — the system prompt and the graph. Start here.
 - `${{ values.pkgName }}/tools.py` — the tools the model can call (`word_count` is a placeholder).
-- `chart/values.yaml` — model, timeouts, resources{% if values.queue %}, queue and scaling{% endif %}.
+- `chart/values.yaml` — model, timeouts, resources{% if values.schedule %}, schedule{% endif %}{% if values.queue %}, queue and scaling{% endif %}.
 
 Push to `main` and Gitea Actions tests the code, builds the image, pushes it to the Gitea
 registry and pins `chart/values.yaml` to the new tag. ArgoCD then rolls it out. A brand
@@ -24,6 +24,18 @@ export ANTHROPIC_API_KEY=...
 uv run agent            # A2A server on :8080, in-memory conversation state
 uv run pytest
 ```
+{% if values.schedule %}
+## Scheduled runs
+
+A CronJob (`${{ values.name }}-schedule`) sends the agent `schedule.prompt` on
+`schedule.cron` (Europe/London), both in `chart/values.yaml`. Each run shows up in the
+kagent UI as a session from `cron@${{ values.name }}`. A failed run is not retried; the next
+tick is the retry, and runs never overlap. To run it now:
+
+```bash
+kubectl -n ${{ values.name }} create job --from=cronjob/${{ values.name }}-schedule run-now
+```
+{% endif %}
 {% if values.queue %}
 ## Webhook-triggered runs
 

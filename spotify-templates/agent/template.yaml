@@ -3,11 +3,18 @@ kind: Template
 metadata:
   name: agent-template
   title: AI Agent (kagent)
-  description: Deploys a declarative kagent Agent from a system prompt and a set of tools. Pure YAML, no image build.
+  description: >-
+    An agent in its own repo, deployed by ArgoCD and served by kagent. Choose how it is
+    built: declarative (a system prompt and platform tools, pure YAML) or a Python LangGraph
+    agent built by Gitea Actions, optionally run on a cron schedule or by Gitea pull request
+    webhooks through a RabbitMQ queue with KEDA scaling.
   tags:
     - recommended
     - agent
     - kagent
+    - langgraph
+    - python
+    - cron
 spec:
   owner: group:default/platform_maintainers
   type: service
@@ -15,87 +22,220 @@ spec:
   parameters:
     - title: About the agent
       required:
-        - component_id
+        - name
+        - description
         - owner
-        - system_prompt
       properties:
-        component_id:
+        name:
           title: Name
           type: string
-          description: Unique name of the agent (lowercase, dashes)
-          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          description: >-
+            Lowercase and dashes. Becomes the repo, the namespace, the kagent Agent and, for
+            LangGraph, the Python package (with dashes as underscores).
+          pattern: '^[a-z]([-a-z0-9]*[a-z0-9])?$'
+          maxLength: 40
           ui:autofocus: true
+          ui:help: 'e.g. agent-reviewer'
         description:
           title: Description
           type: string
-          description: What this agent does for its users
+          description: >-
+            One line, shown in the kagent UI and the catalog. No double quotes or
+            backslashes (it lands in Python and TOML strings).
+          pattern: '^[^"\\]+$'
         owner:
           title: Owner
           type: string
-          description: Owner of the component
           ui:field: OwnerPicker
           ui:options:
             catalogFilter:
               kind:
                 - Group
                 - User
-        system_prompt:
-          title: System prompt
+
+    - title: How it runs
+      required:
+        - runtime
+        - model
+        - systemPrompt
+      properties:
+        runtime:
+          title: What kind of agent?
           type: string
-          description: Instructions the agent follows on every conversation
-          ui:widget: textarea
-          ui:options:
-            rows: 12
-          default: |
-            You are a helpful agent for a platform engineering team.
+          default: declarative
+          enum:
+            - declarative
+            - langgraph
+            - schedule
+            - webhook
+          enumNames:
+            - 'Declarative — a system prompt and platform tools, no code or image build'
+            - 'LangGraph — Python code you own, chat in the kagent UI'
+            - 'LangGraph + schedule — also runs on a cron schedule'
+            - 'LangGraph + webhook queue — also runs on Gitea pull requests, KEDA scale-out'
+          ui:widget: radio
+        model:
+          title: Model
+          type: string
+          default: claude-sonnet-5
+          enum:
+            - claude-sonnet-5
+            - claude-opus-5-5
+            - claude-haiku-4-5
+          enumNames:
+            - Claude Sonnet 5 (default)
+            - Claude Opus 5.5 (most capable)
+            - Claude Haiku 4.5 (fastest, cheapest)
+      # The runtime-specific fields, and a runtime-specific default for the system prompt.
+      dependencies:
+        runtime:
+          oneOf:
+            - properties:
+                runtime:
+                  enum: [declarative]
+                systemPrompt:
+                  title: System prompt
+                  type: string
+                  description: Instructions the agent follows on every conversation
+                  ui:widget: textarea
+                  ui:options:
+                    rows: 12
+                  default: |
+                    You are a helpful agent for a platform engineering team.
 
-            # Instructions
-            - Use the tools available to you before answering; do not guess.
-            - If the request is unclear, ask a clarifying question first.
-            - Explain what you did and what you found.
+                    # Instructions
+                    - Use the tools available to you before answering; do not guess.
+                    - If the request is unclear, ask a clarifying question first.
+                    - Explain what you did and what you found.
 
-            # Response format
-            - Always answer in Markdown.
-        tools:
-          title: Tools
-          type: array
-          description: Tools from the platform's built-in kagent tool server
-          uniqueItems: true
-          ui:widget: checkboxes
-          items:
-            type: string
-            enum:
-              - k8s_get_resources
-              - k8s_describe_resource
-              - k8s_get_pod_logs
-              - k8s_get_events
-              - k8s_get_available_api_resources
-              # ponytail: read-only tools only. Write tools (k8s_apply_manifest) and a
-              # git/Gitea MCP server are the next step once the tool server is per-tenant.
-          default:
-            - k8s_get_resources
-            - k8s_describe_resource
-            - k8s_get_pod_logs
+                    # Response format
+                    - Always answer in Markdown.
+                tools:
+                  title: Tools
+                  type: array
+                  description: Tools from the platform's built-in kagent tool server
+                  uniqueItems: true
+                  ui:widget: checkboxes
+                  items:
+                    type: string
+                    enum:
+                      - k8s_get_resources
+                      - k8s_describe_resource
+                      - k8s_get_pod_logs
+                      - k8s_get_events
+                      - k8s_get_available_api_resources
+                      # ponytail: read-only tools only. Write tools (k8s_apply_manifest) and a
+                      # git/Gitea MCP server are the next step once the tool server is per-tenant.
+                  default:
+                    - k8s_get_resources
+                    - k8s_describe_resource
+                    - k8s_get_pod_logs
+            - properties:
+                runtime:
+                  enum: [langgraph, webhook]
+                systemPrompt:
+                  title: System prompt
+                  type: string
+                  description: >-
+                    Lands in graph.py as SYSTEM_PROMPT; change it there any time. No double
+                    quotes or backslashes (it lands in a Python string).
+                  pattern: '^[^"\\]+$'
+                  ui:widget: textarea
+                  ui:options:
+                    rows: 8
+                  default: |
+                    You are a concise assistant running on the local developer platform.
+
+                    Answer directly. Say plainly when you do not know something rather than guessing.
+            - properties:
+                runtime:
+                  enum: [schedule]
+                scheduleCron:
+                  title: Schedule (cron)
+                  type: string
+                  description: Five-field cron, Europe/London.
+                  default: '0 9 * * 1-5'
+                  pattern: '^\S+ \S+ \S+ \S+ \S+$'
+                schedulePrompt:
+                  title: Message sent on each run
+                  type: string
+                  description: >-
+                    What the CronJob says to the agent every time the schedule fires, as if
+                    typed in the kagent UI. Not the system prompt: this is the per-run
+                    request, so put the job's parameters here and say nobody is watching.
+                  ui:widget: textarea
+                  ui:options:
+                    rows: 4
+                  default: >-
+                    Unattended scheduled run. Nobody is watching, so do not ask for
+                    confirmation: do the job, then finish with a short summary.
+                systemPrompt:
+                  title: System prompt
+                  type: string
+                  description: >-
+                    Lands in graph.py as SYSTEM_PROMPT; change it there any time. No double
+                    quotes or backslashes (it lands in a Python string).
+                  pattern: '^[^"\\]+$'
+                  ui:widget: textarea
+                  ui:options:
+                    rows: 8
+                  default: |
+                    You are an agent running on the local developer platform, on a schedule.
+
+                    Unattended (the schedule): the message says nobody is watching. Then do
+                    not ask any question; do the job and finish with a short summary, which is
+                    the run's log. Interactive (a person in the kagent UI): ask before any side
+                    effect they did not request.
+
+                    A failed run is retried on the next tick from the beginning. Before a side
+                    effect, check whether an earlier run already did it, and say so instead of
+                    repeating it.
+              required:
+                - scheduleCron
+                - schedulePrompt
 
   steps:
-    - id: fetch-base
+    - id: fetch-declarative
       name: Fetch Base
+      if: ${{ parameters.runtime == 'declarative' }}
       action: fetch:template
       input:
-        url: ./content
+        url: ./declarative
         values:
-          component_id: ${{ parameters.component_id }}
+          component_id: ${{ parameters.name }}
           description: ${{ parameters.description }}
           owner: ${{ parameters.owner }}
-          system_prompt: ${{ parameters.system_prompt }}
+          system_prompt: ${{ parameters.systemPrompt }}
           tools: ${{ parameters.tools }}
+          model: ${{ parameters.model }}
+
+    - id: fetch-langgraph
+      name: Fetch Base
+      if: ${{ parameters.runtime != 'declarative' }}
+      action: fetch:template
+      input:
+        url: ./langgraph
+        # GitHub-style ${{ }} expressions belong to Gitea Actions, not the scaffolder
+        copyWithoutTemplating:
+          - .gitea/**
+        values:
+          name: ${{ parameters.name }}
+          pkgName: ${{ parameters.name | replace("-", "_") }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          systemPrompt: ${{ parameters.systemPrompt }}
+          model: ${{ parameters.model }}
+          queue: ${{ parameters.runtime == 'webhook' }}
+          schedule: ${{ parameters.runtime == 'schedule' }}
+          scheduleCron: ${{ parameters.scheduleCron }}
+          schedulePrompt: ${{ parameters.schedulePrompt }}
 
     - id: publish
       name: Publish
       action: publish:gitea
       input:
         description: ${{ parameters.description }}
-        repoUrl: vcs-127-0-0-1.nip.io?owner=local-developer-platform&repo=${{ parameters.component_id }}
+        repoUrl: vcs-127-0-0-1.nip.io?owner=local-developer-platform&repo=${{ parameters.name }}
         defaultBranch: main
 
     - id: register
@@ -114,3 +254,26 @@ spec:
         entityRef: ${{ steps.register.output.entityRef }}
       - title: Chat with it (kagent UI)
         url: https://agents-127-0-0-1.nip.io
+    text:
+      - title: What happens next
+        content: |
+          {%- if parameters.runtime == 'declarative' %}
+          ArgoCD deploys the agent into the `${{ parameters.name }}` namespace; it appears in
+          the kagent UI within a minute or two. Change its prompt, tools or model in
+          `chart/values.yaml`.
+          {%- else %}
+          [Gitea Actions](https://vcs-127-0-0-1.nip.io/local-developer-platform/${{ parameters.name }}/actions)
+          builds the image and pins its tag in `chart/values.yaml`; ArgoCD then deploys the
+          agent into the `${{ parameters.name }}` namespace. Until the first build finishes the
+          pod shows `ImagePullBackOff` — that's expected.
+          {%- endif %}
+          {%- if parameters.runtime == 'schedule' %}
+
+          Runs at `${{ parameters.scheduleCron }}` (Europe/London). Change the cron or the
+          message under `schedule:` in `chart/values.yaml`. To run it now:
+          `kubectl -n ${{ parameters.name }} create job --from=cronjob/${{ parameters.name }}-schedule run-now`
+          {%- endif %}
+          {%- if parameters.runtime == 'webhook' %}
+
+          The README explains how to point a Gitea webhook at the receiver.
+          {%- endif %}

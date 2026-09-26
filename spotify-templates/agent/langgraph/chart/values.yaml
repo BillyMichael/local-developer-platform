@@ -24,6 +24,17 @@ resources:
   limits:
     memory: 1Gi
 
+# A CronJob that sends the agent `prompt` on a timer (templates/schedule.yaml). Off: nothing
+# runs the agent unprompted.
+schedule:
+  enabled: ${{ values.schedule }}
+  cron: ${{ (values.scheduleCron or "0 9 * * 1-5") | dump }}
+  timeZone: Europe/London
+  # The per-run request, as if typed in the kagent UI. Say that nobody is watching.
+  prompt: ${{ (values.schedulePrompt or "Unattended scheduled run. Nobody is watching, so do not ask for confirmation: do the job, then finish with a short summary.") | dump }}
+  # Job ceiling. Must exceed agent.executionTimeout or the Job dies before the run can.
+  activeDeadlineSeconds: 1800
+
 # Gitea webhook -> RabbitMQ -> dispatcher -> this agent, with KEDA scaling the agent's pods
 # on queue depth. Off: the agent is interactive-only (kagent UI and A2A).
 queue:

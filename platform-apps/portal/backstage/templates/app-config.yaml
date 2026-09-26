@@ -112,8 +112,6 @@ data:
           target: https://github.com/BillyMichael/local-developer-platform/blob/main/spotify-templates/3-tier-app/template.yaml
         - type: url
           target: https://github.com/BillyMichael/local-developer-platform/blob/main/spotify-templates/agent/template.yaml
-        - type: url
-          target: https://github.com/BillyMichael/local-developer-platform/blob/main/spotify-templates/langgraph-agent/template.yaml
     
     # The cluster Backstage runs in, read with the pod's own service-account
     # token (read-only, see kubernetes-rbac.yaml). Entities opt in with
