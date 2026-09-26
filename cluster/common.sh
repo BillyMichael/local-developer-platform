@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Sourced by the other scripts, which use the variables defined here
+# shellcheck disable=SC2034
 
 # ============================================================================
 # COLOURS & FORMATTING
