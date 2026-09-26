@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: a secret added and removed in one PR is still leaked
+          fetch-depth: 0
+
+      # Reviewed findings are baselined by fingerprint in .gitleaksignore
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo --user "$(id -u):$(id -g)" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1 git --redact --no-banner --exit-code 1 .
+
+  shellcheck:
+    name: Shell scripts (shellcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Preinstalled on ubuntu-latest. -x follows the `source common.sh` lines.
+      - run: shellcheck --severity=warning --external-sources cluster/*.sh
+
+  helm:
+    name: Helm charts (lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: helm lint
+        run: |
+          status=0
+          for chart in platform-apps/*/*/; do
+            echo "::group::$chart"
+            # lldap-chart vendors its dependency (no public repo), so there is nothing to fetch
+            if grep -q 'repository:' "$chart/Chart.yaml"; then
+              helm dependency update "$chart" >/dev/null || status=1
+            fi
+            # tenant.name is normally set by the tenant ApplicationSet
+            helm lint "$chart" --set tenant.name=ci || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+  actionlint:
+    name: Workflows (actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color

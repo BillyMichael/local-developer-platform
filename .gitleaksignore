@@ -1,0 +1,8 @@
+# Reviewed findings in history. Add a fingerprint here only after checking it is not a
+# live secret; gitleaks prints the fingerprint with each finding.
+# False positives: "external-secrets" in kubectl wait lines
+19708255352579c9759938196fdc095ce7cf3ab7:cluster/cluster-up.sh:generic-api-key:200
+cb0ea9e66a43ff3b16e338dfc40f19592e5a002a:cluster/cluster-up.sh:generic-api-key:160
+e275c20b9fa1f2958f6932e15cc71f9791cfdae3:cluster/cluster-up.sh:generic-api-key:127
+# Old local-cluster Argo CD OIDC client secret, removed from HEAD (now a $secret reference)
+65e77c198a6427a40726e1ab1220084c447bfd92:platform-apps/orchestration/argocd/values.yaml:generic-api-key:44

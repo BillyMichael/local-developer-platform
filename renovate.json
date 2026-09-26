@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "helmv3",
+    "github-actions"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "packageRules": [
+    {
+      "description": "kagent-crds and kagent must move together; the agent skeleton's kagent-langgraph pin follows by hand",
+      "matchPackageNames": [
+        "kagent",
+        "kagent-crds"
+      ],
+      "groupName": "kagent"
+    },
+    {
+      "description": "One PR a week for GitHub Actions bumps",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions",
+      "schedule": [
+        "before 9am on monday"
+      ]
+    }
+  ]
+}
