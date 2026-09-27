@@ -34,6 +34,11 @@ Before you begin, ensure you have the following installed:
     kind nodes, in Argo CD, in Crossplane and in the platform trust bundle. If
     detection misses your proxy, point `LDP_EXTRA_CA_FILE` at its PEM file.
 
+!!! tip "The checkout must be visible to the engine"
+    ArgoCD deploys the platform from this checkout, mounted into the kind
+    nodes. Docker Desktop and Podman machine share your home directory by
+    default; a checkout elsewhere needs adding to the engine's file sharing.
+
 **System Requirements:**
 
 - 16GB+ RAM available for the container runtime
@@ -64,8 +69,10 @@ make up
 
 This will:
 
-- Create a KIND cluster with 1 control-plane and 2 worker nodes
-- Install ArgoCD and bootstrap all platform applications via GitOps
+- Create a KIND cluster with 1 control-plane and 2 worker nodes, with this
+  checkout's `.git` directory mounted into every node
+- Install ArgoCD and bootstrap all platform applications via GitOps from the
+  committed `HEAD` of this checkout (see [GitOps Flow](../architecture/overview.md#gitops-flow))
 - Configure CoreDNS for local service resolution
 - Wait for authentication services to become ready
 - Display credentials and service URLs

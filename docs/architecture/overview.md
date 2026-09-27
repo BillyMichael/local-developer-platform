@@ -8,7 +8,7 @@ The Local Developer Platform is built on GitOps principles, using ArgoCD to mana
 graph TB
     subgraph "Developer Interaction"
         DEV[Developer]
-        GIT[Git Repository]
+        GIT[Local checkout, served in-cluster]
     end
 
     subgraph "Platform Layer"
@@ -96,21 +96,35 @@ graph TB
 
 ## GitOps Flow
 
+ArgoCD's source of truth is the checkout you ran `make up` from, not a remote.
+`cluster-up.sh` bind-mounts the checkout's `.git` directory into every kind node
+and the `ldp-git` Deployment (part of the `argocd` chart) serves it over git
+smart HTTP at `http://ldp-git.orchestration.svc.cluster.local/ldp.git`. The
+platform ApplicationSets track `HEAD` there, so they follow whichever branch is
+checked out on the host and pick up each commit within seconds. Nothing is
+pushed anywhere, no network access is needed to read the platform, and a push
+to the upstream repository never changes a running platform. Only commits are
+visible: uncommitted edits under `platform-apps/` are not deployed.
+
 ```mermaid
 sequenceDiagram
     participant Dev as Developer
-    participant Git as Git Repository
+    participant Git as Local checkout (ldp-git)
     participant ArgoCD as ArgoCD
     participant K8s as Kubernetes
 
-    Dev->>Git: Push changes
-    Git->>ArgoCD: Webhook notification
-    ArgoCD->>Git: Pull latest state
+    Dev->>Git: git commit
+    ArgoCD->>Git: Poll HEAD (every 10s)
     ArgoCD->>ArgoCD: Compare desired vs actual
     ArgoCD->>K8s: Apply changes
     K8s->>ArgoCD: Report status
     ArgoCD->>Dev: Sync status (UI/CLI)
 ```
+
+To track a shared remote instead, point `platform.repoURL` and
+`platform.targetRevision` in `platform-apps/orchestration/argocd/values.yaml`
+and `platform-apps/orchestration/tenant-appsets/values.yaml` at it and set
+`platform.gitServer.enabled` to `false`.
 
 ## Namespace Organization
 

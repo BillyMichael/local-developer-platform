@@ -7,5 +7,6 @@ ldp:
   syncWave: wave-7
 
 platform:
-  repoURL: https://github.com/BillyMichael/LDP.git
-  targetRevision: main
+  # The in-cluster remote for this checkout; see orchestration/argocd/values.yaml.
+  repoURL: http://ldp-git.orchestration.svc.cluster.local/ldp.git
+  targetRevision: HEAD

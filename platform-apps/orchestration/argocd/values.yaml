@@ -2,8 +2,19 @@ ldp:
   syncWave: wave-3
 
 platform:
-  repoURL: https://github.com/BillyMichael/LDP.git
-  targetRevision: main
+  # The platform reads this checkout, served in-cluster by templates/git-server.yaml,
+  # not a remote: HEAD is whatever branch is checked out on the host. Point these at
+  # a real remote (and disable gitServer) to track a shared repo instead.
+  repoURL: http://ldp-git.orchestration.svc.cluster.local/ldp.git
+  targetRevision: HEAD
+  gitServer:
+    enabled: true
+    # Has git and python3; the same image the platform's bootstrap jobs use.
+    image: alpine/k8s:1.34.11
+    # Where cluster-up.sh mounts the checkout's .git directory on every kind node.
+    hostPath: /ldp/repo.git
+    # Path component of repoURL.
+    repoName: ldp.git
   # Number of ldp.dev/sync-wave steps the ApplicationSet rolls through.
   # Apps without an ldp.syncWave default to the last wave.
   syncWaves: 7

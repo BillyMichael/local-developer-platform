@@ -7,7 +7,7 @@ This guide explains how to add a new Helm chart to the Local Developer Platform.
 ```mermaid
 graph LR
     A[Create Chart Directory] --> B[Add Required Files]
-    B --> C[Git Push]
+    B --> C[Git Commit]
     C --> D[ArgoCD Discovers Chart]
     D --> E[Application Deployed]
     E --> F[Visible in Backstage]
@@ -192,15 +192,17 @@ spec:
 - ConfigMaps for additional configuration
 - Ingress routes (if not handled by upstream chart)
 
-### Step 6: Commit and Push
+### Step 6: Commit
 
 ```bash
 git add platform-apps/storage/redis/
 git commit -m "feat(storage): add redis helm chart"
-git push
 ```
 
-ArgoCD will automatically detect the new chart and create an Application for it.
+ArgoCD reads the committed `HEAD` of this checkout through the in-cluster
+`ldp-git` service, so the commit alone is enough: within about ten seconds it
+detects the new chart and creates an Application for it. Uncommitted files are
+not seen. Push when you want to share the change, not to deploy it.
 
 ## Verification
 

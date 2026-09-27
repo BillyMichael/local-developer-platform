@@ -14,6 +14,14 @@ ARGOCD_NS="${ARGOCD_NS:-orchestration}"
 ARGOCD_CHART_DIR="${CHART_DIR:-platform-apps/orchestration/argocd}"
 ARGOCD_RELEASE="${ARGOCD_RELEASE:-argocd}"
 
+# Argo CD reads this checkout, not a remote. The checkout's .git directory is
+# bind-mounted into every node at LDP_GIT_MOUNT (extraMounts in KIND_CFG) and
+# served in-cluster by the ldp-git Deployment of the argocd chart, which the
+# platform ApplicationSets point at (platform.repoURL in that chart's values).
+REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd -P)"
+LDP_GIT_MOUNT="/ldp/repo.git"
+LDP_GIT_URL="http://ldp-git.${ARGOCD_NS}.svc.cluster.local/ldp.git"
+
 TOTAL_STEPS=11
 
 # ============================================================================
@@ -65,6 +73,64 @@ patch_coredns_for_nip_io() {
 
   wait_for 60 \
     "DNS to stabilize in repo-server" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec deploy/argocd-repo-server -- getent hosts github.com"
+}
+
+
+# ============================================================================
+# PLATFORM SOURCE (THIS CHECKOUT)
+# ============================================================================
+
+# Absolute path of the checkout's git directory. --git-common-dir rather than
+# --git-dir so a linked worktree serves the main repository's objects too; its
+# HEAD is then the main checkout's, not the worktree's.
+ldp_git_dir() {
+  (cd "$REPO_DIR" && cd "$(git rev-parse --git-common-dir)" && pwd -P)
+}
+
+# kind only accepts absolute host paths in extraMounts, so KIND_CFG carries a
+# __LDP_GIT_DIR__ placeholder that is filled in here. Pure bash on purpose: no
+# sed delimiter clashes with whatever characters the path contains.
+render_kind_config() {
+  local git_dir="$1" out="$2" line
+  while IFS= read -r line || [ -n "$line" ]; do
+    printf '%s\n' "${line//__LDP_GIT_DIR__/$git_dir}"
+  done < "$KIND_CFG" > "$out"
+}
+
+# True when the control-plane node sees the checkout at LDP_GIT_MOUNT. False on
+# a cluster created before the mount existed, or when the engine's VM does not
+# share the directory holding the checkout.
+node_has_checkout_mount() {
+  "$CE" exec "${CLUSTER_NAME}-control-plane" test -f "${LDP_GIT_MOUNT}/HEAD" >/dev/null 2>&1
+}
+
+require_checkout_mount() {
+  if node_has_checkout_mount; then
+    ok "Nodes see this checkout at ${LDP_GIT_MOUNT}"
+    return 0
+  fi
+  error "The cluster nodes cannot see this checkout at ${LDP_GIT_MOUNT}."
+  error "Argo CD deploys the platform from here, so nothing would sync."
+  if [ "$1" = "existing" ]; then
+    error "The cluster predates the mount: run 'make down && make up' to recreate it."
+  else
+    error "Check that your container engine shares $(ldp_git_dir) with its VM"
+    error "(Docker Desktop: Settings > Resources > File sharing; Podman: 'podman machine init -v')."
+  fi
+  exit 1
+}
+
+# What Argo CD will actually deploy: the committed HEAD of the checked-out
+# branch. Uncommitted edits under platform-apps are invisible to it, which is
+# the most common reason a change "does not apply".
+report_platform_source() {
+  local branch dirty
+  branch=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+  ok "Argo CD deploys the committed HEAD of this checkout (branch: ${branch})"
+  dirty=$(git -C "$REPO_DIR" status --porcelain -- platform-apps 2>/dev/null | wc -l | tr -d ' ')
+  if [ "${dirty:-0}" -gt 0 ]; then
+    warn "platform-apps has ${dirty} uncommitted change(s); Argo CD only sees commits"
+  fi
 }
 
 
@@ -287,9 +353,16 @@ if cluster_exists; then
 
   run_step "Refreshing kubeconfig for '$CLUSTER_NAME'" \
     kind export kubeconfig --name "$CLUSTER_NAME"
+
+  require_checkout_mount existing
 else
+  rendered_kind_cfg=$(mktemp "/tmp/ldp-kind-config-XXXXXX")
+  render_kind_config "$(ldp_git_dir)" "$rendered_kind_cfg"
   run_step "Creating cluster '$CLUSTER_NAME'" \
-    kind create cluster --name "$CLUSTER_NAME" --config "$KIND_CFG"
+    kind create cluster --name "$CLUSTER_NAME" --config "$rendered_kind_cfg"
+  rm -f "$rendered_kind_cfg"
+
+  require_checkout_mount new
 fi
 
 # Set kubectl context to the Kind cluster for safety
@@ -394,8 +467,12 @@ run_step "Deploying Argo CD (without ApplicationSets)" \
     --wait \
     --timeout=5m
 
+# The first install already rolled out ldp-git (helm --wait); this proves the
+# repo-server can fetch from it before the ApplicationSets start generating.
 wait_for 60 \
-  "repo-server DNS resolution" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec deploy/argocd-repo-server -- getent hosts github.com"
+  "repo-server to read this checkout" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec deploy/argocd-repo-server -- git ls-remote '$LDP_GIT_URL' HEAD"
+
+report_platform_source
 
 run_step "Enabling ApplicationSets" \
   helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR" \
@@ -503,5 +580,6 @@ wait_for 300 \
 
 # $SECONDS: bash's count of seconds since this script started
 printf "\n${GREEN}${BOLD}Platform ready in %dm%ds${NC}\n" $(( SECONDS / 60 )) $(( SECONDS % 60 ))
+report_platform_source
 
 bash "${SCRIPT_DIR}/show-info.sh"

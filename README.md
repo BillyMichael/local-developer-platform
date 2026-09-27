@@ -44,7 +44,9 @@ make up
 This command will:
 - Create a KIND cluster with appropriate port mappings
 - Install ArgoCD
-- Bootstrap all platform applications via GitOps
+- Bootstrap all platform applications via GitOps from this checkout: ArgoCD
+  tracks the committed `HEAD` of your local clone, served from inside the
+  cluster, so a `git commit` is all it takes to deploy a change
 - Takes approximately 5-10 minutes on first run
 
 ## Accessing Services
