@@ -24,7 +24,7 @@ Before you begin, ensure you have the following installed:
 - **Make** - Usually pre-installed on macOS/Linux
 
 **System Requirements:**
-- 12GB+ RAM available to the container runtime (on Docker Desktop, set this under Settings > Resources)
+- 16GB+ RAM available to the container runtime (on Docker Desktop, set this under Settings > Resources)
 
 ## Getting Started
 
@@ -71,6 +71,7 @@ URLs:
   │ Authelia     │ https://auth-127-0-0-1.nip.io              │
   │ Gitea        │ https://vcs-127-0-0-1.nip.io               │
   │ Backstage    │ https://portal-127-0-0-1.nip.io            │
+  │ Grafana      │ https://observability-127-0-0-1.nip.io     │
   └──────────────┴────────────────────────────────────────────┘
 ```
 
@@ -88,7 +89,7 @@ local-developer-platform/
 │   ├── secrets/               # External-Secrets, Reloader, Replicator
 │   ├── orchestration/         # ArgoCD, Crossplane, Kargo, KEDA
 │   ├── storage/               # CloudNativePG
-│   ├── observability/         # metrics-server
+│   ├── observability/         # Prometheus, Grafana, Loki, Alloy, metrics-server
 │   ├── vcs/                   # Gitea (Git server)
 │   ├── portal/                # Backstage developer portal
 │   └── devtools/              # kagent (AI agent runtime)

@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kube-prometheus-stack
+  annotations:
+    argocd/app-name: kube-prometheus-stack
+    backstage.io/kubernetes-namespace: observability
+    backstage.io/kubernetes-label-selector: release=kube-prometheus-stack
+  description: Prometheus metrics and Grafana dashboards for the whole cluster.
+  links:
+    - url: https://observability-127-0-0-1.nip.io
+      title: Grafana
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform_maintainers
+  system: developer_platform

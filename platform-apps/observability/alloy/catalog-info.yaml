@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: alloy
+  annotations:
+    argocd/app-name: alloy
+    backstage.io/kubernetes-namespace: observability
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=alloy
+  description: Collects pod logs from every node and sends them to Loki.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform_maintainers
+  system: developer_platform
+  dependsOn:
+    - component:default/loki

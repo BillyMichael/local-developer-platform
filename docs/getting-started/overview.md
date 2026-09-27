@@ -18,7 +18,7 @@ Before you begin, ensure you have the following installed:
     to force Podman.
 
 !!! tip "Docker Desktop"
-    Raise the VM allocation to 12GB+ under **Settings → Resources**. The host
+    Raise the VM allocation to 16GB+ under **Settings → Resources**. The host
     may have plenty of RAM while the VM does not.
 
 !!! tip "Rootless Podman"
@@ -36,7 +36,7 @@ Before you begin, ensure you have the following installed:
 
 **System Requirements:**
 
-- 12GB+ RAM available for the container runtime
+- 16GB+ RAM available for the container runtime
 - 4+ CPU cores recommended
 
 ## Quick Start

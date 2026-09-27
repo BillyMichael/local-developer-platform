@@ -1,0 +1,8 @@
+apiVersion: oidc.ldp/v1alpha1
+kind: Client
+metadata:
+  name: grafana
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  replicateTo: {{ .Release.Namespace }}

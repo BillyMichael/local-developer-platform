@@ -263,8 +263,8 @@ check_available_resources() {
 
   if (( mem_gb == 0 )); then
     warn "Could not determine available memory"
-  elif (( mem_gb < 10 )); then
-    warn "${CE} has only ~${mem_gb}GB RAM. The platform recommends 12GB+."
+  elif (( mem_gb < 14 )); then
+    warn "${CE} has only ~${mem_gb}GB RAM. The platform recommends 16GB+."
     warn "Raise it in your engine's settings, or drop a worker from cluster-config.yaml."
   else
     ok "${mem_gb}GB RAM available to ${CE}"
