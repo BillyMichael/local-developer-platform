@@ -250,25 +250,67 @@ check_port_availability() {
 # RESOURCE CHECK
 # ============================================================================
 
-# Asks the container engine how much RAM it has. On Docker Desktop and
+# Minimums for the whole platform (observability included). Below these the
+# bootstrap does not fail cleanly: probes time out, controllers restart and a
+# later wave (usually Gitea) stalls long after the run started.
+LDP_MIN_MEM_GB="${LDP_MIN_MEM_GB:-14}"   # a 16GB VM reports ~15GiB
+LDP_MIN_CPUS="${LDP_MIN_CPUS:-6}"
+
+# Reads a numeric field from `<engine> info`. Docker exposes it at the top
+# level, podman nests it under .Host, so try both. Prints 0 when unknown.
+engine_info_number() {
+  local docker_field="$1" podman_field="$2" value
+  value=$("$CE" info --format "{{${docker_field}}}" 2>/dev/null) || value=""
+  [[ "$value" =~ ^[0-9]+$ ]] || value=$("$CE" info --format "{{${podman_field}}}" 2>/dev/null) || value=""
+  [[ "$value" =~ ^[0-9]+$ ]] || value=0
+  printf '%s' "$value"
+}
+
+# Asks the container engine how much RAM and CPU it has. On Docker Desktop and
 # podman machine that is the VM's allocation, which is what actually
 # constrains the cluster -- the host may have far more.
+#
+# Stops the run when either is under the minimum, since a starved cluster
+# only shows it 15 minutes in. LDP_SKIP_RESOURCE_CHECK=1 downgrades that to a
+# warning for anyone knowingly running on a smaller machine.
 check_available_resources() {
-  # docker exposes {{.MemTotal}} at the top level; podman nests it under .Host
-  local mem_bytes
-  mem_bytes=$("$CE" info --format '{{.MemTotal}}' 2>/dev/null) || mem_bytes=""
-  [[ "$mem_bytes" =~ ^[0-9]+$ ]] || mem_bytes=$("$CE" info --format '{{.Host.MemTotal}}' 2>/dev/null || echo 0)
-  [[ "$mem_bytes" =~ ^[0-9]+$ ]] || mem_bytes=0
-  local mem_gb=$(( mem_bytes / 1024 / 1024 / 1024 ))
+  local mem_bytes mem_gb cpus short=false
+  mem_bytes=$(engine_info_number .MemTotal .Host.MemTotal)
+  mem_gb=$(( mem_bytes / 1024 / 1024 / 1024 ))
+  cpus=$(engine_info_number .NCPU .Host.CPUs)
 
   if (( mem_gb == 0 )); then
-    warn "Could not determine available memory"
-  elif (( mem_gb < 14 )); then
-    warn "${CE} has only ~${mem_gb}GB RAM. The platform recommends 16GB+."
-    warn "Raise it in your engine's settings, or drop a worker from cluster-config.yaml."
+    warn "Could not determine the memory available to ${CE}"
+  elif (( mem_gb < LDP_MIN_MEM_GB )); then
+    error "${CE} has only ~${mem_gb}GB RAM; the platform needs 16GB+."
+    short=true
   else
     ok "${mem_gb}GB RAM available to ${CE}"
   fi
+
+  if (( cpus == 0 )); then
+    warn "Could not determine the CPUs available to ${CE}"
+  elif (( cpus < LDP_MIN_CPUS )); then
+    error "${CE} has only ${cpus} CPUs; the platform needs ${LDP_MIN_CPUS}+."
+    short=true
+  else
+    ok "${cpus} CPUs available to ${CE}"
+  fi
+
+  [[ "$short" == "true" ]] || return 0
+
+  if [[ "$CE" == "podman" ]]; then
+    error "Resize the VM: podman machine stop && podman machine set --cpus ${LDP_MIN_CPUS} --memory 16384 && podman machine start"
+  else
+    error "Raise the VM allocation under Settings > Resources in Docker Desktop."
+  fi
+
+  if [[ "${LDP_SKIP_RESOURCE_CHECK:-}" == "1" ]]; then
+    warn "LDP_SKIP_RESOURCE_CHECK=1 set; continuing anyway. Expect slow or stalled waves."
+    return 0
+  fi
+  error "Set LDP_SKIP_RESOURCE_CHECK=1 to run on a smaller machine anyway."
+  exit 1
 }
 
 
