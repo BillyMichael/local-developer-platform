@@ -494,6 +494,13 @@ run_step "Enabling ApplicationSets" \
 #   wave-4: authelia, cloudnative-pg, keda               (OIDC & operators)
 #   wave-5: gitea, kargo                                (VCS & delivery)
 #   wave-6: backstage, gitea-actions, kagent            (portal, CI runner, agents)
+#   wave-7: tenant-appsets                              (tenant onboarding)
+#   wave-8: kube-prometheus-stack, loki, alloy          (observability; not waited on)
+#
+# The waits below are sized for a laptop VM sharing a few cores with the host:
+# under that contention image pulls and operator start-up take several times
+# longer than on an idle machine, and a wait that gives up early reads as a
+# broken platform when it is only a slow one.
 # ============================================================================
 
 
@@ -503,7 +510,7 @@ run_step "Enabling ApplicationSets" \
 
 step 6 $TOTAL_STEPS "Wave 1: Foundations"
 
-wait_for 180 \
+wait_for 300 \
   "cert-manager"     "kubectl --context '$CONTEXT_NAME' -n pki wait --for=condition=Available deployment/cert-manager --timeout=1s" \
   "external-secrets" "kubectl --context '$CONTEXT_NAME' -n secrets wait --for=condition=Available deployment/external-secrets --timeout=1s" \
   "crossplane"       "kubectl --context '$CONTEXT_NAME' -n orchestration wait --for=condition=Available deployment/crossplane --timeout=1s"
@@ -515,7 +522,7 @@ wait_for 180 \
 
 step 7 $TOTAL_STEPS "Wave 2: Crossplane Compositions"
 
-wait_for 180 \
+wait_for 300 \
   "Crossplane function-go-templating" "kubectl --context '$CONTEXT_NAME' wait --for=condition=Healthy function/function-go-templating --timeout=1s" \
   "oidc.ldp XRDs"                     "kubectl --context '$CONTEXT_NAME' wait --for=condition=Established xrd/clients.oidc.ldp xrd/users.oidc.ldp --timeout=1s"
 
@@ -529,7 +536,7 @@ step 8 $TOTAL_STEPS "Wave 3: Core Infrastructure"
 TRAEFIK_NS="networking"
 TRAEFIK_SVC="traefik"
 
-wait_for 180 \
+wait_for 300 \
   "Traefik service" "kubectl --context '$CONTEXT_NAME' -n '$TRAEFIK_NS' get service '$TRAEFIK_SVC'" \
   "LLDAP"           "kubectl --context '$CONTEXT_NAME' -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=lldap-chart --timeout=1s"
 
@@ -546,7 +553,7 @@ trust_registry_on_nodes "$TRAEFIK_NS" "$TRAEFIK_SVC"
 
 step 9 $TOTAL_STEPS "Wave 4: Authentication & Operators"
 
-wait_for 300 \
+wait_for 600 \
   "Authelia" "kubectl --context '$CONTEXT_NAME' -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s"
 
 
@@ -559,7 +566,7 @@ step 10 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
 # Gitea rolls several times while its secrets materialise, and configure-gitea
 # crash-loops until Postgres answers. Follow the Deployment's rollout rather than
 # every pod matching the label, which includes replaced pods still terminating.
-wait_for 600 \
+wait_for 900 \
   "Gitea" "kubectl --context '$CONTEXT_NAME' -n vcs rollout status deployment/gitea --timeout=1s"
 
 
@@ -569,7 +576,7 @@ wait_for 600 \
 
 step 11 $TOTAL_STEPS "Wave 6: Developer Portal"
 
-wait_for 300 \
+wait_for 600 \
   "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s" \
   "kagent"    "kubectl --context '$CONTEXT_NAME' -n devtools wait --for=condition=Available deployment/kagent-controller --timeout=1s"
 
@@ -581,5 +588,6 @@ wait_for 300 \
 # $SECONDS: bash's count of seconds since this script started
 printf "\n${GREEN}${BOLD}Platform ready in %dm%ds${NC}\n" $(( SECONDS / 60 )) $(( SECONDS % 60 ))
 report_platform_source
+warn "Observability (Prometheus, Grafana, Loki) rolls out last and is still starting; 'make status' shows progress"
 
 bash "${SCRIPT_DIR}/show-info.sh"

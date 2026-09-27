@@ -1,7 +1,8 @@
 # Tails every pod's logs through the Kubernetes API and pushes them to Loki.
 # Reading via the API (not host paths) keeps it working under rootless podman.
 ldp:
-  syncWave: wave-6
+  # Last wave with Loki, which it ships logs to.
+  syncWave: wave-8
 
 alloy:
   alloy:

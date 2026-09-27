@@ -2,8 +2,10 @@
 # metrics, no Alertmanager, and none of the control-plane scrapes kind cannot
 # serve. Loki (logs) is its own app next to this one.
 ldp:
-  # After Authelia (wave-4), which must know the Grafana client first.
-  syncWave: wave-5
+  # Last wave: the operator, Prometheus and Grafana starting together is the
+  # heaviest burst in the rollout, so it runs after the portal is up rather
+  # than in the middle of it. Needs Authelia (wave-4) for the Grafana client.
+  syncWave: wave-8
   # The operator CRDs are too large for client-side apply.
   serverSideApply: true
 

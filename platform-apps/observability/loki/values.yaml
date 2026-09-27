@@ -1,7 +1,8 @@
 # Pod logs for Grafana: one Loki process on local disk, one day kept.
 # Alloy (next to this app) ships the logs in.
 ldp:
-  syncWave: wave-5
+  # Last wave with the rest of observability.
+  syncWave: wave-8
 
 loki:
   deploymentMode: SingleBinary
