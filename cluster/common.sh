@@ -250,11 +250,10 @@ check_port_availability() {
 # RESOURCE CHECK
 # ============================================================================
 
-# Minimums for the whole platform (observability included). Below these the
+# Minimum for the whole platform (observability included). Below it the
 # bootstrap does not fail cleanly: probes time out, controllers restart and a
 # later wave (usually Gitea) stalls long after the run started.
 LDP_MIN_MEM_GB="${LDP_MIN_MEM_GB:-14}"   # a 16GB VM reports ~15GiB
-LDP_MIN_CPUS="${LDP_MIN_CPUS:-6}"
 
 # Reads a numeric field from `<engine> info`. Docker exposes it at the top
 # level, podman nests it under .Host, so try both. Prints 0 when unknown.
@@ -266,12 +265,12 @@ engine_info_number() {
   printf '%s' "$value"
 }
 
-# Asks the container engine how much RAM and CPU it has. On Docker Desktop and
+# Asks the container engine how much RAM it has, and reports its CPUs. On Docker Desktop and
 # podman machine that is the VM's allocation, which is what actually
 # constrains the cluster -- the host may have far more.
 #
-# Stops the run when either is under the minimum, since a starved cluster
-# only shows it 15 minutes in. LDP_SKIP_RESOURCE_CHECK=1 downgrades that to a
+# Stops the run when memory is under the minimum, since a starved cluster
+# only shows it 15 minutes in. CPUs are reported but not enforced. LDP_SKIP_RESOURCE_CHECK=1 downgrades that to a
 # warning for anyone knowingly running on a smaller machine.
 check_available_resources() {
   local mem_bytes mem_gb cpus short=false
@@ -288,19 +287,14 @@ check_available_resources() {
     ok "${mem_gb}GB RAM available to ${CE}"
   fi
 
-  if (( cpus == 0 )); then
-    warn "Could not determine the CPUs available to ${CE}"
-  elif (( cpus < LDP_MIN_CPUS )); then
-    error "${CE} has only ${cpus} CPUs; the platform needs ${LDP_MIN_CPUS}+."
-    short=true
-  else
+  if (( cpus > 0 )); then
     ok "${cpus} CPUs available to ${CE}"
   fi
 
   [[ "$short" == "true" ]] || return 0
 
   if [[ "$CE" == "podman" ]]; then
-    error "Resize the VM: podman machine stop && podman machine set --cpus ${LDP_MIN_CPUS} --memory 16384 && podman machine start"
+    error "Resize the VM: podman machine stop && podman machine set --memory 16384 && podman machine start"
   else
     error "Raise the VM allocation under Settings > Resources in Docker Desktop."
   fi

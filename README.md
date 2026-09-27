@@ -24,7 +24,7 @@ Before you begin, ensure you have the following installed:
 - **Make** - Usually pre-installed on macOS/Linux
 
 **System Requirements:**
-- 16GB+ RAM and 6+ CPUs available to the container runtime (on Docker Desktop, set this under Settings > Resources); `make up` stops if either is short
+- 16GB+ RAM available to the container runtime (on Docker Desktop, set this under Settings > Resources); `make up` stops if it is short
 
 ## Getting Started
 
