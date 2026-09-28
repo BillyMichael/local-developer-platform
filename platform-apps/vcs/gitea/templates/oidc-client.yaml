@@ -4,5 +4,10 @@ metadata:
   name: gitea
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    # A wave ahead of the workload, so its client secret exists (and has
+    # stopped changing) before the pod that mounts it is created. Otherwise
+    # Reloader rolls the Deployment for every write to the secret, seconds
+    # after the first pod started.
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   replicateTo: {{ .Release.Namespace }}

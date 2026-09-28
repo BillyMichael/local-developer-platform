@@ -29,6 +29,13 @@ backstage:
         memory: 512Mi
     podAnnotations:
       reloader.stakater.com/auto: "true"
+    # One pod at a time, always. Backstage runs its plugins' database
+    # migrations on startup, and two pods starting together against a fresh
+    # database race on the migrations table and both wedge. The default
+    # RollingUpdate surges a second pod whenever Reloader or a config change
+    # rolls the Deployment, which on a slow VM overlaps the first pod's start.
+    strategy:
+      type: Recreate
     image:
       registry: ghcr.io
       repository: billymichael/local-developer-platform

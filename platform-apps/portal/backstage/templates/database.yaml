@@ -7,6 +7,9 @@ metadata:
   name: backstage-db
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    # A wave ahead of the Deployment, so the database is Ready and its
+    # connection secret exists before the first pod is created.
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   instances: 1
   storageSize: 1Gi

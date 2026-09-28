@@ -100,11 +100,79 @@ argo-cd:
       create: true
       oidc.tls.insecure.skip.verify: 'true'
       application.resourceTrackingMethod: annotation
+      # Crossplane's Argo CD guide: nobody interacts with ProviderConfigUsage,
+      # and every managed resource creates one, so keep them out of the tree.
+      resource.exclusions: |
+        - apiGroups: ["*"]
+          kinds: ["ProviderConfigUsage"]
+          clusters: ["*"]
       # Local API-key account for the Backstage Argo CD plugin; its token is
       # minted by templates/job-backstage-token.yaml.
       accounts.backstage: apiKey
       resource.customizations: |
         "*.crossplane.io/*":
+          health.lua: |
+            health_status = {
+              status = "Progressing",
+              message = "Provisioning ..."
+            }
+
+            local function contains (table, val)
+              for i, v in ipairs(table) do
+                if v == val then
+                  return true
+                end
+              end
+              return false
+            end
+
+            local has_no_status = {
+              "Composition",
+              "CompositionRevision"
+            }
+            if obj.status == nil or next(obj.status) == nil and contains(has_no_status, obj.kind) then
+                health_status.status = "Healthy"
+                health_status.message = "Resource is up-to-date."
+              return health_status
+            end
+
+            if obj.status == nil or next(obj.status) == nil or obj.status.conditions == nil then
+              return health_status
+            end
+
+            for i, condition in ipairs(obj.status.conditions) do
+              if condition.type == "LastAsyncOperation" then
+                if condition.status == "False" then
+                  health_status.status = "Degraded"
+                  health_status.message = condition.message
+                  return health_status
+                end
+              end
+
+              if condition.type == "Synced" then
+                if condition.status == "False" then
+                  health_status.status = "Degraded"
+                  health_status.message = condition.message
+                  return health_status
+                end
+              end
+
+              if contains({"Ready", "Healthy", "Offered", "Established", "ValidPipeline", "RevisionHealthy"}, condition.type) then
+                if condition.status == "True" then
+                  health_status.status = "Healthy"
+                  health_status.message = "Resource is up-to-date."
+                end
+              end
+            end
+
+            return health_status
+        # Claims and composites of the platform's own XRDs (oidc.ldp Client and
+        # User, storage.ldp PostgresDatabase). Argo CD matches health checks by
+        # API group, so the crossplane.io entry above does not cover them and a
+        # claim would count as healthy the moment it exists: a sync wave could
+        # never hold a workload back until the claim's secret is written. Same
+        # Lua as the crossplane.io entry (from the Crossplane Argo CD guide).
+        "*.ldp/*":
           health.lua: |
             health_status = {
               status = "Progressing",
