@@ -469,7 +469,7 @@ step 11 $TOTAL_STEPS "Wave 6: Developer Portal & Tenants"
 # A cold node pulls Postgres and Backstage's image in sequence here.
 wait_for 900 \
   "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s" \
-  "kagent"    "kubectl --context '$CONTEXT_NAME' -n devtools wait --for=condition=Available deployment/kagent-controller --timeout=1s"
+  "kagent"    "kubectl --context '$CONTEXT_NAME' -n devtools wait --for=condition=Available deployment/kagent-controller --timeout=1s" \
   "tenant ApplicationSets" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' get applicationset tenant-bootstrap tenant-apps"
 
 # --- done ---------------------------------------------------------------------
