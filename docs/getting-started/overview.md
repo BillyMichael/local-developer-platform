@@ -77,7 +77,7 @@ make up
 
 This will:
 
-- Create a KIND cluster with 1 control-plane and 2 worker nodes, with this
+- Create a KIND cluster with 1 control-plane and 1 worker node, with this
   checkout's `.git` directory mounted into every node
 - Install ArgoCD and bootstrap all platform applications via GitOps from the
   committed `HEAD` of this checkout (see [GitOps Flow](../architecture/overview.md#gitops-flow))

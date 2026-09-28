@@ -48,14 +48,4 @@ nodes:
       - hostPath: __LDP_GIT_DIR__
         containerPath: /ldp/repo.git
         readOnly: true
-  - role: worker
-    kubeadmConfigPatches:
-      - |
-        kind: KubeletConfiguration
-        serializeImagePulls: false
-        maxParallelImagePulls: 10
-    extraMounts:
-      - hostPath: __LDP_GIT_DIR__
-        containerPath: /ldp/repo.git
-        readOnly: true
 
