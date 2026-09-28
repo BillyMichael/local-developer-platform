@@ -18,12 +18,12 @@ Before you begin, ensure you have the following installed:
     to force Podman.
 
 !!! tip "Docker Desktop"
-    Raise the VM allocation to 16GB+ under **Settings → Resources**.
+    Raise the VM allocation to 12GB+ under **Settings → Resources**.
     The host may have plenty of RAM while the VM does not.
 
 !!! tip "Podman machine"
     Resize the VM with
-    `podman machine stop && podman machine set --memory 16384 && podman machine start`.
+    `podman machine stop && podman machine set --memory 12288 && podman machine start`.
 
 !!! tip "Rootless Podman"
     Binding ports 80/443 needs the unprivileged port floor lowered:
@@ -45,7 +45,7 @@ Before you begin, ensure you have the following installed:
 
 **System Requirements:**
 
-- 16GB+ RAM available for the container runtime
+- 12GB+ RAM available for the container runtime (on a 16GB laptop, leave the rest to the host: giving the VM all 16GB makes macOS swap the VM itself)
 - 4+ CPU cores recommended
 
 `make up` checks memory against the engine's VM and stops if it is short,

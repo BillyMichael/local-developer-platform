@@ -253,7 +253,7 @@ check_port_availability() {
 # Minimum for the whole platform (observability included). Below it the
 # bootstrap does not fail cleanly: probes time out, controllers restart and a
 # later wave (usually Gitea) stalls long after the run started.
-LDP_MIN_MEM_GB="${LDP_MIN_MEM_GB:-14}"   # a 16GB VM reports ~15GiB
+LDP_MIN_MEM_GB="${LDP_MIN_MEM_GB:-11}"   # a 12GB VM reports ~11GiB
 
 # Reads a numeric field from `<engine> info`. Docker exposes it at the top
 # level, podman nests it under .Host, so try both. Prints 0 when unknown.
@@ -281,7 +281,7 @@ check_available_resources() {
   if (( mem_gb == 0 )); then
     warn "Could not determine the memory available to ${CE}"
   elif (( mem_gb < LDP_MIN_MEM_GB )); then
-    error "${CE} has only ~${mem_gb}GB RAM; the platform needs 16GB+."
+    error "${CE} has only ~${mem_gb}GB RAM; the platform needs 12GB+."
     short=true
   else
     ok "${mem_gb}GB RAM available to ${CE}"
@@ -294,7 +294,7 @@ check_available_resources() {
   [[ "$short" == "true" ]] || return 0
 
   if [[ "$CE" == "podman" ]]; then
-    error "Resize the VM: podman machine stop && podman machine set --memory 16384 && podman machine start"
+    error "Resize the VM: podman machine stop && podman machine set --memory 12288 && podman machine start"
   else
     error "Raise the VM allocation under Settings > Resources in Docker Desktop."
   fi
