@@ -38,6 +38,17 @@ kube-prometheus-stack:
     enabled: false
 
   prometheusOperator:
+    admissionWebhooks:
+      patch:
+        # The chart's certificate Jobs delete themselves 60s after finishing.
+        # Argo CD runs them as sync hooks and only proceeds once it has seen
+        # them succeed; on a busy laptop VM its controller can take longer
+        # than that, the Job is gone by the time it looks, and the sync waits
+        # forever on a hook that no longer exists. Argo CD's hook-delete policy
+        # removes them once it has recorded success; the TTL only needs to be
+        # long enough never to get there first. (The chart always renders the
+        # field, and 0 would mean "delete immediately".)
+        ttlSecondsAfterFinished: 3600
     resources:
       requests:
         cpu: 10m
