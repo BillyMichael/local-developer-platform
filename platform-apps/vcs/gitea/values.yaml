@@ -59,6 +59,27 @@ gitea:
         autoDiscoverUrl: "https://auth-127-0-0-1.nip.io/.well-known/openid-configuration"
         scopes: "openid profile email groups"
 
+  # Runs at the start of the first init container, before configure-gitea.
+  # configure-gitea runs `gitea migrate` and exits 1 while Postgres is still
+  # starting; every exit lengthens Kubernetes' restart backoff (10s, 20s, 40s,
+  # 80s, 160s...), so on a cold node Gitea spent minutes in CrashLoopBackOff
+  # waiting out backoffs rather than the database. Wait for the database and
+  # the queue to accept connections first, so migrate runs once. Same check
+  # as every other database consumer on the platform (see the chart guide).
+  initPreScript: |
+    wait_for() {
+      i=0
+      until nc -z "$1" "$2"; do
+        i=$((i + 1))
+        [ "$i" -ge 300 ] && { echo "gave up waiting for $1:$2"; exit 1; }
+        [ $((i % 15)) -eq 1 ] && echo "waiting for $1:$2..."
+        sleep 2
+      done
+      echo "$1:$2 is accepting connections"
+    }
+    wait_for gitea-postgresql 5432
+    wait_for gitea-valkey-headless 6379
+
   valkey-cluster:
     enabled: false
   valkey:
@@ -68,6 +89,13 @@ gitea:
     enabled: false
   postgresql:
     enabled: true
+    global:
+      postgresql:
+        auth:
+          # The chart pins the gitea user's password but leaves the (unused)
+          # superuser password to a random value per render, so Argo CD
+          # rewrote the secret on every sync. Pin it too; nothing reads it.
+          postgresPassword: gitea
 
   extraVolumes:
     - name: ca

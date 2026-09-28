@@ -29,6 +29,30 @@ backstage:
         memory: 512Mi
     podAnnotations:
       reloader.stakater.com/auto: "true"
+    # Wait for the database before the backend starts. Backstage exits when it
+    # cannot connect, and each exit lengthens the restart backoff; a wait here
+    # means the image pulls while Postgres comes up and the backend runs once.
+    initContainers:
+      - name: wait-for-db
+        image: busybox:1.37-musl
+        command:
+          - sh
+          - -c
+          - |
+            i=0
+            until nc -z backstage-db-rw 5432; do
+              i=$((i + 1))
+              [ "$i" -ge 300 ] && { echo "gave up waiting for backstage-db-rw:5432"; exit 1; }
+              [ $((i % 15)) -eq 1 ] && echo "waiting for backstage-db-rw:5432..."
+              sleep 2
+            done
+            echo "database is accepting connections"
+        resources:
+          requests:
+            cpu: 5m
+            memory: 8Mi
+          limits:
+            memory: 32Mi
     # The chart's defaults give the backend 30s to open its port (3 x 10s, 1s
     # timeout) and kill it after three slow health answers. On a laptop VM a
     # cold start under load takes longer than that, and a burst elsewhere

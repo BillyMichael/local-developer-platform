@@ -15,6 +15,24 @@ spec:
         app: {{ .Release.Name }}-backend
         backstage.io/kubernetes-id: {{ .Release.Name }}
     spec:
+      # Wait for the database rather than crash until it answers: each crash
+      # lengthens the restart backoff, and the database takes minutes to
+      # initialise on a fresh cluster. Same pattern as the platform's own apps.
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.37-musl
+          command:
+            - sh
+            - -c
+            - |
+              i=0
+              until nc -z {{ .Release.Name }}-db-rw 5432; do
+                i=$((i + 1))
+                [ "$i" -ge 300 ] && { echo "gave up waiting for the database"; exit 1; }
+                [ $((i % 15)) -eq 1 ] && echo "waiting for {{ .Release.Name }}-db-rw:5432..."
+                sleep 2
+              done
+              echo "database is accepting connections"
       containers:
         - name: backend
           image: {{ .Values.backend.image }}

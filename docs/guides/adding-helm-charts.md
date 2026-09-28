@@ -366,6 +366,32 @@ Here's a complete example adding Valkey (Redis-compatible) to the platform:
 - Declare dependencies in `catalog-info.yaml` for visibility
 - Ensure dependent services are deployed first (ArgoCD handles this via sync waves if needed)
 
+### Databases and generated secrets
+
+Three rules keep start-up predictable on a laptop, where a database takes
+minutes to initialise and Reloader restarts a pod whenever a secret it mounts
+changes. Backstage and Gitea follow them; the `3-tier-app` template shows
+them in a tenant chart.
+
+1. **Wait for the database in an init container, don't crash into it.** A
+   backend that exits when it cannot connect gets a longer restart backoff each
+   time (up to five minutes) and starts late even after the database is ready.
+   Use a `busybox` init container with `nc -z <host> <port>` in a loop, bounded
+   at ten minutes. For a `PostgresDatabase` claim the primary is `<name>-rw`.
+   Charts without an `initContainers` hook usually have a pre-script hook
+   (Gitea's `initPreScript`) that serves the same purpose.
+2. **Secrets that arrive late or get rewritten go a sync wave ahead** of the
+   workload that mounts them: `argocd.argoproj.io/sync-wave: "-1"` on the
+   `oidc.ldp` Client (Crossplane writes its secret in several steps) and on
+   External Secrets `Password` generators. Argo CD waits for them to be Ready
+   before creating the Deployment, so Reloader has nothing to react to. A
+   `PostgresDatabase` claim does not need this: its credentials secret is
+   written within seconds, and the init container covers the rest.
+3. **Generated secrets are generated once.** Give an `ExternalSecret` backed by
+   a generator `refreshPolicy: CreatedOnce`, otherwise every Argo CD resync
+   produces a new value and restarts the consumer. Pin any password a bundled
+   subchart would otherwise randomise per render.
+
 ## Troubleshooting
 
 ### Chart Not Appearing in ArgoCD

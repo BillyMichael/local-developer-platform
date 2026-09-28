@@ -6,10 +6,13 @@ kind: PostgresDatabase
 metadata:
   name: backstage-db
   annotations:
+    # Created alongside the Deployment, not a wave ahead: CloudNativePG writes
+    # the connection secret within seconds of the claim, long before the
+    # database is Ready, and gating the Deployment on Ready only delayed the
+    # Backstage image pull (~3 min) until after Postgres came up (~7 min on a
+    # cold node). The pod's init container waits for the database instead,
+    # so the two happen in parallel and the backend starts once.
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-    # A wave ahead of the Deployment, so the database is Ready and its
-    # connection secret exists before the first pod is created.
-    argocd.argoproj.io/sync-wave: "-1"
 spec:
   instances: 1
   storageSize: 1Gi

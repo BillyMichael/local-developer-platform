@@ -575,7 +575,10 @@ wait_for 900 \
 
 step 11 $TOTAL_STEPS "Wave 6: Developer Portal"
 
-wait_for 600 \
+# On a fresh node this wave is a serial chain of cold image pulls: Postgres
+# for Backstage's database (~7 min to Ready through a proxy), then Backstage's
+# own image (~3 min), which cannot start pulling until the database is Ready.
+wait_for 900 \
   "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s" \
   "kagent"    "kubectl --context '$CONTEXT_NAME' -n devtools wait --for=condition=Available deployment/kagent-controller --timeout=1s"
 
