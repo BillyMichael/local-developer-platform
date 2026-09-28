@@ -17,7 +17,7 @@ platform:
     repoName: ldp.git
   # Number of ldp.dev/sync-wave steps the ApplicationSet rolls through.
   # Apps without an ldp.syncWave default to the last wave.
-  syncWaves: 8
+  syncWaves: 7
   applicationSets:
     enabled: true
   claims:

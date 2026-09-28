@@ -356,8 +356,9 @@ Here's a complete example adding Valkey (Redis-compatible) to the platform:
 
 ### Observability
 
-- Enable metrics endpoints where available
-- Configure ServiceMonitor for Prometheus scraping
+- Enable metrics endpoints where available, so a metrics stack can scrape
+  them if one is added (the platform ships only metrics-server, to stay light
+  enough for a laptop)
 - Add meaningful labels and annotations
 
 ### Dependencies

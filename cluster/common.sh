@@ -250,7 +250,7 @@ check_port_availability() {
 # RESOURCE CHECK
 # ============================================================================
 
-# Minimum for the whole platform (observability included). Below it the
+# Minimum for the whole platform. Below it the
 # bootstrap does not fail cleanly: probes time out, controllers restart and a
 # later wave (usually Gitea) stalls long after the run started.
 LDP_MIN_MEM_GB="${LDP_MIN_MEM_GB:-11}"   # a 12GB VM reports ~11GiB

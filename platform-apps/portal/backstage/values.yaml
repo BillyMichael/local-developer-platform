@@ -32,7 +32,7 @@ backstage:
     # The chart's defaults give the backend 30s to open its port (3 x 10s, 1s
     # timeout) and kill it after three slow health answers. On a laptop VM a
     # cold start under load takes longer than that, and a burst elsewhere
-    # (observability rolling out) makes a healthy backend answer slowly: the
+    # (a heavy wave rolling out) makes a healthy backend answer slowly: the
     # kubelet then terminates a working Backstage mid-startup, over and over.
     # Five minutes to start, and five-second answers tolerated while running.
     startupProbe:

@@ -11,8 +11,8 @@ kagent:
       apiKeySecretRef: kagent-anthropic
       apiKeySecretKey: ANTHROPIC_API_KEY
 
-  # ponytail: Grafana runs on the platform now, but its MCP server needs a
-  # service-account token wired in. Enable it when an agent should query metrics.
+  # ponytail: no metrics stack on the platform (too heavy for a laptop); enable
+  # with a Grafana of your own and a service-account token wired in.
   grafana-mcp:
     enabled: false
 

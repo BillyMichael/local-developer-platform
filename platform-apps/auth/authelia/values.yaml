@@ -174,28 +174,10 @@ authelia:
             client_secret:
               path: /hashed-secrets/gitea-password
 
-          - client_id: grafana
-            client_name: Grafana
-            public: false
-            authorization_policy: one_factor
-            require_pkce: true
-            pkce_challenge_method: S256
-            consent_mode: implicit
-            redirect_uris:
-              - https://observability-127-0-0-1.nip.io/login/generic_oauth
-            scopes: [openid, profile, email, groups]
-            grant_types: [authorization_code]
-            response_types: [code]
-            token_endpoint_auth_method: client_secret_basic
-            access_token_signed_response_alg: none
-            userinfo_signed_response_alg: none
-            client_secret:
-              path: /hashed-secrets/grafana-password
-
   pod:
     kind: Deployment
     annotations:
-      secret.reloader.stakater.com/reload: "argocd-oidc-client-secret,backstage-oidc-client-secret,gitea-oidc-client-secret,grafana-oidc-client-secret"
+      secret.reloader.stakater.com/reload: "argocd-oidc-client-secret,backstage-oidc-client-secret,gitea-oidc-client-secret"
 
     resources:
       requests:
@@ -220,13 +202,6 @@ authelia:
       - name: secret-gitea-oidc-client-secret
         secret:
           secretName: gitea-oidc-client-secret
-          optional: true
-          items:
-            - key: password
-              path: password
-      - name: secret-grafana-oidc-client-secret
-        secret:
-          secretName: grafana-oidc-client-secret
           optional: true
           items:
             - key: password
@@ -274,7 +249,6 @@ authelia:
             hash_secret argocd
             hash_secret backstage
             hash_secret gitea
-            hash_secret grafana
 
             echo "Done"
         volumeMounts:
@@ -286,9 +260,6 @@ authelia:
             readOnly: true
           - name: secret-gitea-oidc-client-secret
             mountPath: /secrets/gitea-oidc-client-secret
-            readOnly: true
-          - name: secret-grafana-oidc-client-secret
-            mountPath: /secrets/grafana-oidc-client-secret
             readOnly: true
           - name: secret-jwk-rsa
             mountPath: /secrets/jwk-rsa

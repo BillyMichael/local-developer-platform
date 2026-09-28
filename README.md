@@ -73,7 +73,6 @@ URLs:
   │ Authelia     │ https://auth-127-0-0-1.nip.io              │
   │ Gitea        │ https://vcs-127-0-0-1.nip.io               │
   │ Backstage    │ https://portal-127-0-0-1.nip.io            │
-  │ Grafana      │ https://observability-127-0-0-1.nip.io     │
   └──────────────┴────────────────────────────────────────────┘
 ```
 
@@ -91,7 +90,7 @@ local-developer-platform/
 │   ├── secrets/               # External-Secrets, Reloader, Replicator
 │   ├── orchestration/         # ArgoCD, Crossplane, Kargo, KEDA
 │   ├── storage/               # CloudNativePG
-│   ├── observability/         # Prometheus, Grafana, Loki, Alloy, metrics-server
+│   ├── observability/         # metrics-server (resource metrics API)
 │   ├── vcs/                   # Gitea (Git server)
 │   ├── portal/                # Backstage developer portal
 │   └── devtools/              # kagent (AI agent runtime)
