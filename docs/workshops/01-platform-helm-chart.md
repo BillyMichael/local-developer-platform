@@ -1,29 +1,27 @@
 # Workshop 1: Add a platform Helm chart
 
-Run `mkdir -p platform-apps/storage/valkey`. That's step 1 of 6.
+You will add **Valkey**, a Redis-compatible cache, as a platform service.
+When you finish, it runs in the `storage` namespace, Argo CD manages it, and
+it appears in Backstage's catalog. Workshop 2 turns it into something tenants
+can request for themselves.
 
-You're adding **Valkey**, a Redis-compatible cache, as a platform service.
-Six steps, about an hour. At the end it runs in the `storage` namespace, Argo
-CD manages it, and Backstage lists it.
-
-Before you start: `make status` shows all pods healthy.
+**Time:** about an hour. **Needs:** a running platform (`make status` shows
+all pods healthy).
 
 ## How a folder becomes an app
 
-Argo CD looks for `platform-apps/<area>/<name>/values.yaml`. Each one becomes
-an Application: the chart is that folder, the namespace is `<area>`, and
-`ldp.syncWave` in the values says when it rolls out. Argo CD reads the
-committed `HEAD` of your checkout, so a commit is a deploy.
+The platform ApplicationSet in `platform-apps/orchestration/argocd` scans this
+checkout for `platform-apps/<area>/<name>/values.yaml`. Every match becomes an
+Argo CD Application: the chart is `platform-apps/<area>/<name>`, the namespace
+is `<area>`, and `ldp.syncWave` in the values decides when it rolls out
+relative to everything else. Argo CD reads the committed `HEAD` of your
+checkout, so a commit is a deploy. There is no registry of apps to update.
 
 ## 1. Create the chart
-
-Run:
 
 ```bash
 mkdir -p platform-apps/storage/valkey
 ```
-
-Then create this file:
 
 ```yaml title="platform-apps/storage/valkey/Chart.yaml"
 apiVersion: v2
@@ -35,16 +33,12 @@ dependencies:
     repository: oci://registry-1.docker.io/bitnamicharts
 ```
 
-This is a wrapper chart. It pins the upstream chart as a dependency and adds
-the platform's own values and templates around it. Every platform app works
-this way, so Renovate can bump versions and you can add templates without
-forking anything.
-
-Step 1 of 6 done: the chart exists, with nothing configured yet.
+This is a wrapper chart: it pins an upstream chart as a dependency and adds
+the platform's own values and templates around it. Every platform app is built
+this way, so Renovate can bump the version and you can add templates without
+forking upstream.
 
 ## 2. Set the values
-
-Create this file:
 
 ```yaml title="platform-apps/storage/valkey/values.yaml"
 # Shared cache for platform services. Standalone: one primary, no replicas.
@@ -66,16 +60,13 @@ valkey:
       enabled: false
 ```
 
-Two things to notice. `ldp.syncWave: wave-4` puts it with the other stores
-and operators, after cert-manager and before anything that might use it. And
-every container gets a memory request and limit. On a laptop the scheduler
-needs the numbers, and a runaway cache shouldn't take Gitea down with it.
-
-Step 2 of 6 done: the chart knows what to deploy.
+Two things to notice. `ldp.syncWave: wave-4` places it with the other
+operators and stores, after cert-manager and before anything that might use
+it. And every container gets a memory request and limit: on a laptop VM the
+scheduler needs the numbers, and a runaway cache should not take Gitea with
+it.
 
 ## 3. Put it in the catalog
-
-Create this file:
 
 ```yaml title="platform-apps/storage/valkey/catalog-info.yaml"
 apiVersion: backstage.io/v1alpha1
@@ -95,43 +86,31 @@ spec:
 ```
 
 Backstage reads every `platform-apps/**/catalog-info.yaml`. The annotations
-link the entry to its Argo CD Application and its pods, which is what makes
-the Argo CD and Kubernetes tabs work.
-
-Step 3 of 6 done: Backstage will find it.
+link the entity to its Argo CD Application and its pods, which is what makes
+the portal's Argo CD and Kubernetes tabs work.
 
 ## 4. Render it before you commit
-
-Run:
 
 ```bash
 helm dependency build platform-apps/storage/valkey
 helm template valkey platform-apps/storage/valkey -n storage | less
 ```
 
-Read what you're about to deploy. Check the StatefulSet's resources, that
-auth is off, and that nothing asks for a PersistentVolumeClaim. Get into this
-habit: never trust a chart you haven't rendered.
-
-Step 4 of 6 done: you have read what you're about to deploy.
+Read what you are about to deploy. Check the StatefulSet's resources, that
+`auth` is off, and that nothing asks for a PersistentVolumeClaim. This is the
+habit the whole job rests on: never trust a chart you have not rendered.
 
 ## 5. Commit
-
-Run:
 
 ```bash
 git add platform-apps/storage/valkey
 git commit -m "feat(storage): add valkey"
 ```
 
-No push needed. Within ten seconds the ApplicationSet sees the new folder and
-creates the Application. Wave 4 has already passed, so it syncs straight away.
-
-Step 5 of 6 done: Argo CD is deploying it.
+Nothing to push. Within ten seconds the ApplicationSet sees the new folder and
+creates the Application; because wave 4 is already past, it syncs at once.
 
 ## 6. Verify
-
-Run:
 
 ```bash
 kubectl -n orchestration get application valkey
@@ -152,21 +131,23 @@ kubectl -n storage run redis-cli --rm -it --restart=Never \
   --image=docker.io/valkey/valkey:8 -- valkey-cli -h valkey-primary PING
 ```
 
-`PONG` means it works. Step 6 of 6 done. Valkey is a platform service.
+`PONG` means you have a platform service.
 
 ## What you learned
 
-- A platform app is a wrapper chart, some values and a catalog entry.
-- Sync waves order platform apps. Tenants never see them.
-- Render before you commit. Commit to deploy.
+- A platform app is a wrapper chart, values, and a catalog entry. The
+  ApplicationSet does the rest.
+- Sync waves express dependencies between platform apps; tenants never see
+  them.
+- Render before you commit, and commit to deploy.
 
 ## Stretch
 
-Pick one:
-
-- Make Valkey need a password. Generate one with an External Secrets
+- Make Valkey require a password: generate one with an External Secrets
   `Password` generator, following the [rules for generated
   secrets](../guides/adding-helm-charts.md#databases-and-generated-secrets).
-- Add `prometheus.io/scrape` annotations so a metrics stack could pick it up.
+- Give it a `ServiceMonitor` or `prometheus.io/scrape` annotations, ready for
+  a metrics stack.
 
-Next: open [Workshop 2](02-crossplane-composition.md).
+Next: [Workshop 2](02-crossplane-composition.md) turns this one shared cache
+into a `Cache` API that gives every tenant their own.

@@ -1,11 +1,13 @@
 # Workshops
 
-Open [Workshop 1](01-platform-helm-chart.md). About an hour.
+A path into platform engineering, on a platform small enough to hold in your
+head. Each workshop takes an hour or two, builds on the one before, and leaves
+something real running in your cluster. You need a working `make up`
+([Getting Started](../getting-started/overview.md)) and a text editor.
 
-Before that, one check: `make status` shows all pods healthy.
-
-Each workshop is one to two hours and builds on the last. Install a tool, turn
-it into an API, make it a template, make it safe to run.
+The thread running through them: **a platform is a set of self-service
+products.** You start by installing a tool, then turn it into an API, then
+into a golden path, then make it safe to operate. That is the job.
 
 | # | Workshop | You build | You learn |
 |---|----------|-----------|-----------|
@@ -20,95 +22,69 @@ it into an API, make it a template, make it safe to run.
 | 9 | Break it, then fix it | A deliberately broken sync wave, diagnosed and repaired | Reading Argo CD status, the wave rollout, Reloader and probe failure modes |
 | 10 | Keep it current | A Renovate chart bump reviewed and merged | Chart versioning, rendering a diff before you trust it, CI |
 
-Workshops 1 and 2 are written up. Workshops 3 to 10 are outlines. Each
-starts with the first thing to open.
+Workshops 1 and 2 are written out below. The rest are outlined here so you
+can attempt them from the guides and the platform's own charts, which are the
+worked examples.
 
 ## 3. Ship a golden path
 
-Start: copy `spotify-templates/3-tier-app`.
-
-1. Add a `Cache` from workshop 2 to its chart.
-2. Register the template in Backstage's `app-config.yaml`.
-3. Scaffold an app and push it to the `local-developer-platform` organisation
-   in Gitea, with `ldp.yaml` at the root.
-4. Watch the `tenant-bootstrap` and `tenant-apps` ApplicationSets pick it up.
-
-The point: the platform team owns the template, the tenant owns the repo.
+Copy `spotify-templates/3-tier-app`, add a `Cache` from workshop 2 to its
+chart, and register the template in Backstage's
+`app-config.yaml`. Scaffold an app, push it to the `local-developer-platform`
+organisation in Gitea with an `ldp.yaml` at its root, and watch the
+`tenant-bootstrap` and `tenant-apps` ApplicationSets pick it up. The lesson is
+the handover: the platform team owns the template and the composition, the
+tenant owns the repo.
 
 ## 4. Give it single sign-on
 
-Start: open `platform-apps/vcs/gitea/templates/oidc-client.yaml`.
-
-1. Add a `Client` like it to your app's chart.
-2. Register the client in Authelia's values.
-3. Read `crossplane-compositions/files/client.yaml.gotmpl` to see how the
-   secret is made in `auth` and copied to your app.
-
-The point: login is something the platform provides too.
+Add a `Client` from the `oidc.ldp` group to your app's chart, as
+`platform-apps/vcs/gitea/templates/oidc-client.yaml` does, and register the
+client in Authelia's values. Read the composition in
+`platform-apps/orchestration/crossplane-compositions/files/client.yaml.gotmpl`
+to see the secret generated in `auth` and replicated to the consumer. The
+lesson is that identity is a platform product too.
 
 ## 5. Secrets that behave
 
-Start: read [Databases and generated secrets](../guides/adding-helm-charts.md#databases-and-generated-secrets).
-
-1. Write a chart that breaks each rule.
-2. Watch Reloader restart it when a secret changes.
-3. Watch a generated password change on resync.
-4. Fix both.
-
-The point: most "flaky start-up" is an ordering problem.
+Follow the rules in
+[Databases and generated secrets](../guides/adding-helm-charts.md#databases-and-generated-secrets)
+against a deliberately naive chart: watch Reloader restart it when a secret
+changes, watch a generator rotate a password on resync, then fix both. The
+lesson is that most "flaky start-up" is ordering.
 
 ## 6. Build and deploy from a commit
 
-Start: open the workflow in `spotify-templates/3-tier-app`.
-
-1. Add a Gitea Actions workflow to your app that builds its image.
-2. Push the image to the in-cluster registry, `vcs-127-0-0-1.nip.io`.
-3. Let Argo CD roll it out.
-
-The point: CI is easy when the platform gives you a registry, credentials and
-trust.
+Add a Gitea Actions workflow to your tenant app that builds its image and
+pushes it to the in-cluster registry (`vcs-127-0-0-1.nip.io`), then let Argo
+CD roll it out. `spotify-templates/3-tier-app` has a working example. The
+lesson is what the platform must provide for CI to be trivial: a registry,
+credentials, and trust.
 
 ## 7. Promote, don't just deploy
 
-Start: `kubectl -n orchestration get pods -l app.kubernetes.io/name=kargo`.
-Kargo is installed and unused.
-
-1. Add a `Warehouse` that watches your image.
-2. Add two `Stage`s, dev and prod.
-3. Promote by hand, then automatically.
-
-The point: "a build exists" and "a build is running here" are different
-things.
+Kargo is installed and unused. Define a `Warehouse` watching your image and
+two `Stage`s, dev and prod, in the tenant app's chart, and promote by hand,
+then automatically. The lesson is separating "a build exists" from "a build
+is running here".
 
 ## 8. Scale on demand
 
-Start: open `spotify-templates/agent/langgraph/chart/templates/queue.yaml`. It
-scales a worker on queue depth with a KEDA `ScaledObject`.
-
-1. Do the same for the 3-tier backend on CPU.
-2. Then on a custom metric.
-
-The point: pick a signal that reflects what users are doing.
+The agent template scales its worker on queue depth with a KEDA
+`ScaledObject`. Do the same for the 3-tier backend on CPU, then on a custom
+metric. The lesson is choosing a scaling signal that reflects user demand.
 
 ## 9. Break it, then fix it
 
-Start: change your app's image tag to one that doesn't exist and commit.
-
-1. Find it with `make status`, Argo CD and `kubectl describe`. Fix it.
-2. Repeat with a missing secret.
-3. Repeat with a probe that can never pass.
-
-The point: OutOfSync, Degraded and CrashLoopBackOff each mean something
-different, and point at different people.
+Push a chart with a wrong image tag, a missing secret and a probe that can
+never pass, one at a time. For each, find it from `make status`, Argo CD and
+`kubectl describe`, and fix it with a commit. The lesson is the platform's
+failure vocabulary: OutOfSync, Degraded, CrashLoopBackOff, and what each one
+means about whose problem it is.
 
 ## 10. Keep it current
 
-Start: open the newest Renovate pull request on this repo.
-
-1. Render the chart before and after with `helm template`.
-2. Read the diff.
-3. Run the CI checks locally, then merge.
-
-The point: upgrades are routine when the diff is small and you have read it.
-
-Next: open [Workshop 1](01-platform-helm-chart.md).
+Renovate opens chart version bumps against this repo. Take one, render the
+chart before and after (`helm template`), read the diff, run the CI checks
+locally, and merge. The lesson is that upgrades are routine when the diff is
+small and reviewed, and terrifying when it is neither.
