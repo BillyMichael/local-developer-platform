@@ -22,7 +22,7 @@ REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd -P)"
 LDP_GIT_MOUNT="/ldp/repo.git"
 LDP_GIT_URL="http://ldp-git.${ARGOCD_NS}.svc.cluster.local/ldp.git"
 
-TOTAL_STEPS=11
+TOTAL_STEPS=13
 
 # ============================================================================
 # COREDNS PATCHING FUNCTION
@@ -327,7 +327,7 @@ publish_ca_bundles() {
 
 
 # ============================================================================
-# [1/11] PREFLIGHT CHECKS
+# [1/13] PREFLIGHT CHECKS
 # ============================================================================
 
 step 1 $TOTAL_STEPS "Preflight Checks"
@@ -336,7 +336,7 @@ preflight
 
 
 # ============================================================================
-# [2/11] CREATE KIND CLUSTER
+# [2/13] CREATE KIND CLUSTER
 # ============================================================================
 
 step 2 $TOTAL_STEPS "Creating Kind Cluster"
@@ -379,7 +379,7 @@ wait_for 60 \
 
 
 # ============================================================================
-# [3/11] PROXY CA TRUST
+# [3/13] PROXY CA TRUST
 # ============================================================================
 
 step 3 $TOTAL_STEPS "Trusting TLS Proxy CA"
@@ -401,7 +401,7 @@ rm -f "$extra_ca_file"
 
 
 # ============================================================================
-# [4/11] OPTIONAL CREDENTIALS
+# [4/13] OPTIONAL CREDENTIALS
 # ============================================================================
 # Both prompts are skipped when the matching env var is set or stdin is not a
 # terminal, so unattended runs never block here.
@@ -451,7 +451,7 @@ fi
 
 
 # ============================================================================
-# [5/11] INSTALL ARGO CD
+# [5/13] INSTALL ARGO CD
 # ============================================================================
 
 step 5 $TOTAL_STEPS "Installing Argo CD"
@@ -495,7 +495,7 @@ run_step "Enabling ApplicationSets" \
 #   wave-5: gitea, kargo                                (VCS & delivery)
 #   wave-6: backstage, gitea-actions, kagent            (portal, CI runner, agents)
 #   wave-7: tenant-appsets                              (tenant onboarding)
-#   wave-8: kube-prometheus-stack, loki, alloy          (observability; not waited on)
+#   wave-8: kube-prometheus-stack, loki, alloy          (observability)
 #
 # The waits below are sized for a laptop VM sharing a few cores with the host:
 # under that contention image pulls and operator start-up take several times
@@ -505,7 +505,7 @@ run_step "Enabling ApplicationSets" \
 
 
 # ============================================================================
-# [6/11] WAVE 1 — FOUNDATIONS
+# [6/13] WAVE 1 — FOUNDATIONS
 # ============================================================================
 
 step 6 $TOTAL_STEPS "Wave 1: Foundations"
@@ -517,7 +517,7 @@ wait_for 300 \
 
 
 # ============================================================================
-# [7/11] WAVE 2 — CROSSPLANE COMPOSITIONS
+# [7/13] WAVE 2 — CROSSPLANE COMPOSITIONS
 # ============================================================================
 
 step 7 $TOTAL_STEPS "Wave 2: Crossplane Compositions"
@@ -528,7 +528,7 @@ wait_for 300 \
 
 
 # ============================================================================
-# [8/11] WAVE 3 — CORE INFRASTRUCTURE
+# [8/13] WAVE 3 — CORE INFRASTRUCTURE
 # ============================================================================
 
 step 8 $TOTAL_STEPS "Wave 3: Core Infrastructure"
@@ -548,7 +548,7 @@ trust_registry_on_nodes "$TRAEFIK_NS" "$TRAEFIK_SVC"
 
 
 # ============================================================================
-# [9/11] WAVE 4 — AUTHENTICATION & OPERATORS
+# [9/13] WAVE 4 — AUTHENTICATION & OPERATORS
 # ============================================================================
 
 step 9 $TOTAL_STEPS "Wave 4: Authentication & Operators"
@@ -558,7 +558,7 @@ wait_for 600 \
 
 
 # ============================================================================
-# [10/11] WAVE 5 — VERSION CONTROL & DELIVERY
+# [10/13] WAVE 5 — VERSION CONTROL & DELIVERY
 # ============================================================================
 
 step 10 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
@@ -571,7 +571,7 @@ wait_for 900 \
 
 
 # ============================================================================
-# [11/11] WAVE 6 — DEVELOPER PORTAL
+# [11/13] WAVE 6 — DEVELOPER PORTAL
 # ============================================================================
 
 step 11 $TOTAL_STEPS "Wave 6: Developer Portal"
@@ -582,12 +582,36 @@ wait_for 600 \
 
 
 # ============================================================================
+# [12/13] WAVE 7 — TENANT ONBOARDING
+# ============================================================================
+
+step 12 $TOTAL_STEPS "Wave 7: Tenant Onboarding"
+
+wait_for 300 \
+  "tenant ApplicationSets" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' get applicationset tenant-bootstrap tenant-apps"
+
+
+# ============================================================================
+# [13/13] WAVE 8 — OBSERVABILITY
+# ============================================================================
+# The heaviest wave, so it runs last: the operator, Prometheus and Grafana all
+# start together. Grafana restarts a few times under that load while its
+# datasource provisioning times out, so its wait is the longest.
+
+step 13 $TOTAL_STEPS "Wave 8: Observability"
+
+wait_for 900 \
+  "Loki"       "kubectl --context '$CONTEXT_NAME' -n observability rollout status statefulset/loki --timeout=1s" \
+  "Prometheus" "kubectl --context '$CONTEXT_NAME' -n observability rollout status statefulset/prometheus-kube-prometheus-stack-prometheus --timeout=1s" \
+  "Grafana"    "kubectl --context '$CONTEXT_NAME' -n observability rollout status deployment/kube-prometheus-stack-grafana --timeout=1s"
+
+
+# ============================================================================
 # DONE
 # ============================================================================
 
 # $SECONDS: bash's count of seconds since this script started
 printf "\n${GREEN}${BOLD}Platform ready in %dm%ds${NC}\n" $(( SECONDS / 60 )) $(( SECONDS % 60 ))
 report_platform_source
-warn "Observability (Prometheus, Grafana, Loki) rolls out last and is still starting; 'make status' shows progress"
 
 bash "${SCRIPT_DIR}/show-info.sh"
