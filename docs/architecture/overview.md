@@ -96,15 +96,14 @@ graph TB
 
 ## GitOps Flow
 
-ArgoCD's source of truth is the checkout you ran `make up` from, not a remote.
-`cluster-up.sh` bind-mounts the checkout's `.git` directory into every kind node
-and the `ldp-git` Deployment (part of the `argocd` chart) serves it over git
-smart HTTP at `http://ldp-git.orchestration.svc.cluster.local/ldp.git`. The
-platform ApplicationSets track `HEAD` there, so they follow whichever branch is
-checked out on the host and pick up each commit within seconds. Nothing is
-pushed anywhere, no network access is needed to read the platform, and a push
-to the upstream repository never changes a running platform. Only commits are
-visible: uncommitted edits under `platform-apps/` are not deployed.
+ArgoCD's source of truth is the checkout you ran `make up` from. The
+checkout's `.git` directory is mounted into every kind node and served over
+git HTTP by the `ldp-git` Deployment in the `argocd` chart, at
+`http://ldp-git.orchestration.svc.cluster.local/ldp.git`. The ApplicationSets
+track `HEAD` there, so the platform follows whichever branch is checked out and
+picks up each commit within seconds. Nothing is pushed, nothing is fetched from
+GitHub, and a push upstream never changes a running platform. Only commits are
+deployed; uncommitted edits are invisible.
 
 ```mermaid
 sequenceDiagram
@@ -128,16 +127,20 @@ and `platform-apps/orchestration/tenant-appsets/values.yaml` at it and set
 
 ## Namespace Organization
 
-The platform organizes applications into namespaces by category:
+Each `platform-apps/<category>/` directory deploys into a namespace of the same name:
 
-| Namespace | Purpose | Components |
-|-----------|---------|------------|
-| `core` | Core infrastructure | Traefik, Cert-Manager, External Secrets |
-| `auth` | Authentication services | Authelia, LLDAP |
-| `orchestration` | GitOps and delivery | ArgoCD, Crossplane, Kargo |
-| `portal` | Developer portal | Backstage |
-| `storage` | Data persistence | CloudNativePG |
-| `vcs` | Version control | Gitea |
+| Namespace | Components |
+|-----------|------------|
+| `networking` | Traefik |
+| `pki` | cert-manager, trust-manager |
+| `secrets` | External Secrets, Reloader, Replicator |
+| `auth` | Authelia, LLDAP |
+| `orchestration` | ArgoCD, Crossplane, Kargo, KEDA |
+| `storage` | CloudNativePG |
+| `observability` | metrics-server |
+| `vcs` | Gitea, Gitea Actions |
+| `portal` | Backstage |
+| `devtools` | kagent |
 
 ## Secret Management
 

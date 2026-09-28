@@ -1,13 +1,9 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-# Per-registry hosts.toml files (CA trust for the in-cluster Gitea registry) are
-# written here by cluster-up.sh; containerd only honours them when config_path is set.
-#
-# __LDP_GIT_DIR__ is replaced by cluster-up.sh with the absolute path of this
-# checkout's .git directory (kind takes absolute host paths only). Every node
-# gets it read-only at /ldp/repo.git, where the ldp-git Deployment in
-# platform-apps/orchestration/argocd serves it to Argo CD as the platform's
-# git remote.
+# config_path lets cluster-up.sh drop per-registry hosts.toml files (CA trust
+# for the in-cluster Gitea registry). __LDP_GIT_DIR__ is filled in by
+# cluster-up.sh with this checkout's .git directory, which the ldp-git
+# Deployment serves to Argo CD as the platform's git remote.
 containerdConfigPatches:
   - |-
     [plugins."io.containerd.grpc.v1.cri".registry]

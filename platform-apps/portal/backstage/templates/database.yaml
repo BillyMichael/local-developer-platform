@@ -1,21 +1,13 @@
-# Backstage's own Postgres, composed by the storage.ldp composition in
-# crossplane-compositions. CloudNativePG publishes the connection details as
-# backstage-db-app, read by the extraEnvVars in values.yaml.
+# Backstage's Postgres (storage.ldp composition). CloudNativePG publishes the
+# connection details as backstage-db-app; the pod's init container waits for it.
 apiVersion: storage.ldp/v1alpha1
 kind: PostgresDatabase
 metadata:
   name: backstage-db
   annotations:
-    # Created alongside the Deployment, not a wave ahead: CloudNativePG writes
-    # the connection secret within seconds of the claim, long before the
-    # database is Ready, and gating the Deployment on Ready only delayed the
-    # Backstage image pull (~3 min) until after Postgres came up (~7 min on a
-    # cold node). The pod's init container waits for the database instead,
-    # so the two happen in parallel and the backend starts once.
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   instances: 1
   storageSize: 1Gi
   labels:
-    # Shows the database on the backstage entity's Kubernetes tab
     app.kubernetes.io/instance: {{ .Release.Name }}

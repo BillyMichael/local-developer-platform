@@ -1,6 +1,5 @@
-# Mints an API token for the read-only `backstage` account (configs.cm
-# accounts.backstage) and publishes it as argocd-backstage-token, replicated to
-# the portal namespace where the Backstage Argo CD proxy reads it.
+# Mints an API token for the `backstage` account and publishes it as
+# argocd-backstage-token, replicated to the portal namespace.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -19,8 +18,7 @@ metadata:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 rules:
-  # `kubectl rollout status` lists and watches the deployment by field
-  # selector (kubectl >= 1.30 on alpine/k8s), so it needs list as well as get.
+  # `kubectl rollout status` needs list as well as get and watch.
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "list", "watch"]
@@ -66,7 +64,6 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: kubectl
-          # Pinned to the cluster's Kubernetes minor; has bash, kubectl and curl.
           image: alpine/k8s:1.34.11
           command:
             - /bin/bash
@@ -82,8 +79,7 @@ spec:
 
               kubectl rollout status deployment/argocd-server -n "$NAMESPACE" --timeout=300s
 
-              # The admin password goes in on stdin so it never appears in
-              # this job's arguments; the server CLI logs in over loopback.
+              # Password via stdin so it never appears in process arguments.
               ADMIN_PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n "$NAMESPACE" -o jsonpath='{.data.password}' | base64 -d)
               TOKEN=$(printf '%s\n' "$ADMIN_PASSWORD" | kubectl exec -i -n "$NAMESPACE" deploy/argocd-server -c server -- sh -c '
                 read -r PW

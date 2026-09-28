@@ -2,22 +2,17 @@ ldp:
   syncWave: wave-3
 
 platform:
-  # The platform reads this checkout, served in-cluster by templates/git-server.yaml,
-  # not a remote: HEAD is whatever branch is checked out on the host. Point these at
-  # a real remote (and disable gitServer) to track a shared repo instead.
+  # The in-cluster remote for this checkout (templates/git-server.yaml); HEAD is
+  # whatever branch is checked out. Point at a real remote to track a shared repo.
   repoURL: http://ldp-git.orchestration.svc.cluster.local/ldp.git
   targetRevision: HEAD
   gitServer:
     enabled: true
-    # Has git and python3; the same image the platform's bootstrap jobs use.
     image: alpine/k8s:1.34.11
-    # Where cluster-up.sh mounts the checkout's .git directory on every kind node.
-    hostPath: /ldp/repo.git
-    # Path component of repoURL.
+    hostPath: /ldp/repo.git   # where cluster-up.sh mounts the checkout's .git on every node
     repoName: ldp.git
-  # Number of ldp.dev/sync-wave steps the ApplicationSet rolls through.
-  # Apps without an ldp.syncWave default to the last wave.
-  syncWaves: 7
+  # Rolling-sync steps; apps without ldp.syncWave default to the last one.
+  syncWaves: 6
   applicationSets:
     enabled: true
   claims:
@@ -51,11 +46,8 @@ argo-cd:
         memory: 512Mi
       limits:
         memory: 1536Mi
-  # ldp-ca-bundle is published by cluster-up.sh: the node's system bundle plus
-  # any TLS-inspecting proxy CA. Mounted over the one file Go (go-git,
-  # helm), GnuTLS (git) and the Argo CD binaries all read, so git and chart
-  # fetches through a re-signing proxy verify. Per-host configs.tls.certificates
-  # would not cover `helm dependency build` of the umbrella charts.
+  # ldp-ca-bundle (published by cluster-up.sh) carries any TLS-inspecting proxy
+  # CA; mounted over the system bundle so git and helm fetches verify.
   repoServer:
     resources:
       requests:
@@ -100,17 +92,15 @@ argo-cd:
       create: true
       oidc.tls.insecure.skip.verify: 'true'
       application.resourceTrackingMethod: annotation
-      # Crossplane's Argo CD guide: nobody interacts with ProviderConfigUsage,
-      # and every managed resource creates one, so keep them out of the tree.
+      # Per the Crossplane Argo CD guide: one per managed resource, never read.
       resource.exclusions: |
         - apiGroups: ["*"]
           kinds: ["ProviderConfigUsage"]
           clusters: ["*"]
-      # Local API-key account for the Backstage Argo CD plugin; its token is
-      # minted by templates/job-backstage-token.yaml.
+      # Read-only account for Backstage; token minted by templates/job-backstage-token.yaml.
       accounts.backstage: apiKey
       resource.customizations: |
-        "*.crossplane.io/*":
+        "*.crossplane.io/*": &crossplane-health
           health.lua: |
             health_status = {
               status = "Progressing",
@@ -166,68 +156,10 @@ argo-cd:
             end
 
             return health_status
-        # Claims and composites of the platform's own XRDs (oidc.ldp Client and
-        # User, storage.ldp PostgresDatabase). Argo CD matches health checks by
-        # API group, so the crossplane.io entry above does not cover them and a
-        # claim would count as healthy the moment it exists: a sync wave could
-        # never hold a workload back until the claim's secret is written. Same
-        # Lua as the crossplane.io entry (from the Crossplane Argo CD guide).
-        "*.ldp/*":
-          health.lua: |
-            health_status = {
-              status = "Progressing",
-              message = "Provisioning ..."
-            }
-
-            local function contains (table, val)
-              for i, v in ipairs(table) do
-                if v == val then
-                  return true
-                end
-              end
-              return false
-            end
-
-            local has_no_status = {
-              "Composition",
-              "CompositionRevision"
-            }
-            if obj.status == nil or next(obj.status) == nil and contains(has_no_status, obj.kind) then
-                health_status.status = "Healthy"
-                health_status.message = "Resource is up-to-date."
-              return health_status
-            end
-
-            if obj.status == nil or next(obj.status) == nil or obj.status.conditions == nil then
-              return health_status
-            end
-
-            for i, condition in ipairs(obj.status.conditions) do
-              if condition.type == "LastAsyncOperation" then
-                if condition.status == "False" then
-                  health_status.status = "Degraded"
-                  health_status.message = condition.message
-                  return health_status
-                end
-              end
-
-              if condition.type == "Synced" then
-                if condition.status == "False" then
-                  health_status.status = "Degraded"
-                  health_status.message = condition.message
-                  return health_status
-                end
-              end
-
-              if contains({"Ready", "Healthy", "Offered", "Established", "ValidPipeline", "RevisionHealthy"}, condition.type) then
-                if condition.status == "True" then
-                  health_status.status = "Healthy"
-                  health_status.message = "Resource is up-to-date."
-                end
-              end
-            end
-
-            return health_status
+        # The platform's own XRD groups (oidc.ldp, storage.ldp): Argo CD matches
+        # health checks by API group, so the crossplane.io entry does not cover
+        # them and an unassessed claim counts as healthy the moment it exists.
+        "*.ldp/*": *crossplane-health
         networking.k8s.io/Ingress:
           health.lua: |
             hs = {}
@@ -248,11 +180,6 @@ argo-cd:
     rbac:
       policy.default: 'role:readonly'
       policy.csv: |
-        # Platform maintainers get full admin access
         g, platform_maintainers, role:admin
-
-        # Platform users get read-only access (default policy)
-
-        # Backstage reads application status for the portal's Argo CD cards
         g, backstage, role:readonly
        

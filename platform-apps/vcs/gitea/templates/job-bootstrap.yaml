@@ -7,7 +7,6 @@ metadata:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 ---
-# Namespace-scoped Role - only has permissions within vcs namespace
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -61,7 +60,6 @@ spec:
       serviceAccountName: gitea-bootstrap
       containers:
         - name: kubectl
-          # Pinned to the cluster's Kubernetes minor; has bash, kubectl and curl.
           image: alpine/k8s:1.34.11
           command:
             - /bin/bash
@@ -103,9 +101,7 @@ spec:
                 echo "Secret created and will be replicated to portal."
               fi
 
-              # ArgoCD repo-creds template so tenant apps can clone Gitea
-              # repos over the in-cluster HTTP service (private repos, no TLS).
-              # Replicated to orchestration where ArgoCD picks it up by label.
+              # Argo CD repo-creds for cloning tenant repos over the in-cluster HTTP service.
               if ! kubectl get secret gitea-repo-creds -n $NAMESPACE >/dev/null 2>&1; then
                 echo "Creating ArgoCD repo-creds secret..."
                 cat <<EOF | kubectl apply -f -
@@ -135,9 +131,8 @@ spec:
                 --post-data='{"username":"local-developer-platform","full_name":"Local Developer Platform","description":"Platform infrastructure and services","visibility":"public"}' \
                 http://localhost:3000/api/v1/orgs 2>/dev/null || echo "Organization may already exist"
 
-              # Registry push credential for Actions jobs: Gitea's automatic job token is not
-              # accepted by its container registry. A write:package-only token, published as
-              # an org Actions secret so every repo's workflow can `docker push`.
+              # Registry push token for Actions jobs (the automatic job token is not
+              # accepted by the container registry), published as an org Actions secret.
               if kubectl get secret gitea-registry-token -n $NAMESPACE >/dev/null 2>&1; then
                 REGISTRY_TOKEN=$(kubectl get secret gitea-registry-token -n $NAMESPACE -o jsonpath='{.data.token}' | base64 -d)
               else

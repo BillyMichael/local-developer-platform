@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-"""Read-only git smart-HTTP server over `git upload-pack`.
-
-Serves every repository directory under GIT_ROOT (default /repos) at
-http://host/<name>. Only the fetch half of the protocol exists (info/refs
-and git-upload-pack); pushes are answered 403. Meant for Argo CD to read a
-checkout that is bind-mounted into the cluster.
-"""
+"""Read-only git smart-HTTP server: serves each repo under GIT_ROOT at /<name>
+over `git upload-pack`; pushes get 403."""
 import gzip
 import os
 import subprocess

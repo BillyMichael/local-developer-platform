@@ -15,9 +15,7 @@ backstage:
     create: true
     name: backstage
   backstage:
-    # The chart's args replace the image's command, which loaded the
-    # app-config.yaml baked into the image (permissions, app.extensions).
-    # Load it first; the chart appends app-config.extra.yaml after it.
+    # The image's baked-in app-config.yaml must load before the chart's extra config.
     args:
       - --config
       - app-config.yaml
@@ -29,64 +27,38 @@ backstage:
         memory: 512Mi
     podAnnotations:
       reloader.stakater.com/auto: "true"
-    # Wait for the database before the backend starts. Backstage exits when it
-    # cannot connect, and each exit lengthens the restart backoff; a wait here
-    # means the image pulls while Postgres comes up and the backend runs once.
+    # Init order matters: the kubelet pulls an image only when it starts the
+    # container, so pulling Backstage's image in the first init container lets
+    # the ~3 min pull overlap the database start-up instead of following it.
+    # The second waits for Postgres rather than crashing into restart backoff
+    # (see the chart guide).
     initContainers:
+      - name: pull-image
+        image: '{{ include "backstage.image" . }}'
+        command: ["node", "--version"]
       - name: wait-for-db
         image: busybox:1.37-musl
-        command:
-          - sh
-          - -c
-          - |
-            i=0
-            until nc -z backstage-db-rw 5432; do
-              i=$((i + 1))
-              [ "$i" -ge 300 ] && { echo "gave up waiting for backstage-db-rw:5432"; exit 1; }
-              [ $((i % 15)) -eq 1 ] && echo "waiting for backstage-db-rw:5432..."
-              sleep 2
-            done
-            echo "database is accepting connections"
+        command: ["timeout", "600", "sh", "-c", "until nc -z backstage-db-rw 5432; do echo waiting for backstage-db-rw:5432; sleep 5; done"]
         resources:
           requests:
             cpu: 5m
             memory: 8Mi
           limits:
             memory: 32Mi
-    # The chart's defaults give the backend 30s to open its port (3 x 10s, 1s
-    # timeout) and kill it after three slow health answers. On a laptop VM a
-    # cold start under load takes longer than that, and a burst elsewhere
-    # (a heavy wave rolling out) makes a healthy backend answer slowly: the
-    # kubelet then terminates a working Backstage mid-startup, over and over.
-    # Five minutes to start, and five-second answers tolerated while running.
+    # Chart defaults (30s to start, 1s probe timeout) kill a slow-starting or
+    # briefly-slow backend on a busy laptop VM. Paths and ports are the chart's.
     startupProbe:
-      httpGet:
-        path: /.backstage/health/v1/liveness
-        port: 7007
-        scheme: HTTP
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 30
     livenessProbe:
-      httpGet:
-        path: /.backstage/health/v1/liveness
-        port: 7007
-        scheme: HTTP
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 6
     readinessProbe:
-      httpGet:
-        path: /.backstage/health/v1/readiness
-        port: 7007
-        scheme: HTTP
       periodSeconds: 10
       timeoutSeconds: 5
-    # One pod at a time, always. Backstage runs its plugins' database
-    # migrations on startup, and two pods starting together against a fresh
-    # database race on the migrations table and both wedge. The default
-    # RollingUpdate surges a second pod whenever Reloader or a config change
-    # rolls the Deployment, which on a slow VM overlaps the first pod's start.
+    # Two pods migrating the same fresh database wedge each other.
     strategy:
       type: Recreate
     image:

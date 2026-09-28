@@ -1,16 +1,8 @@
 {{- if .Values.platform.gitServer.enabled }}
-# In-cluster, read-only git remote for this checkout.
-#
-# cluster-up.sh bind-mounts the checkout's .git directory into every kind node
-# at platform.gitServer.hostPath (see cluster-config.yaml). This Deployment
-# serves it over git smart HTTP so the platform ApplicationSets read the
-# committed HEAD of the local checkout instead of a remote on GitHub: a commit
-# here reaches the cluster within the generator's requeue interval, no push,
-# no internet, and nobody else's pushes change a running platform.
-#
-# alpine/k8s carries git and python3 but not git-http-backend, so
-# files/git-serve.py implements the fetch half of the protocol over
-# `git upload-pack`. Pushes are refused.
+# Read-only git remote serving this checkout's .git, which cluster-up.sh
+# bind-mounts into every node, so Argo CD deploys the committed HEAD without a
+# push or a network. alpine/k8s has no git-http-backend, so files/git-serve.py
+# speaks the fetch half of smart HTTP over `git upload-pack`.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -70,10 +62,7 @@ spec:
         - name: checkout
           hostPath:
             path: {{ .Values.platform.gitServer.hostPath }}
-            # Fails the pod loudly when the node lacks the bind mount (cluster
-            # created from an older cluster-config.yaml, or the engine's VM does
-            # not share the checkout's directory).
-            type: Directory
+            type: Directory   # fail loudly when the node lacks the mount
         - name: server
           configMap:
             name: ldp-git-server
