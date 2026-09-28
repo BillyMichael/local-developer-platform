@@ -1,26 +1,38 @@
 # Workshop 2: Turn it into an API with Crossplane
 
-A shared Valkey is a tool. A `Cache` kind that a tenant can put in their chart
-is a platform product. You will define that kind with a Crossplane
-CompositeResourceDefinition, implement it with a Composition that renders a
-StatefulSet and a Service, and use it from a tenant chart.
+This workshop shows how to create a new kind of resource, `Cache`, that a
+tenant can request in their own chart. Crossplane turns each `Cache` into a
+Valkey StatefulSet and a Service.
 
-**Time:** one to two hours. **Needs:** Workshop 1 is not required; this
-composition stands alone. Read `platform-apps/orchestration/crossplane-compositions`
-first: the `PostgresDatabase` kind there is the pattern you are copying.
+## Before you begin
 
-## How compositions work here
+- A running platform. `make status` shows all pods healthy.
+- Workshop 1 is not required.
+- Read `platform-apps/orchestration/crossplane-compositions`. The
+  `PostgresDatabase` kind there follows the same pattern.
 
-Crossplane v2 composes ordinary Kubernetes resources, no cloud provider
-needed. A **CompositeResourceDefinition** (XRD) declares a new kind and its
-schema. A **Composition** says what to create for each instance, and here it
-delegates the rendering to `function-go-templating`, so the resources are a
-Go template in `files/`. Crossplane only creates kinds it has RBAC for, which
-`rbac.yaml` grants. The platform's Argo CD already treats every `*.ldp` kind's
-`Ready` condition as its health, so a claim shows up green or red like any
-other resource.
+This workshop takes one to two hours.
 
-## 1. Define the kind
+## Objectives
+
+- Define a `Cache` kind with a CompositeResourceDefinition.
+- Implement it with a Composition rendered by `function-go-templating`.
+- Grant Crossplane permission to create the composed resources.
+- Request a `Cache` and verify it becomes Ready.
+
+## How compositions work in LDP
+
+Crossplane creates ordinary Kubernetes resources. A CompositeResourceDefinition
+(XRD) declares a new kind and its schema. A Composition says what to create
+for each instance; in LDP it delegates rendering to `function-go-templating`,
+so the resources are a Go template in `files/`. Crossplane can only create
+kinds it has RBAC for, which `rbac.yaml` grants. Argo CD treats the `Ready`
+condition of every `*.ldp` kind as its health, so a `Cache` shows as Healthy or
+Progressing like any other resource.
+
+## Define the kind
+
+Create the XRD:
 
 ```yaml title="platform-apps/orchestration/crossplane-compositions/templates/xrd-cache.yaml"
 # Namespaced so a cache lives beside the app that uses it.
@@ -63,11 +75,13 @@ spec:
                     type: string
 ```
 
-The schema is the contract. Keep it small: every field you expose is one you
-support forever. Defaults mean a tenant can write `kind: Cache` with an empty
-spec and get something sensible.
+The schema is the API contract. Keep it small: every field you expose is one
+you support from now on. The defaults let a tenant write `kind: Cache` with an
+empty spec.
 
-## 2. Write what an instance creates
+## Write the template
+
+Create the Go template that renders each `Cache`:
 
 ```yaml title="platform-apps/orchestration/crossplane-compositions/files/cache.yaml.gotmpl"
 {{- /* Rendered by function-go-templating, not Helm. */ -}}
@@ -138,20 +152,22 @@ spec:
       port: 6379
 ```
 
-Three things carry the whole design:
+Notice three things:
 
 - `composition-resource-name` names each composed resource so Crossplane can
-  track it across reconciles, and `getComposedResource` lets the template read
-  back what it created last time.
-- The `ready` annotation is how the composite learns it is Ready, and every
-  composed resource needs a verdict. The StatefulSet's is "one ready replica";
-  the Service's is simply `"True"`, because a Service has no Ready condition
-  of its own. Miss one and the `Cache` reports `Unready resources: service`
-  forever, and so does any Argo CD sync wave waiting on it.
-- Everything lands in the XR's own namespace, which is what a namespaced XRD
-  is for.
+  track it between reconciles, and `getComposedResource` reads back what was
+  created last time.
+- The `ready` annotation tells Crossplane when each resource is ready. Every
+  composed resource needs one. The StatefulSet is ready when it has one ready
+  replica. A Service has no Ready condition, so its annotation is simply
+  `"True"`. Without it, the `Cache` reports `Unready resources: service`
+  forever.
+- Everything is created in the `Cache`'s own namespace, because the XRD is
+  namespaced.
 
-## 3. Wire the composition to the template
+## Configure the composition
+
+Create the Composition. It inlines the template file:
 
 ```yaml title="platform-apps/orchestration/crossplane-compositions/templates/composition-cache.yaml"
 apiVersion: apiextensions.crossplane.io/v1
@@ -179,13 +195,13 @@ spec:
 {{ .Files.Get "files/cache.yaml.gotmpl" | indent 12 }}
 ```
 
-Helm inlines the file; Crossplane's function renders it. Two template
-languages in one file is why the `.gotmpl` file starts with a comment saying
-which one it is for.
+Helm inlines the file; Crossplane's function renders it. The `.gotmpl` file
+starts with a comment saying which of the two template languages it is for.
 
-## 4. Let Crossplane create these kinds
+## Grant permission
 
-Add to `platform-apps/orchestration/crossplane-compositions/templates/rbac.yaml`:
+Add this ClusterRole to
+`platform-apps/orchestration/crossplane-compositions/templates/rbac.yaml`:
 
 ```yaml
 ---
@@ -207,26 +223,93 @@ rules:
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ```
 
-Skip this and the composition renders fine but nothing appears; the composite
-reports a forbidden error in its `Synced` condition. It is the most common
-first failure, so look for it there.
+Without it the composition renders but nothing is created, and the `Cache`
+shows a `forbidden` error in its `Synced` condition.
 
-## 5. Commit and check the definition landed
+## Deploy the definition
 
-```bash
-helm lint platform-apps/orchestration/crossplane-compositions
-git add platform-apps/orchestration/crossplane-compositions
-git commit -m "feat(crossplane): Cache kind for tenant caches"
-kubectl get xrd caches.storage.ldp
-kubectl get composition cache.storage.ldp
-```
+1. Lint and commit:
 
-The `crossplane-compositions` Application is in wave 2, so Argo CD syncs the
-change as soon as it sees the commit.
+    ```bash
+    helm lint platform-apps/orchestration/crossplane-compositions
+    git add platform-apps/orchestration/crossplane-compositions
+    git commit -m "feat(crossplane): Cache kind for tenant caches"
+    ```
 
-## 6. Use it from a tenant chart
+    The `crossplane-compositions` Application is in wave 2, so Argo CD syncs
+    it as soon as it sees the commit.
 
-In any chart, this is now enough:
+2. Check that the definition is established:
+
+    ```bash
+    kubectl get xrd caches.storage.ldp
+    ```
+
+    The output is similar to:
+
+    ```
+    NAME                 ESTABLISHED   OFFERED   AGE
+    caches.storage.ldp   True                    30s
+    ```
+
+## Request a Cache
+
+1. Create a namespace and a `Cache`:
+
+    ```bash
+    kubectl create namespace demo
+    kubectl -n demo apply -f - <<'YAML'
+    apiVersion: storage.ldp/v1alpha1
+    kind: Cache
+    metadata:
+      name: demo
+    YAML
+    ```
+
+2. Watch it become Ready:
+
+    ```bash
+    kubectl -n demo get cache demo -w
+    ```
+
+    The output is similar to:
+
+    ```
+    NAME   SYNCED   READY   MEMORY   AGE
+    demo   True     False   64Mi     5s
+    demo   True     True    64Mi     41s
+    ```
+
+3. Look at what was created:
+
+    ```bash
+    kubectl -n demo get sts,svc,pod
+    ```
+
+    The output is similar to:
+
+    ```
+    NAME                    READY   AGE
+    statefulset.apps/demo   1/1     45s
+
+    NAME           TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+    service/demo   ClusterIP   10.96.156.141   <none>        6379/TCP   45s
+
+    NAME         READY   STATUS    RESTARTS   AGE
+    pod/demo-0   1/1     Running   0          45s
+    ```
+
+4. Connect to it:
+
+    ```bash
+    kubectl -n demo run cli --rm -it --restart=Never \
+      --image=docker.io/valkey/valkey:8-alpine -- valkey-cli -h demo PING
+    ```
+
+    The output is `PONG`.
+
+In a tenant chart, the same request looks like this, and the app reaches the
+cache at `<release>-cache:6379`:
 
 ```yaml title="templates/cache.yaml"
 apiVersion: storage.ldp/v1alpha1
@@ -239,43 +322,22 @@ spec:
   memory: 32Mi
 ```
 
-The app reaches it at `<release>-cache:6379`. Try it in the `3-tier-app`
-template's chart, or directly:
+## Clean up
+
+Delete the `Cache` and the namespace. Crossplane removes the StatefulSet and
+Service:
 
 ```bash
-kubectl create namespace demo
-kubectl -n demo apply -f - <<'YAML'
-apiVersion: storage.ldp/v1alpha1
-kind: Cache
-metadata:
-  name: demo
-YAML
-kubectl -n demo get cache demo -w
+kubectl -n demo delete cache demo
+kubectl delete namespace demo
 ```
 
-`READY True` within a minute. `kubectl -n demo describe cache demo` shows the
-composed resources; `kubectl -n demo get sts,svc` shows them as plain
-Kubernetes objects, because that is what they are.
+Keep the XRD and Composition if you are continuing to Workshop 3.
 
-## What you learned
+## What's next
 
-- An XRD is an API contract; a composition is its implementation; RBAC is the
-  permission to implement it. All three are just YAML in one chart.
-- Readiness is something you define. The platform's Argo CD health check
-  turns it into green and red for everyone.
-- Namespaced composites keep a tenant's resources in the tenant's namespace,
-  with no claims and no cross-namespace plumbing.
-
-## Stretch
-
-- Add `spec.password: true` that generates a password with an External
-  Secrets `Password` generator (`refreshPolicy: CreatedOnce`) and publishes a
-  `<name>-cache` connection secret, the way `PostgresDatabase` publishes
-  `<name>-app`. The `client.yaml.gotmpl` composition shows the generator
-  pattern.
-- Write a second Composition for the same XRD that points at a shared Valkey
-  instead of creating one, and select it with a label. That is how one API
-  grows a cheaper implementation without changing its consumers.
-
-Next: [Workshop 3](index.md#3-ship-a-golden-path) puts a `Cache` into a
-Backstage template so tenants get one without writing YAML at all.
+- [Workshop 3: Ship a golden path](index.md#3-ship-a-golden-path) puts a
+  `Cache` in a Backstage template so tenants get one without writing YAML.
+- To add a generated password, see how `client.yaml.gotmpl` uses an External
+  Secrets `Password` generator, and the
+  [rules for generated secrets](../guides/adding-helm-charts.md#databases-and-generated-secrets).

@@ -1,13 +1,13 @@
 # Workshops
 
-A path into platform engineering, on a platform small enough to hold in your
-head. Each workshop takes an hour or two, builds on the one before, and leaves
-something real running in your cluster. You need a working `make up`
-([Getting Started](../getting-started/overview.md)) and a text editor.
+These workshops teach platform engineering by building on LDP. Each one takes
+an hour or two, builds on the one before, and leaves something running in your
+cluster. Before you begin, run `make up` ([Getting Started](../getting-started/overview.md))
+and check that `make status` shows all pods healthy.
 
-The thread running through them: **a platform is a set of self-service
-products.** You start by installing a tool, then turn it into an API, then
-into a golden path, then make it safe to operate. That is the job.
+The workshops follow one idea: a platform is a set of services people can get
+for themselves. You install a tool, turn it into an API, make it a template,
+then make it safe to operate.
 
 | # | Workshop | You build | You learn |
 |---|----------|-----------|-----------|
@@ -22,9 +22,8 @@ into a golden path, then make it safe to operate. That is the job.
 | 9 | Break it, then fix it | A deliberately broken sync wave, diagnosed and repaired | Reading Argo CD status, the wave rollout, Reloader and probe failure modes |
 | 10 | Keep it current | A Renovate chart bump reviewed and merged | Chart versioning, rendering a diff before you trust it, CI |
 
-Workshops 1 and 2 are written out below. The rest are outlined here so you
-can attempt them from the guides and the platform's own charts, which are the
-worked examples.
+Workshops 1 and 2 are complete. Workshops 3 to 10 are outlines. The
+platform's own charts are the worked examples for each.
 
 ## 3. Ship a golden path
 
