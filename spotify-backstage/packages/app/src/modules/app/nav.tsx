@@ -20,10 +20,8 @@ import { MyGroupsSidebarItem } from '@backstage/plugin-org';
 import { NotificationsSidebarItem } from '@backstage/plugin-notifications';
 import { SidebarSearchModal } from '@backstage/plugin-search';
 import { UserSettingsSignInAvatar } from '@backstage/plugin-user-settings';
-import AccountTreeIcon from '@material-ui/icons/AccountTree';
 import CategoryIcon from '@material-ui/icons/Category';
 import CreateComponentIcon from '@material-ui/icons/AddCircleOutline';
-import ExtensionIcon from '@material-ui/icons/Extension';
 import GroupIcon from '@material-ui/icons/People';
 import HomeIcon from '@material-ui/icons/Home';
 import LaunchIcon from '@material-ui/icons/Launch';
@@ -76,15 +74,17 @@ const LdpNav = ({ navItems }: NavContentComponentProps) => {
       <SidebarGroup label="Menu" icon={<MenuIcon />}>
         <SidebarItem icon={HomeIcon} to="/" text="Home" />
         <SidebarItem icon={CategoryIcon} to="catalog" text="Catalog" />
-        <SidebarItem icon={ExtensionIcon} to="api-docs" text="APIs" />
+        <SidebarItem
+          icon={CreateComponentIcon}
+          to="create"
+          text="Self Service"
+        />
         <SidebarItem icon={LibraryBooks} to="docs" text="Docs" />
-        <SidebarItem icon={AccountTreeIcon} to="catalog-graph" text="Graph" />
         <MyGroupsSidebarItem
           singularTitle="My Group"
           pluralTitle="My Groups"
           icon={GroupIcon}
         />
-        <SidebarItem icon={CreateComponentIcon} to="create" text="Create" />
         <SidebarDivider />
         <SidebarScrollWrapper>
           <SidebarItem icon={LaunchIcon} text="Platform Tools">
