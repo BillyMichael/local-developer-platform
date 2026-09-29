@@ -1,7 +1,5 @@
-# Crossplane v2 composes the External Secrets resources directly. The resources
-# live in files/user.yaml.gotmpl, rendered by function-go-templating; keeping
-# them out of templates/ means Helm never parses their template expressions.
-# Crossplane's permission to manage them comes from rbac.yaml.
+# Resources live in files/user.yaml.gotmpl (rendered by function-go-templating,
+# kept out of templates/ so Helm never parses them); RBAC in rbac.yaml.
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:

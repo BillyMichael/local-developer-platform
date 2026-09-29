@@ -7,7 +7,6 @@ gitea:
       cpu: 50m
       memory: 128Mi
     limits:
-      # container registry pushes and Actions logs need headroom over the old 256Mi
       memory: 512Mi
   ingress:
     enabled: true
@@ -21,12 +20,6 @@ gitea:
         hosts:
           - vcs-127-0-0-1.nip.io
 
-  service:
-    DISABLE_REGISTRATION: true
-
-  oauth2_client:
-    ENABLE_AUTO_REGISTRATION: true
-
   gitea:
     podAnnotations:
       reloader.stakater.com/auto: "true"
@@ -34,17 +27,23 @@ gitea:
       security:
         ROOT_CA: /etc/ssl/certs/ldp-ca.pem
       service:
+        # No local sign-up; accounts are created on first Authelia login.
+        ALLOW_ONLY_EXTERNAL_REGISTRATION: true
         ENABLE_CAPTCHA: false
         SHOW_REGISTRATION_BUTTON: false
         ENABLE_BASIC_AUTHENTICATION: false
         ENABLE_PASSWORD_SIGNIN_FORM: false
         ENABLE_PASSKEY_AUTHENTICATION: false
+      # Auto-create accounts on first Authelia login, named after the LLDAP uid.
+      oauth2_client:
+        ENABLE_AUTO_REGISTRATION: true
+        USERNAME: preferred_username
+        ACCOUNT_LINKING: auto
       openid:
         ENABLE_OPENID_SIGNIN: false
         ENABLE_OPENID_SIGNUP: true
       webhook:
-        # Gitea blocks webhooks to private addresses by default; queue-backed agents
-        # (spotify-templates/agent) receive them on in-cluster Services
+        # Agents (spotify-templates/agent) receive webhooks on in-cluster Services.
         ALLOWED_HOST_LIST: "external,*.svc.cluster.local"
 
     oauth:
@@ -55,6 +54,12 @@ gitea:
         autoDiscoverUrl: "https://auth-127-0-0-1.nip.io/.well-known/openid-configuration"
         scopes: "openid profile email groups"
 
+  # Wait for Postgres and Valkey before configure-gitea runs `gitea migrate`,
+  # rather than crash into restart backoff (see the chart guide).
+  initPreScript: |
+    timeout 600 sh -c 'until nc -z gitea-postgresql 5432; do echo waiting for gitea-postgresql:5432; sleep 5; done'
+    timeout 600 sh -c 'until nc -z gitea-valkey-headless 6379; do echo waiting for gitea-valkey-headless:6379; sleep 5; done'
+
   valkey-cluster:
     enabled: false
   valkey:
@@ -64,6 +69,11 @@ gitea:
     enabled: false
   postgresql:
     enabled: true
+    global:
+      postgresql:
+        auth:
+          # Unused, but randomised per render otherwise, so Argo CD rewrote the secret on every sync.
+          postgresPassword: gitea
 
   extraVolumes:
     - name: ca
@@ -80,8 +90,7 @@ gitea:
     env:
       - name: SSL_CERT_FILE
         value: /etc/ssl/certs/ldp-ca.pem
-      # Fixed global Actions runner registration token (templates/runner-token.yaml).
-      # Gitea creates it at startup; the gitea-actions chart registers with the same secret.
+      # Shared with the gitea-actions runner (templates/runner-token.yaml).
       - name: GITEA_RUNNER_REGISTRATION_TOKEN
         valueFrom:
           secretKeyRef:
