@@ -31,7 +31,8 @@ perses:
           - observability-127-0-0-1.nip.io
         secretName: perses-tls
 
-  # naming an external Secret is what stops the chart generating its own (create: false alone does not)
+  # naming an external Secret is what stops the chart generating its own (create: false alone does not);
+  # deprecated upstream in favour of secret.name, which does NOT switch it off
   secret:
     create: false
   envVarsExternalSecretName: perses-env

@@ -1,9 +1,11 @@
+# Resources live in files/client.yaml.gotmpl, kept out of templates/ so Helm never parses them; RBAC in rbac.yaml.
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
   name: client.oidc.ldp
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: '-1'
 spec:
   compositeTypeRef:
     apiVersion: oidc.ldp/v1alpha1

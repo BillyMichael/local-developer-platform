@@ -356,7 +356,14 @@ report_platform_source
 
 run_step "Enabling ApplicationSets" "${argocd_helm[@]}"
 
-# Waves follow ldp.syncWave in each values.yaml. Timeouts are sized for cold image pulls on a laptop VM behind a proxy.
+# Waves follow ldp.syncWave in each values.yaml:
+#   1 cert-manager, external-secrets, crossplane, kagent-crds, metrics-server
+#   2 crossplane-compositions
+#   3 traefik, trust-manager, lldap, reloader, kubernetes-replicator, argocd
+#   4 authelia, cloudnative-pg, keda
+#   5 gitea, kargo
+#   6 backstage, gitea-actions, kagent, victoria-metrics, victoria-logs, victoria-logs-collector, perses, tenant-appsets
+# Timeouts are sized for cold image pulls on a laptop VM behind a proxy.
 step 6 $TOTAL_STEPS "Wave 1: Foundations"
 
 wait_for 300 \

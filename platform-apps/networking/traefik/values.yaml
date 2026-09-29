@@ -19,6 +19,7 @@ traefik:
       nodePort: 30443
 
   service:
+    # chart >= 40 reads the Service type from service.spec, not service.type
     spec:
       type: NodePort
 

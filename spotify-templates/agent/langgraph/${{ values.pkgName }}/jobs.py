@@ -1,8 +1,14 @@
 """Gitea webhook -> RabbitMQ -> dispatcher -> the agent's own A2A server (`agent receive`).
 
-The receiver only enqueues (Gitea times a delivery out in seconds). The dispatcher relays each
-job as an A2A message, so runs show up in the kagent UI like chat turns. At-least-once: failed
-relays are retried, then dead-lettered to `jobs.dead`.
+The receiver checks the HMAC signature, keeps only the events the agent cares about, and only
+enqueues (Gitea times a delivery out in seconds). The dispatcher relays each job as one A2A
+message to the agent's Service, so runs go through kagent's executor, checkpointer and task
+store and show up in the kagent UI like chat turns.
+
+Delivery is at-least-once. A failed relay is republished with its attempt number bumped and
+dead-lettered to `jobs.dead` after MAX_ATTEMPTS; a dispatcher that dies mid-run leaves its
+messages unacked and RabbitMQ redelivers them (the quorum queue's delivery limit bounds that
+path). KEDA scales the agent pods on ready + unacked (chart/templates/queue.yaml).
 """
 
 from __future__ import annotations

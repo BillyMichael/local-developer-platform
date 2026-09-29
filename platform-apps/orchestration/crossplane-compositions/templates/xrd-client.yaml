@@ -1,10 +1,12 @@
-# Cluster-scoped: a namespaced XR can only compose into its own namespace, and the secret is born in auth
+# Cluster-scoped: a namespaced XR can only compose into its own namespace, and the secret is born in auth.
+# No claims: in Crossplane v2 platform charts create the Client directly.
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
   name: clients.oidc.ldp
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: '-1'
 spec:
   scope: Cluster
   group: oidc.ldp

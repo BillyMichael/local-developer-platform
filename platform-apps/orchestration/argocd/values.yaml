@@ -4,6 +4,7 @@ ldp:
   serverSideApply: true
 
 platform:
+  # In-cluster remote for this checkout (templates/git-server.yaml); point at a real remote to track a shared repo.
   repoURL: http://ldp-git.orchestration.svc.cluster.local/ldp.git
   targetRevision: HEAD
   gitServer:

@@ -53,6 +53,8 @@ authelia:
       encryption_key:
         secret_name: authelia-generated
         path: session.encryption.key
+      # chart 0.11 validates cookies[] strictly: authelia_url is derived from the domain, secure is not a key,
+      # remember_me lives at session level (default 1M)
       cookies:
         - name: authelia_session
           domain: auth-127-0-0-1.nip.io

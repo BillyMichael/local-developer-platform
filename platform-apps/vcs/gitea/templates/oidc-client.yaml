@@ -4,6 +4,7 @@ metadata:
   name: gitea
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    # A wave ahead so the client secret is complete before the pod mounts it.
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   replicateTo: {{ .Release.Namespace }}

@@ -173,6 +173,7 @@ check_port_availability() {
   fi
 }
 
+# Below this the platform does not fail cleanly: probes time out, controllers restart and a late wave stalls.
 LDP_MIN_MEM_GB=11   # a 12GB VM reports ~11GiB
 
 # Prints "<bytes> <cpus>" of the engine VM; docker keys them at the top level, podman under .Host.
