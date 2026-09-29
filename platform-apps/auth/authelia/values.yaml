@@ -51,15 +51,15 @@ authelia:
         enabled: true
 
     session:
+      # chart 0.11 validates cookies[] strictly: authelia_url is derived from the domain
+      # by the chart, secure was never a key, remember_me lives at session level
+      remember_me: 1M
       cookies:
         - name: authelia_session
           domain: auth-127-0-0-1.nip.io
-          authelia_url: https://auth-127-0-0-1.nip.io
           same_site: lax
-          secure: true
           expiration: 1h
           inactivity: 5m
-          remember_me: 1M
 
     identity_providers:
       oidc:
