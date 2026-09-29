@@ -91,6 +91,9 @@ argo-cd:
       applicationsetcontroller.enable.progressive.syncs: 'true'
     cm:
       oidc.tls.insecure.skip.verify: 'true'
+      # The 3.x default, but explicit: an older bootstrap Argo CD would label-track the early
+      # waves, and 3.x then sees the leftover instance label as drift.
+      application.resourceTrackingMethod: annotation
       # Crossplane Argo CD guide: one per managed resource, never read
       resource.exclusions: |
         - apiGroups: ["*"]

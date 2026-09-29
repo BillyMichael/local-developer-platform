@@ -10,6 +10,9 @@ gitea:
       memory: 512Mi
   ingress:
     enabled: true
+    # Explicit: the chart otherwise renders ingressClassName: null, the default class fills in
+    # traefik, and the app stays OutOfSync, which stalls the rollout at wave 5.
+    className: traefik
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: websecure
       cert-manager.io/cluster-issuer: ca-issuer

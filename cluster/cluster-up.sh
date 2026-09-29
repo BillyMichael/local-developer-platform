@@ -346,8 +346,13 @@ argocd_helm=(helm upgrade --install argocd platform-apps/orchestration/argocd
   --kube-context "$CONTEXT_NAME" --namespace "$ARGOCD_NS"
   --set platform.claims.enabled=false --timeout=5m)
 
+# `dependency update`, not --dependency-update: that only fetches missing charts, so a stale
+# (gitignored) Chart.lock or charts/*.tgz from an older checkout would bootstrap an old Argo CD.
+run_step "Resolving Argo CD chart dependencies" \
+  helm dependency update platform-apps/orchestration/argocd
+
 run_step "Deploying Argo CD (without ApplicationSets)" \
-  "${argocd_helm[@]}" --create-namespace --set platform.applicationSets.enabled=false --dependency-update --wait
+  "${argocd_helm[@]}" --create-namespace --set platform.applicationSets.enabled=false --wait
 
 wait_for 60 \
   "repo-server to read this checkout" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec deploy/argocd-repo-server -- git ls-remote '$LDP_GIT_URL' HEAD"
