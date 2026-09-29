@@ -124,8 +124,7 @@ spec:
                       - k8s_get_pod_logs
                       - k8s_get_events
                       - k8s_get_available_api_resources
-                      # ponytail: read-only tools only. Write tools (k8s_apply_manifest) and a
-                      # git/Gitea MCP server are the next step once the tool server is per-tenant.
+                      # ponytail: read-only tools until the tool server is per-tenant.
                   default:
                     - k8s_get_resources
                     - k8s_describe_resource

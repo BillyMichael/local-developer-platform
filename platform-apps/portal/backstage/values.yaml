@@ -15,9 +15,7 @@ backstage:
     create: true
     name: backstage
   backstage:
-    # The chart's args replace the image's command, which loaded the
-    # app-config.yaml baked into the image (permissions, app.extensions).
-    # Load it first; the chart appends app-config.extra.yaml after it.
+    # The image's baked-in app-config.yaml must load before the chart's extra config.
     args:
       - --config
       - app-config.yaml
@@ -29,6 +27,40 @@ backstage:
         memory: 512Mi
     podAnnotations:
       reloader.stakater.com/auto: "true"
+    # Init order matters: the kubelet pulls an image only when it starts the
+    # container, so pulling Backstage's image in the first init container lets
+    # the ~3 min pull overlap the database start-up instead of following it.
+    # The second waits for Postgres rather than crashing into restart backoff
+    # (see the chart guide).
+    initContainers:
+      - name: pull-image
+        image: '{{ include "backstage.image" . }}'
+        command: ["node", "--version"]
+      - name: wait-for-db
+        image: busybox:1.37-musl
+        command: ["timeout", "600", "sh", "-c", "until nc -z backstage-db-rw 5432; do echo waiting for backstage-db-rw:5432; sleep 5; done"]
+        resources:
+          requests:
+            cpu: 5m
+            memory: 8Mi
+          limits:
+            memory: 32Mi
+    # Chart defaults (30s to start, 1s probe timeout) kill a slow-starting or
+    # briefly-slow backend on a busy laptop VM. Paths and ports are the chart's.
+    startupProbe:
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 30
+    livenessProbe:
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
+    readinessProbe:
+      periodSeconds: 10
+      timeoutSeconds: 5
+    # Two pods migrating the same fresh database wedge each other.
+    strategy:
+      type: Recreate
     image:
       registry: ghcr.io
       repository: billymichael/local-developer-platform
