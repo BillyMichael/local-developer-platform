@@ -1,10 +1,5 @@
-# Namespaced, unlike the oidc.ldp kinds: a database lives beside the app that
-# uses it, so the XR composes straight into its own namespace and a tenant
-# chart can declare one like any other resource.
-#
-# For an XR named <name>, CloudNativePG publishes the connection details in
-# the Secret <name>-app (host, port, dbname, user, password, uri) and serves
-# read-write connections at the Service <name>-rw.
+# Namespaced (unlike the oidc.ldp kinds) so a database lives beside its app.
+# CloudNativePG publishes <name>-app (connection secret) and <name>-rw (service).
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
