@@ -1,6 +1,7 @@
 # Metrics for the whole cluster in one process: VictoriaMetrics scrapes the
 # kubelets itself (no operator, no vmagent), stores a week on local disk and
-# serves the Prometheus query API. Perses (next to this app) draws the
+# serves the Prometheus query API. kube-state-metrics rides along for object
+# state (restarts, phases, replicas). Perses (next to this app) draws the
 # dashboards; vmui here is for ad hoc queries and the cardinality explorer.
 ldp:
   # Last wave with the rest of observability: nothing else needs it to be up.
@@ -52,6 +53,10 @@ victoria-metrics-single:
           - job_name: victoria-logs
             static_configs:
               - targets: ["victoria-logs-victoria-logs-single-server.observability.svc:9428"]
+
+          - job_name: kube-state-metrics
+            static_configs:
+              - targets: ["victoria-metrics-kube-state-metrics.observability.svc:8080"]
 
           # Container CPU, memory and network from each kubelet's cAdvisor.
           - job_name: kubernetes-nodes-cadvisor
@@ -126,3 +131,25 @@ victoria-metrics-single:
                 target_label: namespace
               - source_labels: [__meta_kubernetes_pod_name]
                 target_label: pod
+
+kube-state-metrics:
+  # Only the object kinds the dashboards and kubectl-style questions need; the
+  # full set adds series for every Endpoint, Lease and ConfigMap on the cluster.
+  collectors:
+    - daemonsets
+    - deployments
+    - jobs
+    - cronjobs
+    - namespaces
+    - nodes
+    - persistentvolumeclaims
+    - pods
+    - replicasets
+    - statefulsets
+    - horizontalpodautoscalers
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 96Mi
