@@ -7,7 +7,7 @@ This guide explains how to add a new Helm chart to the Local Developer Platform.
 ```mermaid
 graph LR
     A[Create Chart Directory] --> B[Add Required Files]
-    B --> C[Git Push]
+    B --> C[Git Commit]
     C --> D[ArgoCD Discovers Chart]
     D --> E[Application Deployed]
     E --> F[Visible in Backstage]
@@ -24,12 +24,16 @@ All platform applications live under `platform-apps/` organized by category:
 
 ```
 platform-apps/
-├── auth/           # Authentication services (namespace: auth)
-├── core/           # Core infrastructure (namespace: core)
-├── orchestration/  # GitOps tools (namespace: orchestration)
-├── portal/         # Developer portal (namespace: portal)
-├── storage/        # Data persistence (namespace: storage)
-└── vcs/            # Version control (namespace: vcs)
+├── auth/           # Authelia, LLDAP
+├── devtools/       # kagent
+├── networking/     # Traefik
+├── observability/  # metrics-server
+├── orchestration/  # ArgoCD, Crossplane, Kargo, KEDA
+├── pki/            # cert-manager, trust-manager
+├── portal/         # Backstage
+├── secrets/        # External Secrets, Reloader, Replicator
+├── storage/        # CloudNativePG
+└── vcs/            # Gitea, Gitea Actions
 ```
 
 !!! info "Namespace Mapping"
@@ -151,14 +155,8 @@ spec:
 
 **System Values:**
 
-The `system` field should match your category directory:
-
-- `auth` - Authentication services
-- `core` - Core infrastructure
-- `orchestration` - GitOps and deployment tools
-- `portal` - Developer portal
-- `storage` - Data persistence
-- `vcs` - Version control
+The `system` field should match your category directory (`auth`,
+`networking`, `orchestration`, `portal`, `storage`, `vcs`, ...).
 
 ### Step 5: Add Custom Templates (Optional)
 
@@ -192,15 +190,17 @@ spec:
 - ConfigMaps for additional configuration
 - Ingress routes (if not handled by upstream chart)
 
-### Step 6: Commit and Push
+### Step 6: Commit
 
 ```bash
 git add platform-apps/storage/redis/
 git commit -m "feat(storage): add redis helm chart"
-git push
 ```
 
-ArgoCD will automatically detect the new chart and create an Application for it.
+The commit is enough: ArgoCD deploys from the committed `HEAD` of this
+checkout (see [GitOps flow](../architecture/overview.md#gitops-flow)) and
+creates the Application within seconds. Push to share the change, not to
+deploy it.
 
 ## Verification
 
@@ -272,11 +272,6 @@ Here's a complete example adding Valkey (Redis-compatible) to the platform:
           limits:
             cpu: 500m
             memory: 512Mi
-
-      metrics:
-        enabled: true
-        serviceMonitor:
-          enabled: true
     ```
 
 === "catalog-info.yaml"
@@ -354,14 +349,39 @@ Here's a complete example adding Valkey (Redis-compatible) to the platform:
 
 ### Observability
 
-- Enable metrics endpoints where available
-- Configure ServiceMonitor for Prometheus scraping
+- Expose metrics endpoints where the chart offers them; the platform ships
+  only metrics-server, so nothing scrapes them until a metrics stack is added
 - Add meaningful labels and annotations
 
 ### Dependencies
 
 - Declare dependencies in `catalog-info.yaml` for visibility
 - Ensure dependent services are deployed first (ArgoCD handles this via sync waves if needed)
+
+### Databases and generated secrets
+
+On a laptop a database takes minutes to initialise, and Reloader restarts a
+pod whenever a secret it mounts changes. Backstage, Gitea and the `3-tier-app`
+template follow three rules:
+
+1. **Wait for the database in an init container.** A backend that crashes
+   until the database answers gets a longer restart backoff each time. Use a
+   `busybox` init container running
+   `timeout 600 sh -c 'until nc -z <host> <port>; do sleep 5; done'`; a
+   `PostgresDatabase` claim's primary is `<name>-rw`. Charts without
+   `initContainers` usually have a pre-script hook (Gitea's `initPreScript`).
+   The kubelet pulls an image only when it starts that container, so a large
+   app image is worth pulling in a first init container (`command: ["node",
+   "--version"]` or similar) so the pull overlaps the database start-up.
+2. **Secrets whose producer keeps writing after creation go a sync wave
+   ahead** of their consumer: `argocd.argoproj.io/sync-wave: "-1"` on `oidc.ldp`
+   Clients, whose secret is assembled in several writes. Reloader ignores a
+   secret being created, so a secret written once (a `PostgresDatabase` claim's
+   credentials, a create-once generator) needs no wave.
+3. **Generated secrets are generated once**: `refreshPolicy: CreatedOnce` on
+   generator-backed ExternalSecrets, and pin any password a bundled subchart
+   would randomise per render. Otherwise every resync rotates the value and
+   restarts the consumer.
 
 ## Troubleshooting
 
