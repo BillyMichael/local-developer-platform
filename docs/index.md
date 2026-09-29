@@ -25,5 +25,6 @@ hide:
 <ul class="ldp-next" markdown>
 <li markdown>[Getting started](getting-started/overview.md): prerequisites, `make up`, and the first login.</li>
 <li markdown>[Adding a Helm chart](guides/adding-helm-charts.md): how a new folder becomes a running app.</li>
+<li markdown>[Workshops](workshops/index.md): a hands-on path into platform engineering, one product at a time.</li>
 <li markdown>[Architecture](architecture/overview.md): how the components depend on each other.</li>
 </ul>

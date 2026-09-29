@@ -3,11 +3,12 @@ import CodeIcon from '@material-ui/icons/Code';
 import SyncIcon from '@material-ui/icons/Sync';
 import TrendingUpIcon from '@material-ui/icons/TrendingUp';
 import AndroidIcon from '@material-ui/icons/Android';
+import TimelineIcon from '@material-ui/icons/Timeline';
 import VpnKeyIcon from '@material-ui/icons/VpnKey';
 
 /**
  * The platform UIs a user can open from the portal, in the order they meet
- * them: code, delivery, promotion, agents, identity. Shared by the sidebar's
+ * them: code, delivery, promotion, agents, observability, identity. Shared by the sidebar's
  * Platform Tools submenu and the home page so the two never drift.
  */
 export const PLATFORM_TOOLS: {
@@ -44,6 +45,13 @@ export const PLATFORM_TOOLS: {
     description: 'AI agents running on the cluster',
     href: 'https://agents-127-0-0-1.nip.io',
     icon: AndroidIcon,
+  },
+  {
+    title: 'Observability',
+    product: 'Grafana',
+    description: 'Metrics and logs for everything on the cluster',
+    href: 'https://observability-127-0-0-1.nip.io',
+    icon: TimelineIcon,
   },
   {
     title: 'Identity',
