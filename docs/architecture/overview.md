@@ -8,7 +8,7 @@ The Local Developer Platform is built on GitOps principles, using ArgoCD to mana
 graph TB
     subgraph "Developer Interaction"
         DEV[Developer]
-        GIT[Git Repository]
+        GIT[Local checkout, served in-cluster]
     end
 
     subgraph "Platform Layer"
@@ -96,34 +96,51 @@ graph TB
 
 ## GitOps Flow
 
+ArgoCD's source of truth is the checkout you ran `make up` from. The
+checkout's `.git` directory is mounted into every kind node and served over
+git HTTP by the `ldp-git` Deployment in the `argocd` chart, at
+`http://ldp-git.orchestration.svc.cluster.local/ldp.git`. The ApplicationSets
+track `HEAD` there, so the platform follows whichever branch is checked out and
+picks up each commit within seconds. Nothing is pushed, nothing is fetched from
+GitHub, and a push upstream never changes a running platform. Only commits are
+deployed; uncommitted edits are invisible.
+
 ```mermaid
 sequenceDiagram
     participant Dev as Developer
-    participant Git as Git Repository
+    participant Git as Local checkout (ldp-git)
     participant ArgoCD as ArgoCD
     participant K8s as Kubernetes
 
-    Dev->>Git: Push changes
-    Git->>ArgoCD: Webhook notification
-    ArgoCD->>Git: Pull latest state
+    Dev->>Git: git commit
+    ArgoCD->>Git: Poll HEAD (every 10s)
     ArgoCD->>ArgoCD: Compare desired vs actual
     ArgoCD->>K8s: Apply changes
     K8s->>ArgoCD: Report status
     ArgoCD->>Dev: Sync status (UI/CLI)
 ```
 
+To track a shared remote instead, point `platform.repoURL` and
+`platform.targetRevision` in `platform-apps/orchestration/argocd/values.yaml`
+and `platform-apps/orchestration/tenant-appsets/values.yaml` at it and set
+`platform.gitServer.enabled` to `false`.
+
 ## Namespace Organization
 
-The platform organizes applications into namespaces by category:
+Each `platform-apps/<category>/` directory deploys into a namespace of the same name:
 
-| Namespace | Purpose | Components |
-|-----------|---------|------------|
-| `core` | Core infrastructure | Traefik, Cert-Manager, External Secrets |
-| `auth` | Authentication services | Authelia, LLDAP |
-| `orchestration` | GitOps and delivery | ArgoCD, Crossplane, Kargo |
-| `portal` | Developer portal | Backstage |
-| `storage` | Data persistence | CloudNativePG |
-| `vcs` | Version control | Gitea |
+| Namespace | Components |
+|-----------|------------|
+| `networking` | Traefik |
+| `pki` | cert-manager, trust-manager |
+| `secrets` | External Secrets, Reloader, Replicator |
+| `auth` | Authelia, LLDAP |
+| `orchestration` | ArgoCD, Crossplane, Kargo, KEDA |
+| `storage` | CloudNativePG |
+| `observability` | metrics-server |
+| `vcs` | Gitea, Gitea Actions |
+| `portal` | Backstage |
+| `devtools` | kagent |
 
 ## Secret Management
 
