@@ -15,6 +15,11 @@ spec:
         app: {{ .Release.Name }}-backend
         backstage.io/kubernetes-id: {{ .Release.Name }}
     spec:
+      # Wait for the database instead of crashing into a growing restart backoff.
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.37-musl
+          command: ["timeout", "600", "sh", "-c", "until nc -z {{ .Release.Name }}-db-rw 5432; do echo waiting for {{ .Release.Name }}-db-rw:5432; sleep 5; done"]
       containers:
         - name: backend
           image: {{ .Values.backend.image }}
