@@ -3,9 +3,8 @@ ldp:
 
 actions:
   enabled: true
-  # Register over the in-cluster HTTP service so the runner itself has no TLS to trust.
-  # Jobs still see Gitea's public ROOT_URL (https://vcs-127-0-0-1.nip.io); the CA
-  # plumbing below is what makes checkout and `docker push` work from inside them.
+  # Register over the in-cluster HTTP service (no TLS); jobs still use Gitea's
+  # public URL, which the CA plumbing below makes work.
   giteaRootURL: http://gitea-http.vcs.svc.cluster.local:3000
   # Created by the gitea chart (templates/runner-token.yaml)
   existingSecret: gitea-runner-token
