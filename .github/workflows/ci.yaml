@@ -51,10 +51,12 @@ jobs:
             echo "::group::$chart"
             # lldap-chart vendors its dependency (no public repo), so there is nothing to fetch
             if grep -q 'repository:' "$chart/Chart.yaml"; then
-              helm dependency update "$chart" >/dev/null || status=1
+              helm dependency update "$chart" >/dev/null \
+                || { echo "::error title=helm dependency update::$chart"; status=1; }
             fi
             # tenant.name is normally set by the tenant ApplicationSet
-            helm lint "$chart" --set tenant.name=ci || status=1
+            helm lint "$chart" --set tenant.name=ci \
+              || { echo "::error title=helm lint::$chart"; status=1; }
             echo "::endgroup::"
           done
           exit $status

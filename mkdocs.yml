@@ -67,6 +67,10 @@ nav:
     - Overview: getting-started/overview.md
   - Guides:
     - Adding a Helm Chart: guides/adding-helm-charts.md
+  - Workshops:
+    - Overview: workshops/index.md
+    - 1. Add a platform Helm chart: workshops/01-platform-helm-chart.md
+    - 2. Turn it into an API with Crossplane: workshops/02-crossplane-composition.md
   - Architecture:
     - Platform Overview: architecture/overview.md
 

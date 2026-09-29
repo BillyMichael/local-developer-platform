@@ -35,6 +35,9 @@ metadata:
     gotemplating.fn.crossplane.io/ready: {{ if eq (getResourceCondition "Ready" $secret).Status "True" }}"True"{{ else }}"False"{{ end }}
 spec:
   refreshInterval: 24h
+  # A generator value is new on every refresh; without this the client secret
+  # rotated on each re-apply and Reloader restarted Authelia and the consumer.
+  refreshPolicy: CreatedOnce
   target:
     name: {{ $name }}-oidc-client-secret
     template:
