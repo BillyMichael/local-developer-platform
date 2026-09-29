@@ -2,9 +2,7 @@
 # Sourced by the other scripts, which use the variables defined here
 # shellcheck disable=SC2034
 
-# ============================================================================
-# COLOURS & FORMATTING
-# ============================================================================
+# --- output -------------------------------------------------------------------
 
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -14,30 +12,15 @@ NC="\033[0m"
 BOLD="\033[1m"
 DIM="\033[2m"
 
-# ============================================================================
-# FORMATTING FUNCTIONS
-# ============================================================================
+section()    { printf "\n${BOLD}${BLUE}==> %s${NC}\n\n" "$1"; }
+step()       { printf "\n${BOLD}${BLUE}==> [%s/%s] %s${NC}\n\n" "$1" "$2" "$3"; }   # step <n> <total> <title>
+subsection() { printf "${BOLD}%s${NC}\n\n" "$1"; }
+ok()         { printf "  ${GREEN}✔${NC} %s\n" " $1"; }
+warn()       { printf "  ${YELLOW}!${NC} %s\n" " $1"; }
+error()      { printf "  ${RED}✖${NC} %s\n" " $1"; }
 
-section() {
-  printf "\n${BOLD}${BLUE}==> %s${NC}\n\n" "$1"
-}
-
-# step <current> <total> <description>
-# Prints a section header with a progress counter, e.g. [3/9] Deploying ...
-step() {
-  printf "\n${BOLD}${BLUE}==> [%s/%s] %s${NC}\n\n" "$1" "$2" "$3"
-}
-
-subsection() {
-  printf "${BOLD}%s${NC}\n\n" "$1"
-}
-
-ok()    { printf "  ${GREEN}✔${NC} %s\n" " $1"; }
-warn()  { printf "  ${YELLOW}!${NC} %s\n" " $1"; }
-error() { printf "  ${RED}✖${NC} %s\n" " $1"; }
-
-# Prints $1 if set; otherwise asks for a hidden value when stdin is a terminal.
-# Enter on its own skips (prints nothing). Prompt goes to stderr so $(...) only captures the value.
+# Prints $1 if set, else asks for a hidden value when stdin is a terminal (Enter
+# skips). The prompt goes to stderr so $(...) captures only the value.
 prompt_secret() {
   local value="$1"
   if [ -z "$value" ] && [ -t 0 ]; then
@@ -50,7 +33,7 @@ prompt_secret() {
 
 banner() {
   printf "${BOLD}${BLUE}"
-  cat <<'EOF'
+  cat <<'EOT'
 
   ██╗     ██████╗  ██████╗
   ██║     ██╔══██╗ ██╔══██╗
@@ -58,20 +41,16 @@ banner() {
   ██║     ██║  ██║ ██╔═══╝
   ███████╗██████╔╝ ██║
   ╚══════╝╚═════╝  ╚═╝
-EOF
+EOT
   printf "${NC}\n  ${BOLD}Local Developer Platform${NC}  by Billy Michael\n"
 }
 
-# ============================================================================
-# CURSOR MANAGEMENT + SHARED CLEANUP STACK
-# ============================================================================
-# Hide the terminal cursor for the entire script run and restore it on any
-# exit path, including INT/TERM and `set -e` aborts.
-#
-# Functions that spawn background work (run_step, wait_for) push a cleanup
-# closure onto _CLEANUP_CMDS on entry and pop it on normal completion.
-# A single top-level trap runs whatever remains on abort, so the traps do
-# not stomp on each other when functions are nested.
+# --- cursor and cleanup stack -------------------------------------------------
+# The cursor is hidden for the whole run and restored on every exit path.
+# run_step and wait_for push a cleanup command on entry and pop it on normal
+# completion; one top-level trap runs whatever is left on abort, so nested
+# calls do not stomp on each other's traps.
+
 _CLEANUP_CMDS=()
 _LAST_CLEANUP_IDX=-1
 
@@ -81,14 +60,12 @@ _push_cleanup() {
 }
 
 _pop_cleanup() {
-  local idx="$1"
-  [ -n "$idx" ] && unset "_CLEANUP_CMDS[$idx]"
+  [ -n "$1" ] && unset "_CLEANUP_CMDS[$1]"
 }
 
 _run_cleanups() {
   local cmd
-  # ${arr[@]+...} guard: bash 3.2 (macOS default) treats an empty array as
-  # unbound under `set -u`, so a bare "${_CLEANUP_CMDS[@]}" would abort here.
+  # ${arr[@]+...}: bash 3.2 (macOS) treats an empty array as unbound under set -u.
   for cmd in ${_CLEANUP_CMDS[@]+"${_CLEANUP_CMDS[@]}"}; do
     [ -n "$cmd" ] && eval "$cmd" 2>/dev/null || true
   done
@@ -100,17 +77,12 @@ trap '_run_cleanups; printf "\033[?25h"' EXIT
 trap '_run_cleanups; printf "\033[?25h"; exit 130' INT
 trap '_run_cleanups; printf "\033[?25h"; exit 143' TERM
 
-# ============================================================================
-# SPINNER & STEP EXECUTION LOGIC
-# ============================================================================
+# --- run_step: spinner around one command ------------------------------------
 
 SPINNER_FRAMES=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
 
 spinner() {
-  local msg="$1"
-  local pid="$2"
-  local i=0
-
+  local msg="$1" pid="$2" i=0
   while kill -0 "$pid" 2>/dev/null; do
     printf "\r  ${BLUE}%s${NC}  %s..." "${SPINNER_FRAMES[$i]}" "$msg"
     i=$(( (i + 1) % ${#SPINNER_FRAMES[@]} ))
@@ -118,42 +90,29 @@ spinner() {
   done
 }
 
+# run_step <message> <command...>: output goes to a log file, shown on failure.
 run_step() {
   local msg="$1"; shift
 
-  local start_ts
+  local start_ts logfile
   start_ts=$(date +%s)
-
-  local logfile
   logfile=$(mktemp "/tmp/ldp-step-XXXXXX")
 
-  # Run command in background, capturing output to logfile
   "$@" >"$logfile" 2>&1 &
   local cmd_pid=$!
-
-  # Start spinner bound to command PID
   spinner "$msg" "$cmd_pid" &
   local spinner_pid=$!
 
-  # Register cleanup on the shared stack; popped on normal completion below
   _push_cleanup "kill $cmd_pid 2>/dev/null; kill $spinner_pid 2>/dev/null; rm -f '$logfile'"
   local _cleanup_idx=$_LAST_CLEANUP_IDX
 
-  # Wait for main command and capture exit status
   local status=0
   wait "$cmd_pid" || status=$?
-
-  # Cleanup spinner immediately
   kill "$spinner_pid" 2>/dev/null || true
   wait "$spinner_pid" 2>/dev/null || true
-
   _pop_cleanup "$_cleanup_idx"
 
-  local end_ts
-  end_ts=$(date +%s)
-  local duration=$(( end_ts - start_ts ))
-
-  # Final output replacing spinner line
+  local duration=$(( $(date +%s) - start_ts ))
   if [ "$status" -eq 0 ]; then
     printf "\r  ${GREEN}✔${NC}  %s (${duration}s)\n" "$msg"
     rm -f "$logfile"
@@ -162,17 +121,13 @@ run_step() {
     printf "     ${RED}Log:${NC} %s\n" "$logfile"
     tail -10 "$logfile" 2>/dev/null | sed 's/^/     /'
   fi
-
   return "$status"
 }
 
-# ============================================================================
-# CONTAINER ENGINE DETECTION
-# ============================================================================
+# --- container engine ---------------------------------------------------------
 
-# Sets CE to "docker" or "podman". Docker wins if both work, since kind's
-# podman support is still experimental. Set KIND_EXPERIMENTAL_PROVIDER=podman
-# to force podman.
+# Sets CE to docker or podman. Docker wins when both work (kind's podman support
+# is experimental); KIND_EXPERIMENTAL_PROVIDER=podman forces podman.
 detect_container_engine() {
   if [[ "${KIND_EXPERIMENTAL_PROVIDER:-}" == "podman" ]]; then
     engine_works podman || { error "KIND_EXPERIMENTAL_PROVIDER=podman but podman is not working."; exit 1; }
@@ -192,27 +147,18 @@ detect_container_engine() {
   export CE
 }
 
-# True if the engine is installed and its daemon is responding.
 engine_works() {
   command -v "$1" >/dev/null 2>&1 && "$1" info >/dev/null 2>&1
 }
 
-# True if kind node containers for CLUSTER_NAME exist in the engine.
-#
-# Deliberately not `kind get clusters`: that shells out to `<engine> ps` with a
-# Go template that indexes .Labels, which podman >= 5.8 rejects ("cannot index
-# slice/array with type string"). The call then fails silently and every
-# "does it exist?" check says no, while `kind create` (which uses a plain
-# label filter) still sees the old nodes and refuses with "node(s) already
-# exist". Asking the engine directly with the same label filter kind uses
-# keeps up/down/preflight in agreement.
+# Not `kind get clusters`: its `<engine> ps` Go template breaks on podman >= 5.8
+# and silently reports no clusters, while `kind create` still sees the nodes.
+# The same label filter kind uses keeps up/down/preflight in agreement.
 cluster_exists() {
   [ -n "$("$CE" ps -a --filter "label=io.x-k8s.kind.cluster=${CLUSTER_NAME}" --format '{{.Names}}' 2>/dev/null)" ]
 }
 
-# ============================================================================
-# PORT AVAILABILITY CHECK
-# ============================================================================
+# --- preflight checks ---------------------------------------------------------
 
 port_in_use() {
   if command -v ss >/dev/null 2>&1; then
@@ -223,7 +169,7 @@ port_in_use() {
 }
 
 check_port_availability() {
-  local blocked=false
+  local blocked=false port
   for port in "$@"; do
     if port_in_use "$port"; then
       error "Port $port is already in use"
@@ -238,7 +184,6 @@ check_port_availability() {
     exit 1
   fi
 
-  # Rootless podman cannot bind ports below 1024 at all.
   if [[ "$CE" == "podman" ]] && [[ "$(podman info --format '{{.Host.Security.Rootless}}')" == "true" ]]; then
     warn "Rootless podman cannot bind ports 80/443. Either run:"
     warn "  sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80"
@@ -246,40 +191,80 @@ check_port_availability() {
   fi
 }
 
-# ============================================================================
-# RESOURCE CHECK
-# ============================================================================
+# Below this the platform does not fail cleanly: probes time out, controllers
+# restart and a late wave stalls long after the run started.
+LDP_MIN_MEM_GB="${LDP_MIN_MEM_GB:-11}"   # a 12GB VM reports ~11GiB
 
-# Asks the container engine how much RAM it has. On Docker Desktop and
-# podman machine that is the VM's allocation, which is what actually
-# constrains the cluster -- the host may have far more.
+# Numeric field from `<engine> info`; docker keys it at the top level, podman
+# under .Host. Prints 0 when unknown.
+# Memory and CPUs of the engine VM (docker reports them at the top level,
+# podman under .Host). Prints "<bytes> <cpus>", 0 for anything unknown.
+engine_resources() {
+  local out
+  out=$("$CE" info --format '{{.MemTotal}} {{.NCPU}}' 2>/dev/null) || out=""
+  [[ "$out" =~ ^[0-9]+\ [0-9]+$ ]] || out=$("$CE" info --format '{{.Host.MemTotal}} {{.Host.CPUs}}' 2>/dev/null) || out=""
+  [[ "$out" =~ ^[0-9]+\ [0-9]+$ ]] || out="0 0"
+  printf '%s' "$out"
+}
+
 check_available_resources() {
-  # docker exposes {{.MemTotal}} at the top level; podman nests it under .Host
-  local mem_bytes
-  mem_bytes=$("$CE" info --format '{{.MemTotal}}' 2>/dev/null) || mem_bytes=""
-  [[ "$mem_bytes" =~ ^[0-9]+$ ]] || mem_bytes=$("$CE" info --format '{{.Host.MemTotal}}' 2>/dev/null || echo 0)
-  [[ "$mem_bytes" =~ ^[0-9]+$ ]] || mem_bytes=0
-  local mem_gb=$(( mem_bytes / 1024 / 1024 / 1024 ))
+  local mem_bytes mem_gb cpus
+  read -r mem_bytes cpus <<<"$(engine_resources)"
+  mem_gb=$(( mem_bytes / 1024 / 1024 / 1024 ))
 
   if (( mem_gb == 0 )); then
-    warn "Could not determine available memory"
-  elif (( mem_gb < 10 )); then
-    warn "${CE} has only ~${mem_gb}GB RAM. The platform recommends 12GB+."
-    warn "Raise it in your engine's settings, or drop a worker from cluster-config.yaml."
+    warn "Could not determine the memory available to ${CE}"
+  elif (( mem_gb < LDP_MIN_MEM_GB )); then
+    error "${CE} has only ~${mem_gb}GB RAM; the platform needs 12GB+."
   else
     ok "${mem_gb}GB RAM available to ${CE}"
   fi
+  (( cpus > 0 )) && ok "${cpus} CPUs available to ${CE}"
+  (( mem_gb == 0 || mem_gb >= LDP_MIN_MEM_GB )) && return 0
+
+  if [[ "$CE" == "podman" ]]; then
+    error "Resize the VM: podman machine stop && podman machine set --memory 12288 && podman machine start"
+  else
+    error "Raise the VM allocation under Settings > Resources in Docker Desktop."
+  fi
+  if [[ "${LDP_SKIP_RESOURCE_CHECK:-}" == "1" ]]; then
+    warn "LDP_SKIP_RESOURCE_CHECK=1 set; continuing anyway. Expect slow or stalled waves."
+    return 0
+  fi
+  error "Set LDP_SKIP_RESOURCE_CHECK=1 to run on a smaller machine anyway."
+  exit 1
 }
 
+check_required_tools() {
+  local tool
+  for tool in "$@"; do
+    if command -v "$tool" >/dev/null 2>&1; then
+      ok "$tool found"
+    else
+      error "$tool not found"
+      exit 1
+    fi
+  done
+}
 
-# ============================================================================
-# WAIT FOR RESOURCE HELPER
-# ============================================================================
+# Everything `make up` needs before it touches the cluster; also `make preflight`.
+preflight() {
+  detect_container_engine
+  check_required_tools kind kubectl helm
+  # A running cluster legitimately holds the ingress ports.
+  if cluster_exists; then
+    ok "Ports 80/443/9000 belong to the existing '$CLUSTER_NAME' cluster"
+  else
+    check_port_availability 80 443 9000
+  fi
+  check_available_resources
+}
+
+# --- wait_for: poll several conditions in parallel ---------------------------
 
 # wait_for <timeout_seconds> <label> <cmd> [<label> <cmd> ...]
-# Polls each cmd until it succeeds or the timeout passes. Multiple pairs are
-# polled in parallel, each getting its own spinner line that ticks off as it
-# becomes ready. cmd runs via `bash -c`, so quote it as one argument.
+# Each cmd runs via `bash -c` (quote it as one argument) and gets its own
+# spinner line that ticks off as it succeeds.
 wait_for() {
   local timeout="$1"; shift
 
@@ -290,17 +275,13 @@ wait_for() {
     shift 2
   done
 
-  local tmpdir
+  local tmpdir start_ts
   tmpdir=$(mktemp -d "/tmp/ldp-wait-XXXXXX")
-  local start_ts
   start_ts=$(date +%s)
 
-  # One background worker per task. Each writes its exit status to
-  # <i>.status when done; the render loop below reads those files.
-  #
-  # `set -m` makes each worker its own process group leader, so the cleanup
-  # below can kill the group (negative PID) and take the worker's kubectl
-  # and sleep children with it instead of orphaning them.
+  # One worker per task, each writing "<ok|fail> <elapsed>" to <i>.status.
+  # set -m makes each worker a process-group leader, so cleanup can kill the
+  # group and take its kubectl/sleep children with it.
   set -m
   local -a pids=()
   local i
@@ -308,10 +289,9 @@ wait_for() {
     (
       local deadline=$(( start_ts + timeout ))
       while :; do
-        # stdin from /dev/null so `kubectl run -i` doesn't fight for the tty.
+        # stdin from /dev/null so `kubectl run -i` does not fight for the tty.
         if bash -c "${cmds[$i]}" </dev/null >"$tmpdir/$i.log" 2>&1; then
-          # Publish atomically: a plain `>` truncates first and writes second, and the
-          # render loop can read the empty file in between, which kills the script under set -e.
+          # write-then-rename: the render loop must never read a truncated file
           echo "ok $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status.tmp" && mv "$tmpdir/$i.status.tmp" "$tmpdir/$i.status"
           exit 0
         fi
@@ -319,7 +299,7 @@ wait_for() {
           echo "fail $(( $(date +%s) - start_ts ))" > "$tmpdir/$i.status.tmp" && mv "$tmpdir/$i.status.tmp" "$tmpdir/$i.status"
           exit 1
         fi
-        sleep 2
+        sleep 5
       done
     ) &
     pids+=( $! )
@@ -329,7 +309,7 @@ wait_for() {
   _push_cleanup "for p in ${pids[*]}; do kill -- -\$p 2>/dev/null; done; rm -rf '$tmpdir'"
   local _cleanup_idx=$_LAST_CLEANUP_IDX
 
-  # Reserve one output line per task, then repaint them in place each tick.
+  # Reserve one line per task, then repaint them in place each tick.
   for _ in "${labels[@]}"; do echo; done
 
   local frame=0 done_count=0
@@ -338,7 +318,6 @@ wait_for() {
     printf "\033[%dA" "${#labels[@]}"
 
     for i in "${!labels[@]}"; do
-      # Finished workers record their own elapsed time, so the line freezes.
       local status elapsed
       status=running
       [[ -f "$tmpdir/$i.status" ]] && read -r status elapsed < "$tmpdir/$i.status"
@@ -359,7 +338,6 @@ wait_for() {
   wait 2>/dev/null || true
   _pop_cleanup "$_cleanup_idx"
 
-  # Report failures with the last attempt's output.
   local rc=0
   for i in "${!labels[@]}"; do
     if [[ "$(<"$tmpdir/$i.status")" == fail* ]]; then
@@ -373,44 +351,7 @@ wait_for() {
   return "$rc"
 }
 
-# ============================================================================
-# REQUIRED TOOLS CHECK
-# ============================================================================
-
-check_required_tools() {
-  local tools=("$@")
-  for tool in "${tools[@]}"; do
-    if command -v "$tool" >/dev/null 2>&1; then
-      ok "$tool found"
-    else
-      error "$tool not found"
-      exit 1
-    fi
-  done
-}
-
-# ============================================================================
-# PREFLIGHT
-# ============================================================================
-
-# Everything `make up` needs before it touches the cluster. Also exposed on
-# its own as `make preflight`.
-preflight() {
-  detect_container_engine
-  check_required_tools kind kubectl helm
-  # A running cluster legitimately holds the ingress ports, so only demand
-  # they be free when we'd actually be creating the cluster.
-  if cluster_exists; then
-    ok "Ports 80/443/9000 belong to the existing '$CLUSTER_NAME' cluster"
-  else
-    check_port_availability 80 443 9000
-  fi
-  check_available_resources
-}
-
-# ============================================================================
-# SHARED CONFIG
-# ============================================================================
+# --- shared config ------------------------------------------------------------
 
 CLUSTER_NAME="${CLUSTER_NAME:-ldp}"
 CONTEXT_NAME="kind-${CLUSTER_NAME}"

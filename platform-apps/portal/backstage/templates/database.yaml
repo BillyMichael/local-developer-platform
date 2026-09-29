@@ -1,6 +1,5 @@
-# Backstage's own Postgres, composed by the storage.ldp composition in
-# crossplane-compositions. CloudNativePG publishes the connection details as
-# backstage-db-app, read by the extraEnvVars in values.yaml.
+# Backstage's Postgres (storage.ldp composition). CloudNativePG publishes the
+# connection details as backstage-db-app; the pod's init container waits for it.
 apiVersion: storage.ldp/v1alpha1
 kind: PostgresDatabase
 metadata:
@@ -11,5 +10,4 @@ spec:
   instances: 1
   storageSize: 1Gi
   labels:
-    # Shows the database on the backstage entity's Kubernetes tab
     app.kubernetes.io/instance: {{ .Release.Name }}
