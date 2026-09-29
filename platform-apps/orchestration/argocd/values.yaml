@@ -1,5 +1,7 @@
 ldp:
   syncWave: wave-3
+  # Argo CD 3.3+ ApplicationSet CRD exceeds the client-side-apply annotation limit
+  serverSideApply: true
 
 platform:
   # The in-cluster remote for this checkout (templates/git-server.yaml); HEAD is
@@ -38,6 +40,9 @@ argo-cd:
 
   global:
     domain: cd-127-0-0-1.nip.io
+    # chart 10 defaults this to true; kindnet does not enforce NetworkPolicy, keep the install minimal
+    networkPolicy:
+      create: false
 
   controller:
     resources:
