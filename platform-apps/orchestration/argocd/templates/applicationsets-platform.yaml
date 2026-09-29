@@ -3,6 +3,12 @@ apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
   name: platform-apps
+  annotations:
+    # This ApplicationSet rolls out the argocd Application that manages it.
+    # Argo CD 3.x reports an ApplicationSet as Progressing for as long as its
+    # RollingSync is under way, so without this the argocd sync waits for the
+    # rollout and the rollout waits for the argocd sync.
+    argocd.argoproj.io/ignore-healthcheck: "true"
 spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
