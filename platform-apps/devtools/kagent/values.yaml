@@ -6,11 +6,8 @@ kagent:
     default: anthropic
     anthropic:
       model: claude-sonnet-5
-      # Created by cluster-up.sh from $ANTHROPIC_API_KEY; tenants get a replicated copy.
-      apiKeySecretRef: kagent-anthropic
-      apiKeySecretKey: ANTHROPIC_API_KEY
 
-  # ponytail: the chart enables this by default; there is no Grafana on the platform.
+  # no Grafana on the platform
   grafana-mcp:
     enabled: false
 

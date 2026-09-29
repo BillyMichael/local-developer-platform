@@ -1,5 +1,3 @@
-# Backstage's Postgres (storage.ldp composition). CloudNativePG publishes the
-# connection details as backstage-db-app; the pod's init container waits for it.
 apiVersion: storage.ldp/v1alpha1
 kind: PostgresDatabase
 metadata:

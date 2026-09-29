@@ -2,15 +2,12 @@ ldp:
   syncWave: wave-5
 
 kargo:
-  # Replaces controller.globalCredentials.namespaces (deprecated in 1.9, must be a list
-  # in 1.11). Also grants the controller read access to the git credential that the
-  # gitea bootstrap job replicates into this namespace.
+  # grants the controller read access to the git credential gitea's bootstrap job replicates here
   global:
     sharedResources:
       namespace: orchestration
       createNamespace: false
   webhooksServer:
-    enabled: true
     resources:
       requests:
         cpu: 10m
@@ -34,8 +31,6 @@ kargo:
       enabled: true
       issuerURL: https://auth-127-0-0-1.nip.io
       clientID: kargo
-      dex:
-        enabled: false
       admins:
         claims:
           groups:
@@ -50,7 +45,6 @@ kargo:
         traefik.ingress.kubernetes.io/router.entrypoints: websecure
         cert-manager.io/cluster-issuer: ca-issuer
       tls:
-        enabled: true
         selfSignedCert: false 
   controller:
     resources:

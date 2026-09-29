@@ -2,8 +2,6 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: lldap-bootstrap-configs
-  annotations:
-    argocd.argoproj.io/sync-wave: '0'
 spec:
   refreshInterval: 24h
   secretStoreRef:
@@ -71,5 +69,3 @@ spec:
       remoteRef:
         key: lldap-user-credentials
         property: password
-    
-    

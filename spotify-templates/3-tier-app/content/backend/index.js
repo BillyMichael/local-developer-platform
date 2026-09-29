@@ -4,7 +4,6 @@ import pg from 'pg';
 const app = express();
 const port = 3000;
 
-// PostgreSQL Configuration
 const pool = new pg.Pool({
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',

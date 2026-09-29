@@ -20,12 +20,7 @@ import { appModule } from './modules/app';
 import { homePluginWithLdpHome } from './modules/pages';
 import { techdocsModule } from './modules/techdocs';
 
-/**
- * Features are listed explicitly rather than discovered (`app.packages`), so
- * adding a plugin to package.json does nothing until it is added here. Each
- * plugin supplies its own pages, entity cards and tabs; app-config.yaml's
- * `app.extensions` scopes the ones whose defaults are too broad.
- */
+// Not discovered (app.packages): a plugin in package.json does nothing until listed here.
 export default createApp({
   features: [
     catalogPlugin,

@@ -1,8 +1,6 @@
 import { SignInPageBlueprint } from '@backstage/plugin-app-react';
 
-// Unnamed, so it takes the id of plugin-app's own guest sign-in page
-// (`sign-in-page:app`) and replaces it; a named one would compete with it
-// for the singleton input and the app would fail to bootstrap.
+// Unnamed, so it replaces `sign-in-page:app`; a named one fails bootstrap.
 export const signInPage = SignInPageBlueprint.make({
   params: {
     loader: () =>

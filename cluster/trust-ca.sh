@@ -4,8 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-# --- extract ca certificate ----------------------------------------------------
-
 section "Trust Platform CA Certificate"
 
 CA_CERT="/tmp/ldp-ca.crt"
@@ -14,11 +12,8 @@ run_step "Extracting CA certificate from cluster" \
   bash -c "
     kubectl --context '$CONTEXT_NAME' get secret root-ca -n pki \
       -o jsonpath='{.data.tls\.crt}' | base64 -d > '$CA_CERT'
-    # Verify it's a valid certificate
     openssl x509 -in '$CA_CERT' -noout -subject
   "
-
-# --- install into os trust store -----------------------------------------------
 
 case "$(uname -s)" in
   Darwin)

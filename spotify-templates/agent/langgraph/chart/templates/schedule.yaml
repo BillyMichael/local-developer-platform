@@ -1,8 +1,6 @@
 {{- if .Values.schedule.enabled }}
-# kagent has no scheduler, so a plain CronJob runs the image's `trigger` role: one A2A
-# message to the agent's own Service, exit 0 only if the run completed. The run happens in
-# the agent's pods like any chat turn, so no queue is needed: `Forbid` is the dedupe and
-# the next tick is the retry.
+# kagent has no scheduler. `trigger` sends one A2A message and exits 0 only if the run
+# completed; `Forbid` is the dedupe and the next tick is the retry.
 apiVersion: batch/v1
 kind: CronJob
 metadata:

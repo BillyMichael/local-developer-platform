@@ -1,12 +1,10 @@
-# Namespaced (unlike the oidc.ldp kinds) so a database lives beside its app.
-# CloudNativePG publishes <name>-app (connection secret) and <name>-rw (service).
+# CloudNativePG publishes <name>-app (connection secret) and <name>-rw (service)
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
   name: postgresdatabases.storage.ldp
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-    argocd.argoproj.io/sync-wave: '-1'
 spec:
   scope: Namespaced
   group: storage.ldp

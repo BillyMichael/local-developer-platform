@@ -13,7 +13,6 @@ spec:
           tokenRef:
             secretName: gitea-admin-token
             key: token
-          allBranches: false
           insecure: true
         filters:
           - branchMatch: main
@@ -23,8 +22,6 @@ spec:
   template:
     metadata:
       name: '{{ `{{ .repository }}` }}-bootstrap'
-      annotations:
-        argocd.argoproj.io/sync-wave: "-1"
     spec:
       project: default
       source:
@@ -66,7 +63,6 @@ spec:
           tokenRef:
             secretName: gitea-admin-token
             key: token
-          allBranches: false
           insecure: true
         filters:
           - branchMatch: main
@@ -76,13 +72,10 @@ spec:
   template:
     metadata:
       name: '{{ `{{ .repository }}` }}'
-      annotations:
-        argocd.argoproj.io/sync-wave: "0"
     spec:
       project: '{{ `{{ .repository }}` }}'
       source:
-        # clone via the in-cluster HTTP service; the SCM provider's {{ `{{ .url }}` }}
-        # is an SSH URL, and ArgoCD has no SSH credentials
+        # the SCM provider's .url is SSH, and Argo CD has no SSH credentials
         repoURL: 'http://gitea-http.vcs.svc.cluster.local:3000/local-developer-platform/{{ `{{ .repository }}` }}.git'
         targetRevision: main
         path: chart

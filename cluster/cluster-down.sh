@@ -6,14 +6,10 @@ source "${SCRIPT_DIR}/common.sh"
 
 TOTAL_STEPS=2
 
-# --- [1/2] preflight checks ----------------------------------------------------
-
 step 1 $TOTAL_STEPS "Preflight Checks"
 
 detect_container_engine
 check_required_tools "kind"
-
-# --- [2/2] delete cluster ------------------------------------------------------
 
 step 2 $TOTAL_STEPS "Deleting Kind Cluster"
 

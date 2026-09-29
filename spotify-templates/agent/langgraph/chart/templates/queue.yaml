@@ -1,8 +1,6 @@
 {{- if .Values.queue.enabled }}
 {{- $receiver := printf "%s-receiver" .Release.Name }}
-# Random values generated once (refreshPolicy: CreatedOnce) and never in Git: the rabbitmq
-# subchart reads password and erlang-cookie, the receiver password and webhook-secret, KEDA
-# password. Keep derived values (URLs) out of here — CreatedOnce never re-renders them.
+# Generated once, never in Git. Keep derived values (URLs) out: CreatedOnce never re-renders.
 apiVersion: generators.external-secrets.io/v1alpha1
 kind: Password
 metadata:
@@ -43,7 +41,6 @@ spec:
             target: {{ $key }}
     {{- end }}
 ---
-# Webhook receiver + queue dispatcher: small, always on, no model key
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -91,8 +88,7 @@ spec:
               value: {{ .Values.queue.dispatch.concurrency | quote }}
             - name: AGENT_DISPATCH_TIMEOUT
               value: {{ .Values.queue.dispatch.timeout | quote }}
-          # The server only listens once connected to RabbitMQ, which can take a minute on
-          # a fresh install
+          # Listens only once RabbitMQ is up, which can take a minute on a fresh install
           startupProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 5
@@ -120,9 +116,7 @@ spec:
       port: 8080
       targetPort: http
 ---
-# Scales the controller-generated agent Deployment on ready + unacked messages. The http
-# protocol matters: over AMQP KEDA sees only ready messages, and the dispatcher takes
-# jobs off "ready" within milliseconds, so running work would be invisible.
+# protocol: http, since over AMQP KEDA sees only ready messages, not the unacked running ones.
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -136,8 +130,7 @@ spec:
     horizontalPodAutoscalerConfig:
       behavior:
         scaleDown:
-          # HPA scale-in can kill a pod mid-run (the job is redelivered, not lost);
-          # holding capacity through a burst's quiet gaps makes that rare
+          # Scale-in can kill a pod mid-run (the job is redelivered); make it rare
           stabilizationWindowSeconds: 600
   triggers:
     - type: rabbitmq

@@ -4,18 +4,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-LLDAP_NS="${LLDAP_NS:-auth}"
-
-# --- header --------------------------------------------------------------------
-
 section "Local Development Platform Info"
 
 subsection "User Credentials:"
 
-# --- fetch credentials ---------------------------------------------------------
-
 get_secret_field() {
-  kubectl --context "$CONTEXT_NAME" -n "$LLDAP_NS" get secret "$1" -o jsonpath="{.data.$2}" 2>/dev/null | base64 -d ||
+  kubectl --context "$CONTEXT_NAME" -n auth get secret "$1" -o jsonpath="{.data.$2}" 2>/dev/null | base64 -d ||
     printf "(not yet available)"
 }
 
@@ -25,16 +19,12 @@ MAINT_PASS=$(get_secret_field "lldap-maintainer-credentials" "password")
 USER_USER=$(get_secret_field "lldap-user-credentials" "id")
 USER_PASS=$(get_secret_field "lldap-user-credentials" "password")
 
-# --- print credential table ----------------------------------------------------
-
 printf "  ┌────────────┬──────────────────────┬──────────────────────────────────┐\n"
 printf "  │ %-10s │ %-20s │ %-32s │\n" "Role" "Username" "Password"
 printf "  ├────────────┼──────────────────────┼──────────────────────────────────┤\n"
 printf "  │ %-10s │ %-20s │ %-32s │\n" "Maintainer" "$MAINT_USER" "$MAINT_PASS"
 printf "  │ %-10s │ %-20s │ %-32s │\n" "User"       "$USER_USER"  "$USER_PASS"
 printf "  └────────────┴──────────────────────┴──────────────────────────────────┘\n\n"
-
-# --- url table -----------------------------------------------------------------
 
 subsection "URLs:"
 
@@ -51,8 +41,6 @@ printf "  │ %-12s │ %-42s │\n" "vmui"     "https://metrics-127-0-0-1.nip.i
 printf "  │ %-12s │ %-42s │\n" "Logs"     "https://logs-127-0-0-1.nip.io/select/vmui"
 printf "  └──────────────┴────────────────────────────────────────────┘\n\n"
 
-# --- commands table ------------------------------------------------------------
-
 subsection "Useful Commands:"
 
 printf "  ┌──────────────────┬─────────────────────────────────────────┐\n"
@@ -65,10 +53,7 @@ printf "  │ %-16s │ %-39s │\n" "make trust-ca"   "Trust the platform CA (n
 printf "  │ %-16s │ %-39s │\n" "make info"       "Show LDP info"
 printf "  └──────────────────┴─────────────────────────────────────────┘\n\n"
 
-# --- ca trust notice -----------------------------------------------------------
-# curl exit 60 = the OS trust store lacks the platform CA. Under WSL the CA
-# lives in Windows, so Linux curl still fails after `make trust-ca`.
-
+# curl exit 60: OS trust store lacks the CA. Under WSL it lives in Windows, so Linux curl still fails after `make trust-ca`.
 if command -v curl >/dev/null 2>&1; then
   ca_rc=0
   curl -s -o /dev/null --max-time 5 https://portal-127-0-0-1.nip.io || ca_rc=$?

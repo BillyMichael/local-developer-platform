@@ -86,7 +86,6 @@ spec:
             - Claude Sonnet 5 (default)
             - Claude Opus 5.5 (most capable)
             - Claude Haiku 4.5 (fastest, cheapest)
-      # The runtime-specific fields, and a runtime-specific default for the system prompt.
       dependencies:
         runtime:
           oneOf:

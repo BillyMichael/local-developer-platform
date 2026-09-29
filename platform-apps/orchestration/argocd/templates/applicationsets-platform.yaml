@@ -4,10 +4,7 @@ kind: ApplicationSet
 metadata:
   name: platform-apps
   annotations:
-    # This ApplicationSet rolls out the argocd Application that manages it.
-    # Argo CD 3.x reports an ApplicationSet as Progressing for as long as its
-    # RollingSync is under way, so without this the argocd sync waits for the
-    # rollout and the rollout waits for the argocd sync.
+    # keeps the appset out of the argocd app's aggregate health (see health.lua in values)
     argocd.argoproj.io/ignore-healthcheck: "true"
 spec:
   goTemplate: true
@@ -32,11 +29,8 @@ spec:
         requeueAfterSeconds: 10
   template:
     metadata:
-      # Escape for Helm, will be processed by ArgoCD
       name: '{{ `{{ index .path.segments 2 }}` }}'
       labels:
-        # Progressive syncs match on labels (not annotations)
-        # Each app declares ldp.syncWave in its values.yaml; defaults to the last wave
         ldp.dev/sync-wave: '{{ `{{ dig "ldp" "syncWave" "wave-` }}{{ .Values.platform.syncWaves }}{{ `" . }}` }}'
     spec:
       project: default

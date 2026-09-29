@@ -31,14 +31,8 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: '3.14'
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-docs.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: pip
+          cache-dependency-path: requirements-docs.txt
 
       - name: Install dependencies
         run: pip install -r requirements-docs.txt

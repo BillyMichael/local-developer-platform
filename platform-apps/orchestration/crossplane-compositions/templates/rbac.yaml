@@ -1,6 +1,4 @@
-# Crossplane v2 composes arbitrary Kubernetes kinds, but only those it has RBAC
-# for. The crossplane ClusterRole aggregates every role carrying this label, so
-# this grants exactly the kinds the oidc.ldp compositions create.
+# Crossplane v2 can only compose kinds it has RBAC for; its ClusterRole aggregates this label
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -17,7 +15,6 @@ rules:
     resources: ["passwords"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
-# Grants the kinds the storage.ldp compositions create.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

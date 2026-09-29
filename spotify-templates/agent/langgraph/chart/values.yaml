@@ -7,8 +7,7 @@ agent:
   executionTimeout: 900
   # LangGraph steps per run, ~2 per tool call
   recursionLimit: 50
-  # A2A requests one pod runs at once; past it the pod answers 503 and the dispatcher
-  # retries. Also KEDA's per-pod target, so size it against resources.limits.memory.
+  # Concurrent A2A requests per pod (503 past it); also KEDA's per-pod target. Size to memory.
   maxInflight: 4
 
 image:
@@ -24,8 +23,7 @@ resources:
   limits:
     memory: 1Gi
 
-# A CronJob that sends the agent `prompt` on a timer (templates/schedule.yaml). Off: nothing
-# runs the agent unprompted.
+# A CronJob that sends the agent `prompt` on a timer (templates/schedule.yaml).
 schedule:
   enabled: ${{ values.schedule }}
   cron: ${{ (values.scheduleCron or "0 9 * * 1-5") | dump }}
@@ -35,34 +33,29 @@ schedule:
   # Job ceiling. Must exceed agent.executionTimeout or the Job dies before the run can.
   activeDeadlineSeconds: 1800
 
-# Gitea webhook -> RabbitMQ -> dispatcher -> this agent, with KEDA scaling the agent's pods
-# on queue depth. Off: the agent is interactive-only (kagent UI and A2A).
+# Gitea webhook -> RabbitMQ -> dispatcher -> this agent, with KEDA scaling on queue depth.
 queue:
   enabled: ${{ values.queue }}
   # Only enqueue pull requests whose source branch starts with this, e.g. "renovate/"
   branchPrefix: ""
   dispatch:
-    # Jobs relayed at once. Keep >= keda.maxReplicas x agent.maxInflight or scale-out
-    # adds pods that never get work.
+    # Keep >= keda.maxReplicas x agent.maxInflight or new pods never get work.
     concurrency: 20
     # Seconds for one relay: waiting for a free pod plus the run itself
     timeout: 3600
   keda:
-    # 1, not 0: the pods also serve the kagent UI, and a Service with no endpoints can't
-    # be woken by the relays failing against it
+    # Not 0: the pods also serve the kagent UI, and nothing wakes a Service with no endpoints
     minReplicas: 1
     maxReplicas: 5
 
-# Subchart (CloudPirates, official rabbitmq image). Credentials come from the
-# ExternalSecret in templates/queue.yaml so they survive ArgoCD re-renders.
+# Credentials come from the ExternalSecret in templates/queue.yaml so they survive re-renders.
 rabbitmq:
   fullnameOverride: rabbitmq
   auth:
     username: admin
     existingSecret: queue-credentials
   config:
-    # Above queue.dispatch.timeout (ms): RabbitMQ closes a channel whose delivery stays
-    # unacked longer than this, and a relay holds its delivery for the whole run
+    # ms, above queue.dispatch.timeout: a relay holds its delivery unacked for the whole run
     extraConfiguration: |
       consumer_timeout = 7200000
   persistence:

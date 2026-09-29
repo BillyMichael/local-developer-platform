@@ -1,5 +1,4 @@
-# Tenant onboarding ApplicationSets: need the gitea-admin-token the Gitea
-# bootstrap job creates in wave 5.
+# needs the gitea-admin-token that gitea's bootstrap job creates in wave 5
 ldp:
   syncWave: wave-6
 

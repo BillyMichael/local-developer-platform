@@ -27,11 +27,7 @@ backstage:
         memory: 512Mi
     podAnnotations:
       reloader.stakater.com/auto: "true"
-    # Init order matters: the kubelet pulls an image only when it starts the
-    # container, so pulling Backstage's image in the first init container lets
-    # the ~3 min pull overlap the database start-up instead of following it.
-    # The second waits for Postgres rather than crashing into restart backoff
-    # (see the chart guide).
+    # pull-image first so the ~3 min pull overlaps DB start-up; wait-for-db avoids crash-loop backoff
     initContainers:
       - name: pull-image
         image: '{{ include "backstage.image" . }}'
@@ -45,8 +41,7 @@ backstage:
             memory: 8Mi
           limits:
             memory: 32Mi
-    # Chart defaults (30s to start, 1s probe timeout) kill a slow-starting or
-    # briefly-slow backend on a busy laptop VM. Paths and ports are the chart's.
+    # chart defaults (30s to start, 1s timeout) kill the backend on a busy laptop VM
     startupProbe:
       periodSeconds: 10
       timeoutSeconds: 5
@@ -62,7 +57,6 @@ backstage:
     strategy:
       type: Recreate
     image:
-      registry: ghcr.io
       repository: billymichael/local-developer-platform
       tag: latest
     extraAppConfig:

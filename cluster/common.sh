@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Sourced by the other scripts, which use the variables defined here
 # shellcheck disable=SC2034
-
-# --- output -------------------------------------------------------------------
 
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -13,14 +10,13 @@ BOLD="\033[1m"
 DIM="\033[2m"
 
 section()    { printf "\n${BOLD}${BLUE}==> %s${NC}\n\n" "$1"; }
-step()       { printf "\n${BOLD}${BLUE}==> [%s/%s] %s${NC}\n\n" "$1" "$2" "$3"; }   # step <n> <total> <title>
+step()       { printf "\n${BOLD}${BLUE}==> [%s/%s] %s${NC}\n\n" "$1" "$2" "$3"; }
 subsection() { printf "${BOLD}%s${NC}\n\n" "$1"; }
 ok()         { printf "  ${GREEN}✔${NC} %s\n" " $1"; }
 warn()       { printf "  ${YELLOW}!${NC} %s\n" " $1"; }
 error()      { printf "  ${RED}✖${NC} %s\n" " $1"; }
 
-# Prints $1 if set, else asks for a hidden value when stdin is a terminal (Enter
-# skips). The prompt goes to stderr so $(...) captures only the value.
+# Prompt on stderr so $(...) captures only the value.
 prompt_secret() {
   local value="$1"
   if [ -z "$value" ] && [ -t 0 ]; then
@@ -45,11 +41,7 @@ EOT
   printf "${NC}\n  ${BOLD}Local Developer Platform${NC}  by Billy Michael\n"
 }
 
-# --- cursor and cleanup stack -------------------------------------------------
-# The cursor is hidden for the whole run and restored on every exit path.
-# run_step and wait_for push a cleanup command on entry and pop it on normal
-# completion; one top-level trap runs whatever is left on abort, so nested
-# calls do not stomp on each other's traps.
+# One top-level trap runs pending cleanups so nested run_step/wait_for do not stomp on each other's traps.
 
 _CLEANUP_CMDS=()
 _LAST_CLEANUP_IDX=-1
@@ -77,8 +69,6 @@ trap '_run_cleanups; printf "\033[?25h"' EXIT
 trap '_run_cleanups; printf "\033[?25h"; exit 130' INT
 trap '_run_cleanups; printf "\033[?25h"; exit 143' TERM
 
-# --- run_step: spinner around one command ------------------------------------
-
 SPINNER_FRAMES=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
 
 spinner() {
@@ -90,7 +80,6 @@ spinner() {
   done
 }
 
-# run_step <message> <command...>: output goes to a log file, shown on failure.
 run_step() {
   local msg="$1"; shift
 
@@ -124,10 +113,7 @@ run_step() {
   return "$status"
 }
 
-# --- container engine ---------------------------------------------------------
-
-# Sets CE to docker or podman. Docker wins when both work (kind's podman support
-# is experimental); KIND_EXPERIMENTAL_PROVIDER=podman forces podman.
+# Docker wins when both work: kind's podman support is experimental.
 detect_container_engine() {
   if [[ "${KIND_EXPERIMENTAL_PROVIDER:-}" == "podman" ]]; then
     engine_works podman || { error "KIND_EXPERIMENTAL_PROVIDER=podman but podman is not working."; exit 1; }
@@ -151,14 +137,10 @@ engine_works() {
   command -v "$1" >/dev/null 2>&1 && "$1" info >/dev/null 2>&1
 }
 
-# Not `kind get clusters`: its `<engine> ps` Go template breaks on podman >= 5.8
-# and silently reports no clusters, while `kind create` still sees the nodes.
-# The same label filter kind uses keeps up/down/preflight in agreement.
+# Not `kind get clusters`: its `ps` template breaks on podman >= 5.8 and silently reports none.
 cluster_exists() {
   [ -n "$("$CE" ps -a --filter "label=io.x-k8s.kind.cluster=${CLUSTER_NAME}" --format '{{.Names}}' 2>/dev/null)" ]
 }
-
-# --- preflight checks ---------------------------------------------------------
 
 port_in_use() {
   if command -v ss >/dev/null 2>&1; then
@@ -191,14 +173,9 @@ check_port_availability() {
   fi
 }
 
-# Below this the platform does not fail cleanly: probes time out, controllers
-# restart and a late wave stalls long after the run started.
-LDP_MIN_MEM_GB="${LDP_MIN_MEM_GB:-11}"   # a 12GB VM reports ~11GiB
+LDP_MIN_MEM_GB=11   # a 12GB VM reports ~11GiB
 
-# Numeric field from `<engine> info`; docker keys it at the top level, podman
-# under .Host. Prints 0 when unknown.
-# Memory and CPUs of the engine VM (docker reports them at the top level,
-# podman under .Host). Prints "<bytes> <cpus>", 0 for anything unknown.
+# Prints "<bytes> <cpus>" of the engine VM; docker keys them at the top level, podman under .Host.
 engine_resources() {
   local out
   out=$("$CE" info --format '{{.MemTotal}} {{.NCPU}}' 2>/dev/null) || out=""
@@ -247,24 +224,18 @@ check_required_tools() {
   done
 }
 
-# Everything `make up` needs before it touches the cluster; also `make preflight`.
 preflight() {
   detect_container_engine
   check_required_tools kind kubectl helm
-  # A running cluster legitimately holds the ingress ports.
   if cluster_exists; then
-    ok "Ports 80/443/9000 belong to the existing '$CLUSTER_NAME' cluster"
+    ok "Ports 80/443 belong to the existing '$CLUSTER_NAME' cluster"
   else
-    check_port_availability 80 443 9000
+    check_port_availability 80 443
   fi
   check_available_resources
 }
 
-# --- wait_for: poll several conditions in parallel ---------------------------
-
-# wait_for <timeout_seconds> <label> <cmd> [<label> <cmd> ...]
-# Each cmd runs via `bash -c` (quote it as one argument) and gets its own
-# spinner line that ticks off as it succeeds.
+# wait_for <timeout_seconds> <label> <cmd> [<label> <cmd> ...]; each cmd runs via `bash -c`.
 wait_for() {
   local timeout="$1"; shift
 
@@ -279,9 +250,7 @@ wait_for() {
   tmpdir=$(mktemp -d "/tmp/ldp-wait-XXXXXX")
   start_ts=$(date +%s)
 
-  # One worker per task, each writing "<ok|fail> <elapsed>" to <i>.status.
-  # set -m makes each worker a process-group leader, so cleanup can kill the
-  # group and take its kubectl/sleep children with it.
+  # set -m: each worker leads a process group, so cleanup also kills its kubectl/sleep children.
   set -m
   local -a pids=()
   local i
@@ -309,7 +278,6 @@ wait_for() {
   _push_cleanup "for p in ${pids[*]}; do kill -- -\$p 2>/dev/null; done; rm -rf '$tmpdir'"
   local _cleanup_idx=$_LAST_CLEANUP_IDX
 
-  # Reserve one line per task, then repaint them in place each tick.
   for _ in "${labels[@]}"; do echo; done
 
   local frame=0 done_count=0
@@ -350,8 +318,6 @@ wait_for() {
   rm -rf "$tmpdir"
   return "$rc"
 }
-
-# --- shared config ------------------------------------------------------------
 
 CLUSTER_NAME="${CLUSTER_NAME:-ldp}"
 CONTEXT_NAME="kind-${CLUSTER_NAME}"

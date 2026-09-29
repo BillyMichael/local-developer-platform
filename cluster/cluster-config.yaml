@@ -1,9 +1,6 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-# config_path lets cluster-up.sh drop per-registry hosts.toml files (CA trust
-# for the in-cluster Gitea registry). __LDP_GIT_DIR__ is filled in by
-# cluster-up.sh with this checkout's .git directory, which the ldp-git
-# Deployment serves to Argo CD as the platform's git remote.
+# config_path: cluster-up.sh drops per-registry hosts.toml files. __LDP_GIT_DIR__ is rendered by cluster-up.sh.
 containerdConfigPatches:
   - |-
     [plugins."io.containerd.grpc.v1.cri".registry]
@@ -26,9 +23,6 @@ nodes:
         protocol: TCP
       - containerPort: 30443   # Traefik NodePort (HTTPS)
         hostPort: 443
-        protocol: TCP
-      - containerPort: 30900   # Traefik NodePort (dashboard/API)
-        hostPort: 9000
         protocol: TCP
     extraMounts:
       - hostPath: __LDP_GIT_DIR__

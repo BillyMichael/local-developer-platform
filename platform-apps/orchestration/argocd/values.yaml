@@ -4,8 +4,6 @@ ldp:
   serverSideApply: true
 
 platform:
-  # The in-cluster remote for this checkout (templates/git-server.yaml); HEAD is
-  # whatever branch is checked out. Point at a real remote to track a shared repo.
   repoURL: http://ldp-git.orchestration.svc.cluster.local/ldp.git
   targetRevision: HEAD
   gitServer:
@@ -35,12 +33,11 @@ argo-cd:
       annotations:
         traefik.ingress.kubernetes.io/router.entrypoints: websecure
         cert-manager.io/cluster-issuer: ca-issuer
-      hostname: cd-127-0-0-1.nip.io
       tls: true
 
   global:
     domain: cd-127-0-0-1.nip.io
-    # chart 10 defaults this to true; kindnet does not enforce NetworkPolicy, keep the install minimal
+    # kindnet does not enforce NetworkPolicy
     networkPolicy:
       create: false
 
@@ -51,8 +48,7 @@ argo-cd:
         memory: 512Mi
       limits:
         memory: 1536Mi
-  # ldp-ca-bundle (published by cluster-up.sh) carries any TLS-inspecting proxy
-  # CA; mounted over the system bundle so git and helm fetches verify.
+  # ldp-ca-bundle (from cluster-up.sh) adds any TLS-inspecting proxy CA
   repoServer:
     resources:
       requests:
@@ -93,23 +89,15 @@ argo-cd:
       server.insecure: 'true'
       applicationsetcontroller.enable.progressive.syncs: 'true'
     cm:
-      url: https://cd-127-0-0-1.nip.io
-      create: true
       oidc.tls.insecure.skip.verify: 'true'
-      application.resourceTrackingMethod: annotation
-      # Per the Crossplane Argo CD guide: one per managed resource, never read.
+      # Crossplane Argo CD guide: one per managed resource, never read
       resource.exclusions: |
         - apiGroups: ["*"]
           kinds: ["ProviderConfigUsage"]
           clusters: ["*"]
-      # Read-only account for Backstage; token minted by templates/job-backstage-token.yaml.
       accounts.backstage: apiKey
       resource.customizations: |
-        # Argo CD 3.x reports an ApplicationSet as Progressing for as long as its
-        # RollingSync runs. This chart's PostSync hooks make the sync wait for
-        # wave-0 health first, and the platform ApplicationSet rolls out the
-        # argocd Application itself, so the two waited on each other for ever on
-        # a fresh cluster. Its rollout is not this resource's health.
+        # 3.x keeps an appset Progressing during RollingSync; it rolls out argocd itself, so that deadlocks
         argoproj.io/ApplicationSet:
           health.lua: |
             hs = { status = "Healthy", message = "Rollout progress is tracked by the Applications, not here." }
@@ -124,69 +112,28 @@ argo-cd:
             return hs
         "*.crossplane.io/*": &crossplane-health
           health.lua: |
-            health_status = {
-              status = "Progressing",
-              message = "Provisioning ..."
-            }
-
-            local function contains (table, val)
-              for i, v in ipairs(table) do
-                if v == val then
-                  return true
-                end
-              end
-              return false
+            local healthy = { Ready = true, Healthy = true, Offered = true, Established = true, ValidPipeline = true, RevisionHealthy = true }
+            if obj.status == nil or next(obj.status) == nil and (obj.kind == "Composition" or obj.kind == "CompositionRevision") then
+              return { status = "Healthy", message = "Resource is up-to-date." }
             end
-
-            local has_no_status = {
-              "Composition",
-              "CompositionRevision"
-            }
-            if obj.status == nil or next(obj.status) == nil and contains(has_no_status, obj.kind) then
-                health_status.status = "Healthy"
-                health_status.message = "Resource is up-to-date."
-              return health_status
+            hs = { status = "Progressing", message = "Provisioning ..." }
+            if next(obj.status) == nil or obj.status.conditions == nil then
+              return hs
             end
-
-            if obj.status == nil or next(obj.status) == nil or obj.status.conditions == nil then
-              return health_status
-            end
-
-            for i, condition in ipairs(obj.status.conditions) do
-              if condition.type == "LastAsyncOperation" then
-                if condition.status == "False" then
-                  health_status.status = "Degraded"
-                  health_status.message = condition.message
-                  return health_status
-                end
+            for _, c in ipairs(obj.status.conditions) do
+              if (c.type == "LastAsyncOperation" or c.type == "Synced") and c.status == "False" then
+                return { status = "Degraded", message = c.message }
               end
-
-              if condition.type == "Synced" then
-                if condition.status == "False" then
-                  health_status.status = "Degraded"
-                  health_status.message = condition.message
-                  return health_status
-                end
-              end
-
-              if contains({"Ready", "Healthy", "Offered", "Established", "ValidPipeline", "RevisionHealthy"}, condition.type) then
-                if condition.status == "True" then
-                  health_status.status = "Healthy"
-                  health_status.message = "Resource is up-to-date."
-                end
+              if healthy[c.type] and c.status == "True" then
+                hs = { status = "Healthy", message = "Resource is up-to-date." }
               end
             end
-
-            return health_status
-        # The platform's own XRD groups (oidc.ldp, storage.ldp): Argo CD matches
-        # health checks by API group, so the crossplane.io entry does not cover
-        # them and an unassessed claim counts as healthy the moment it exists.
+            return hs
+        # own XRD groups: without a check a claim counts as healthy the moment it exists
         "*.ldp/*": *crossplane-health
         networking.k8s.io/Ingress:
           health.lua: |
-            hs = {}
-            hs.status = "Healthy"
-            return hs
+            return { status = "Healthy" }
       oidc.config: |
         name: 'Authelia'
         issuer: 'https://auth-127-0-0-1.nip.io'

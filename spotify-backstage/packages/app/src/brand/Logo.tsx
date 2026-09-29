@@ -1,7 +1,7 @@
 import { makeStyles } from '@material-ui/core';
 import { BRAND, fontFamily } from '../theme';
 
-/** The LDP mark — same SVG as docs/assets/logo.svg (isometric cube + node). */
+// Same SVG as docs/assets/logo.svg.
 export const LdpMark = ({
   size = 28,
   className,
@@ -82,14 +82,8 @@ const useStyles = makeStyles({
   },
 });
 
-/** Mark + "LDP" wordmark + byline, for navy surfaces. */
-export const LdpLogo = ({
-  size = 40,
-  byline = 'Local Developer Platform',
-}: {
-  size?: number;
-  byline?: string;
-}) => {
+// White text: for navy surfaces.
+export const LdpLogo = ({ size = 40 }: { size?: number }) => {
   const classes = useStyles();
   return (
     <span className={classes.root}>
@@ -98,13 +92,12 @@ export const LdpLogo = ({
         <span className={classes.wordmark} style={{ fontSize: size * 0.6 }}>
           LDP
         </span>
-        {byline && <span className={classes.byline}>{byline}</span>}
+        <span className={classes.byline}>Local Developer Platform</span>
       </span>
     </span>
   );
 };
 
-/** "LDP" set bold inside a light display heading. */
 export const LdpName = () => (
   <span style={{ fontWeight: 700, letterSpacing: '0.04em' }}>LDP</span>
 );

@@ -4,26 +4,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-# --- config -------------------------------------------------------------------
+KIND_CFG="cluster/cluster-config.yaml"
+ARGOCD_NS="orchestration"
 
-KIND_CFG="${KIND_CFG:-cluster/cluster-config.yaml}"
-ARGOCD_NS="${ARGOCD_NS:-orchestration}"
-ARGOCD_CHART_DIR="${CHART_DIR:-platform-apps/orchestration/argocd}"
-ARGOCD_RELEASE="${ARGOCD_RELEASE:-argocd}"
-
-# Argo CD deploys this checkout: its .git directory is mounted into every node
-# at LDP_GIT_MOUNT and served in-cluster by the ldp-git Deployment in the argocd
-# chart, which the platform ApplicationSets read (platform.repoURL).
+# This checkout's .git is mounted into every node and served by the ldp-git Deployment (platform.repoURL).
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd -P)"
 LDP_GIT_MOUNT="/ldp/repo.git"
 LDP_GIT_URL="http://ldp-git.${ARGOCD_NS}.svc.cluster.local/ldp.git"
 
 TOTAL_STEPS=11
 
-# --- coredns ------------------------------------------------------------------
-
-# Routes *.nip.io to Traefik inside the cluster. A rewrite rule (not a plain
-# hosts entry) so Node.js getaddrinfo accepts the answer name.
+# A rewrite rule, not a plain hosts entry, so Node.js getaddrinfo accepts the answer name.
 patch_coredns_for_nip_io() {
   local traefik_ip="$1"
 
@@ -65,16 +56,12 @@ patch_coredns_for_nip_io() {
     "DNS to stabilize in repo-server" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec deploy/argocd-repo-server -- getent hosts github.com"
 }
 
-# --- platform source (this checkout) ------------------------------------------
-
-# --git-common-dir so a linked worktree serves the main repository's objects
-# (and its HEAD).
+# --git-common-dir so a linked worktree serves the main repository's objects.
 ldp_git_dir() {
   (cd "$REPO_DIR" && cd "$(git rev-parse --git-common-dir)" && pwd -P)
 }
 
-# kind takes absolute host paths only, so KIND_CFG carries a __LDP_GIT_DIR__
-# placeholder. Bash substitution, so no sed delimiter can clash with the path.
+# kind takes absolute host paths only; bash substitution so no sed delimiter clashes with the path.
 render_kind_config() {
   local git_dir="$1" out="$2" line
   while IFS= read -r line || [ -n "$line" ]; do
@@ -82,8 +69,6 @@ render_kind_config() {
   done < "$KIND_CFG" > "$out"
 }
 
-# $1 is "existing" or "new": a cluster created before the mount existed needs
-# recreating; a new one that lacks it means the engine VM does not share the dir.
 require_checkout_mount() {
   if "$CE" exec "${CLUSTER_NAME}-control-plane" test -f "${LDP_GIT_MOUNT}/HEAD" >/dev/null 2>&1; then
     ok "Nodes see this checkout at ${LDP_GIT_MOUNT}"
@@ -100,8 +85,6 @@ require_checkout_mount() {
   exit 1
 }
 
-# Argo CD only sees commits; uncommitted platform-apps edits are the usual
-# reason a change "does not apply".
 report_platform_source() {
   local branch dirty
   branch=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
@@ -112,11 +95,7 @@ report_platform_source() {
   fi
 }
 
-# --- node registry trust ------------------------------------------------------
-
-# containerd on the nodes uses neither CoreDNS nor the platform CA, so each node
-# gets a /etc/hosts entry for the Gitea registry and a hosts.toml with the CA.
-# Docker rewrites /etc/hosts when a node restarts, hence on every `make up`.
+# containerd uses neither CoreDNS nor the platform CA. Docker rewrites /etc/hosts on node restart, hence every `make up`.
 REGISTRY_HOST="vcs-127-0-0-1.nip.io"
 
 _trust_registry_on_node() {
@@ -156,19 +135,11 @@ trust_registry_on_nodes() {
   rm -f "$ca_file"
 }
 
-# --- proxy ca trust -----------------------------------------------------------
-
-# A TLS-inspecting proxy (Netskope, Zscaler, ...) re-signs every HTTPS
-# connection with a CA only the host trusts. Its CA goes into each node's trust
-# store (image pulls), the ldp-ca-bundle ConfigMap that Argo CD and Crossplane
-# mount over /etc/ssl/certs/ca-certificates.crt (git, helm and package
-# fetches), and ldp-extra-ca, which trust-manager folds into the platform
-# bundle. LDP_EXTRA_CA_FILE bypasses detection.
+# TLS-inspecting proxy CA (Netskope, Zscaler, ...): node trust stores, ldp-ca-bundle (Argo CD, Crossplane), ldp-extra-ca (trust-manager).
 CA_BUNDLE_CM="ldp-ca-bundle"
 EXTRA_CA_CM="ldp-extra-ca"
 CA_PROBE_HOST="github.com"
 
-# First readable public root store; tells a proxy CA from a real intermediate.
 _public_roots() {
   local f
   for f in /etc/ssl/cert.pem /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt; do
@@ -189,7 +160,6 @@ collect_extra_cas() {
   if [ -n "${LDP_EXTRA_CA_FILE:-}" ]; then
     cat "$LDP_EXTRA_CA_FILE" > "$raw"
   elif command -v openssl >/dev/null 2>&1; then
-    # Every certificate the server presents except the leaf.
     openssl s_client -showcerts -connect "${CA_PROBE_HOST}:443" -servername "$CA_PROBE_HOST" </dev/null 2>/dev/null \
       | awk '/BEGIN CERTIFICATE/{n++} n>1 && /BEGIN CERTIFICATE/,/END CERTIFICATE/' > "$raw" || true
     # Proxies do not always serve their root; Netskope keeps it here on macOS.
@@ -197,7 +167,6 @@ collect_extra_cas() {
     [ -r "$netskope" ] && cat "$netskope" >> "$raw"
   fi
 
-  # Split, drop anything a public root vouches for, dedupe by fingerprint.
   awk -v dir="$workdir" '/BEGIN CERTIFICATE/{n++; f=sprintf("%s/%03d.pem", dir, n)} n>0 {print > f}' "$raw"
   local roots; roots=$(_public_roots || true)
   local cert fp count=0 seen=" "
@@ -217,7 +186,6 @@ collect_extra_cas() {
   echo "$count"
 }
 
-# One "CN=..." line per certificate in $1.
 describe_cas() {
   awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' "$1" \
     | awk -v cmd="openssl x509 -noout -subject" '{print | cmd} /END CERTIFICATE/{close(cmd)}' \
@@ -246,8 +214,7 @@ trust_extra_ca_on_nodes() {
   done
 }
 
-# Publishes the node's full bundle (always, so the chart mounts resolve) and
-# the proxy CA on its own when there is one.
+# The bundle is always published so the chart mounts resolve.
 publish_ca_bundles() {
   local extra_ca_file="$1" extra_count="$2"
 
@@ -279,21 +246,16 @@ publish_ca_bundles() {
   rm -f "$bundle"
 }
 
-# --- [1/11] preflight ---------------------------------------------------------
-
 step 1 $TOTAL_STEPS "Preflight Checks"
 
 preflight
-
-# --- [2/11] kind cluster ------------------------------------------------------
 
 step 2 $TOTAL_STEPS "Creating Kind Cluster"
 
 if cluster_exists; then
   ok "Cluster '$CLUSTER_NAME' already exists"
 
-  # An engine/VM restart leaves kind's nodes stopped (no restart policy under
-  # podman) and may drop the kubeconfig entry.
+  # An engine/VM restart leaves nodes stopped (no restart policy under podman) and may drop the kubeconfig entry.
   stopped_nodes=$("$CE" ps -a --filter "name=${CLUSTER_NAME}-" --filter status=exited --format '{{.Names}}')
   if [ -n "$stopped_nodes" ]; then
     run_step "Starting stopped cluster nodes" "$CE" start $stopped_nodes
@@ -316,14 +278,11 @@ fi
 run_step "Setting kubectl context to '$CONTEXT_NAME'" \
   kubectl config use-context "$CONTEXT_NAME"
 
-# `kubectl run --rm` leaves the pod behind on an interrupted run and every
-# retry then fails with "already exists".
+# An interrupted `kubectl run --rm` leaves the pod behind and retries fail with "already exists".
 kubectl --context "$CONTEXT_NAME" delete pod dns-check --ignore-not-found --now >/dev/null 2>&1 || true
 
 wait_for 60 \
   "CoreDNS to resolve external hosts" "kubectl --context '$CONTEXT_NAME' run dns-check --rm -i --restart=Never --image=busybox -- nslookup github.com"
-
-# --- [3/11] proxy ca ----------------------------------------------------------
 
 step 3 $TOTAL_STEPS "Trusting TLS Proxy CA"
 
@@ -342,13 +301,9 @@ run_step "Publishing CA bundle to the cluster" \
   publish_ca_bundles "$extra_ca_file" "$extra_ca_count"
 rm -f "$extra_ca_file"
 
-# --- [4/11] optional credentials ---------------------------------------------
-# Prompts are skipped when the env var is set or stdin is not a terminal.
-
 step 4 $TOTAL_STEPS "Optional Credentials"
 
-# Anonymous GitHub API access (60 req/hr) is exhausted by the catalog's
-# 5-minute refresh. Honours $GITHUB_TOKEN.
+# Anonymous GitHub API access (60 req/hr) is exhausted by the catalog's 5-minute refresh.
 if kubectl --context "$CONTEXT_NAME" -n portal get secret github-token >/dev/null 2>&1; then
   ok "GitHub token secret already exists"
 else
@@ -365,8 +320,7 @@ else
   unset gh_token
 fi
 
-# Always created (possibly empty) so agent pods can start; the annotations let
-# tenant namespaces pull a copy via kubernetes-replicator. Honours $ANTHROPIC_API_KEY.
+# Always created (possibly empty) so agent pods can start; annotations let tenants pull a copy via kubernetes-replicator.
 if kubectl --context "$CONTEXT_NAME" -n devtools get secret kagent-anthropic >/dev/null 2>&1; then
   ok "Anthropic API key secret already exists"
 else
@@ -386,19 +340,15 @@ else
   unset anthropic_key
 fi
 
-# --- [5/11] argo cd -----------------------------------------------------------
-
 step 5 $TOTAL_STEPS "Installing Argo CD"
 
-argocd_helm=(helm upgrade --install "$ARGOCD_RELEASE" "$ARGOCD_CHART_DIR"
+argocd_helm=(helm upgrade --install argocd platform-apps/orchestration/argocd
   --kube-context "$CONTEXT_NAME" --namespace "$ARGOCD_NS"
   --set platform.claims.enabled=false --timeout=5m)
 
 run_step "Deploying Argo CD (without ApplicationSets)" \
   "${argocd_helm[@]}" --create-namespace --set platform.applicationSets.enabled=false --dependency-update --wait
 
-# helm --wait already rolled out ldp-git; prove the repo-server can fetch from
-# it before the ApplicationSets start generating.
 wait_for 60 \
   "repo-server to read this checkout" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' exec deploy/argocd-repo-server -- git ls-remote '$LDP_GIT_URL' HEAD"
 
@@ -406,21 +356,7 @@ report_platform_source
 
 run_step "Enabling ApplicationSets" "${argocd_helm[@]}"
 
-# --- platform rollout ---------------------------------------------------------
-# Argo CD syncs the platform apps in waves (ldp.syncWave in each values.yaml):
-#   1 cert-manager, external-secrets, crossplane, kagent-crds
-#   2 crossplane-compositions
-#   3 traefik, trust-manager, lldap, reloader, kubernetes-replicator, argocd
-#   4 authelia, cloudnative-pg, keda
-#   5 gitea, kargo
-#   6 backstage, gitea-actions, kagent, victoria-metrics, victoria-logs,
-#     victoria-logs-collector, perses
-#   7 tenant-appsets
-# The waits are sized for a laptop VM: cold image pulls through a proxy and
-# operator start-up take several times longer than on an idle machine.
-
-# --- [6/11] wave 1 ------------------------------------------------------------
-
+# Waves follow ldp.syncWave in each values.yaml. Timeouts are sized for cold image pulls on a laptop VM behind a proxy.
 step 6 $TOTAL_STEPS "Wave 1: Foundations"
 
 wait_for 300 \
@@ -428,15 +364,11 @@ wait_for 300 \
   "external-secrets" "kubectl --context '$CONTEXT_NAME' -n secrets wait --for=condition=Available deployment/external-secrets --timeout=1s" \
   "crossplane"       "kubectl --context '$CONTEXT_NAME' -n orchestration wait --for=condition=Available deployment/crossplane --timeout=1s"
 
-# --- [7/11] wave 2 ------------------------------------------------------------
-
 step 7 $TOTAL_STEPS "Wave 2: Crossplane Compositions"
 
 wait_for 300 \
   "Crossplane function-go-templating" "kubectl --context '$CONTEXT_NAME' wait --for=condition=Healthy function/function-go-templating --timeout=1s" \
   "oidc.ldp XRDs"                     "kubectl --context '$CONTEXT_NAME' wait --for=condition=Established xrd/clients.oidc.ldp xrd/users.oidc.ldp --timeout=1s"
-
-# --- [8/11] wave 3 ------------------------------------------------------------
 
 step 8 $TOTAL_STEPS "Wave 3: Core Infrastructure"
 
@@ -448,14 +380,10 @@ traefik_ip="$(kubectl --context "$CONTEXT_NAME" -n networking get service traefi
 patch_coredns_for_nip_io "$traefik_ip"
 trust_registry_on_nodes "$traefik_ip"
 
-# --- [9/11] wave 4 ------------------------------------------------------------
-
 step 9 $TOTAL_STEPS "Wave 4: Authentication & Operators"
 
 wait_for 600 \
   "Authelia" "kubectl --context '$CONTEXT_NAME' -n auth wait --for=condition=Ready pod -l app.kubernetes.io/name=authelia --timeout=1s"
-
-# --- [10/11] wave 5 -----------------------------------------------------------
 
 step 10 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
 
@@ -463,12 +391,8 @@ step 10 $TOTAL_STEPS "Wave 5: Version Control & Delivery"
 wait_for 900 \
   "Gitea" "kubectl --context '$CONTEXT_NAME' -n vcs rollout status deployment/gitea --timeout=1s"
 
-# --- [11/11] wave 6 -----------------------------------------------------------
-
 step 11 $TOTAL_STEPS "Wave 6: Developer Portal, Observability & Tenants"
 
-# A cold node pulls Postgres and Backstage's image in sequence here. The
-# observability apps are single small processes and come up alongside.
 wait_for 900 \
   "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s" \
   "kagent"    "kubectl --context '$CONTEXT_NAME' -n devtools wait --for=condition=Available deployment/kagent-controller --timeout=1s" \
@@ -476,8 +400,6 @@ wait_for 900 \
   "VictoriaLogs"    "kubectl --context '$CONTEXT_NAME' -n observability rollout status statefulset/victoria-logs-victoria-logs-single-server --timeout=1s" \
   "Perses"          "kubectl --context '$CONTEXT_NAME' -n observability rollout status statefulset/perses --timeout=1s" \
   "tenant ApplicationSets" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' get applicationset tenant-bootstrap tenant-apps"
-
-# --- done ---------------------------------------------------------------------
 
 printf "\n${GREEN}${BOLD}Platform ready in %dm%ds${NC}\n" $(( SECONDS / 60 )) $(( SECONDS % 60 ))
 report_platform_source

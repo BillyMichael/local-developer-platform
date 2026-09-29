@@ -5,7 +5,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -14,7 +13,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -36,7 +34,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 subjects:
   - kind: ServiceAccount
     name: gitea-bootstrap
@@ -53,7 +50,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   template:
     spec:
@@ -71,7 +67,6 @@ spec:
               echo "Waiting for Gitea pod to be ready..."
               kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=gitea -n $NAMESPACE --timeout=300s
 
-              # Reuse the token if the secret exists, otherwise generate one and store it
               if kubectl get secret gitea-admin-token -n $NAMESPACE >/dev/null 2>&1; then
                 echo "Token secret already exists, skipping token generation"
                 TOKEN=$(kubectl get secret gitea-admin-token -n $NAMESPACE -o jsonpath='{.data.token}' | base64 -d)
@@ -123,7 +118,6 @@ spec:
               EOF
               fi
 
-              # Create default organization if it doesn't exist
               echo "Creating default organization..."
               kubectl exec -n $NAMESPACE deploy/gitea -- wget -q -O- \
                 --header="Authorization: token $TOKEN" \
@@ -131,8 +125,7 @@ spec:
                 --post-data='{"username":"local-developer-platform","full_name":"Local Developer Platform","description":"Platform infrastructure and services","visibility":"public"}' \
                 http://localhost:3000/api/v1/orgs 2>/dev/null || echo "Organization may already exist"
 
-              # Registry push token for Actions jobs (the automatic job token is not
-              # accepted by the container registry), published as an org Actions secret.
+              # Actions jobs push with this org secret: the registry rejects the automatic job token.
               if kubectl get secret gitea-registry-token -n $NAMESPACE >/dev/null 2>&1; then
                 REGISTRY_TOKEN=$(kubectl get secret gitea-registry-token -n $NAMESPACE -o jsonpath='{.data.token}' | base64 -d)
               else

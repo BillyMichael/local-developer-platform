@@ -2,9 +2,7 @@ ldp:
   syncWave: wave-1
 
 crossplane:
-  # Package manager pulls xpkg images itself rather than through containerd, so
-  # it needs the proxy CA too. ldp-ca-bundle is published into this
-  # namespace by cluster-up.sh before Argo CD starts.
+  # the package manager pulls xpkgs itself, not via containerd, so it needs the proxy CA too
   registryCaBundleConfig:
     name: ldp-ca-bundle
     key: ca-certificates.crt

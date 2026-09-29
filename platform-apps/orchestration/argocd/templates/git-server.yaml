@@ -1,8 +1,5 @@
 {{- if .Values.platform.gitServer.enabled }}
-# Read-only git remote serving this checkout's .git, which cluster-up.sh
-# bind-mounts into every node, so Argo CD deploys the committed HEAD without a
-# push or a network. alpine/k8s has no git-http-backend, so files/git-serve.py
-# speaks the fetch half of smart HTTP over `git upload-pack`.
+# Serves the checkout's .git (bind-mounted by cluster-up.sh); alpine/k8s has no git-http-backend
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -33,11 +30,6 @@ spec:
         - name: git
           image: {{ .Values.platform.gitServer.image }}
           command: ["python3", "/opt/ldp/git-serve.py"]
-          env:
-            - name: GIT_ROOT
-              value: /repos
-            - name: PORT
-              value: "8080"
           ports:
             - name: http
               containerPort: 8080

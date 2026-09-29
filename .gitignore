@@ -47,3 +47,4 @@ kubeconfig.*
 *.swp
 *.tmp
 *.bak
+__pycache__/

@@ -1,4 +1,3 @@
-# Resource metrics API for kubectl top, KEDA and Backstage's Kubernetes tab.
 ldp:
   syncWave: wave-1
 

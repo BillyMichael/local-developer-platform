@@ -3,10 +3,9 @@ ldp:
 
 actions:
   enabled: true
-  # Register over the in-cluster HTTP service (no TLS); jobs still use Gitea's
-  # public URL, which the CA plumbing below makes work.
+  # register over plain HTTP; jobs use the public URL via the CA plumbing below
   giteaRootURL: http://gitea-http.vcs.svc.cluster.local:3000
-  # Created by the gitea chart (templates/runner-token.yaml)
+  # from the gitea chart (templates/runner-token.yaml)
   existingSecret: gitea-runner-token
   existingSecretKey: token
 
@@ -29,7 +28,7 @@ actions:
         log:
           level: info
         runner:
-          # Applied to every job: makes git, node and curl in job containers trust the platform CA
+          # every job container trusts the platform CA
           envs:
             SSL_CERT_FILE: /etc/ssl/certs/ldp-ca.pem
             GIT_SSL_CAINFO: /etc/ssl/certs/ldp-ca.pem
@@ -39,7 +38,7 @@ actions:
         container:
           require_docker: true
           docker_timeout: 300s
-          # Paths are resolved by the dind daemon, i.e. inside the dind container's filesystem
+          # paths resolve inside the dind container
           options: -v /etc/docker/certs.d/vcs-127-0-0-1.nip.io/ca.crt:/etc/ssl/certs/ldp-ca.pem:ro
           valid_volumes:
             - /etc/docker/certs.d/vcs-127-0-0-1.nip.io/ca.crt
@@ -52,8 +51,7 @@ actions:
         limits:
           memory: 2Gi
       extraVolumeMounts:
-        # `docker push vcs-127-0-0-1.nip.io/...` from a job; also the source of the
-        # -v mount into job containers (see runner.config above)
+        # for `docker push` to the Gitea registry, and the source of the -v mount above
         - name: ca
           mountPath: /etc/docker/certs.d/vcs-127-0-0-1.nip.io/ca.crt
           subPath: trust-bundle.pem

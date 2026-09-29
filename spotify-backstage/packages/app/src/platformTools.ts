@@ -6,11 +6,6 @@ import AndroidIcon from '@material-ui/icons/Android';
 import TimelineIcon from '@material-ui/icons/Timeline';
 import VpnKeyIcon from '@material-ui/icons/VpnKey';
 
-/**
- * The platform UIs a user can open from the portal, in the order they meet
- * them: code, delivery, promotion, agents, observability, identity. Shared by the sidebar's
- * Platform Tools submenu and the home page so the two never drift.
- */
 export const PLATFORM_TOOLS: {
   title: string;
   product: string;

@@ -1,14 +1,7 @@
 import homePlugin from '@backstage/plugin-home/alpha';
 
-/**
- * The LDP home page replaces plugin-home's widget grid by overriding the
- * plugin's own `page:home` loader rather than adding a competing page, so its
- * routeRef stays mounted for everything that links home.
- *
- * `path: '/'` is required: upstream mounts at "/home" and params merge on
- * override, so omitting it would leave "/" unmounted. The page renders its
- * own hero, so it wants no plugin header either.
- */
+// Override page:home (not a new page) so its routeRef stays mounted. path '/' is
+// required: params merge on override and upstream mounts at /home.
 export const homePluginWithLdpHome = homePlugin.withOverrides({
   extensions: [
     homePlugin.getExtension('page:home').override({

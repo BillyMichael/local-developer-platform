@@ -1,7 +1,4 @@
-# Perses encrypts datasource credentials with this key; without one it uses a
-# key baked into the binary. Generated once: a new key would make anything
-# already encrypted unreadable. Delivered as PERSES_SECURITY_ENCRYPTION_KEY
-# (values.yaml envVars) from the perses-env Secret.
+# Perses otherwise uses a key baked into the binary; CreatedOnce, as a new key breaks what is already encrypted
 apiVersion: generators.external-secrets.io/v1alpha1
 kind: Password
 metadata:
@@ -14,7 +11,6 @@ spec:
   length: 32
   digits: 8
   symbols: 0
-  noUpper: false
   allowRepeat: true
 ---
 apiVersion: external-secrets.io/v1

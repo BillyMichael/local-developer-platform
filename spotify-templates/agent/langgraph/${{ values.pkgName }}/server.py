@@ -47,12 +47,7 @@ def _in_cluster() -> bool:
 
 
 def checkpointer():
-    """kagent's REST checkpointer in-cluster, an in-memory one locally.
-
-    In-cluster, conversation state lives in the kagent controller, so the agent needs no
-    database and any replica can serve any conversation. The platform's controller runs
-    AUTH_MODE=unsecure, so a bare client is enough.
-    """
+    """kagent's REST checkpointer in-cluster (a bare client: AUTH_MODE=unsecure), in-memory locally."""
     if not _in_cluster():
         from langgraph.checkpoint.memory import MemorySaver
 
@@ -86,12 +81,7 @@ def _agent_card(name: str) -> AgentCard:
 
 
 class InflightLimit:
-    """ASGI middleware: at most `limit` A2A requests in flight per pod; the rest get 503.
-
-    Without it the only cap is memory, and past capacity every run on the pod dies together
-    in an OOM kill. The queue dispatcher treats 503 as "retry shortly", which keeps the job
-    counted in the queue so KEDA adds a pod.
-    """
+    """At most `limit` A2A requests per pod, the rest get 503: otherwise the cap is an OOM kill."""
 
     EXEMPT = frozenset({"/.well-known/agent-card.json", "/health"})
 
@@ -127,7 +117,6 @@ class InflightLimit:
 
 
 def serve(graph) -> None:
-    """Serve a compiled LangGraph over A2A on $PORT (8080 by default)."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     name = app_name()
     if _in_cluster():

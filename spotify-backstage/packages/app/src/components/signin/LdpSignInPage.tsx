@@ -63,10 +63,6 @@ const useStyles = makeStyles(theme => ({
   spinner: { color: BRAND.white },
 }));
 
-/**
- * Sign-in over the platform's OIDC provider. Tries a silent session first,
- * then offers the popup.
- */
 export const LdpSignInPage = ({ onSignInSuccess }: SignInPageProps) => {
   const classes = useStyles();
   const authApi = useApi(oidcAuthApiRef);

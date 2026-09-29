@@ -10,7 +10,6 @@ button,
     box-shadow 0.1s ease-out;
 }
 
-/* Visible focus on every interactive element: 2px amber, 2px offset. */
 :focus-visible {
   outline: 2px solid #f5b335;
   outline-offset: 2px;
@@ -30,19 +29,12 @@ button,
 }
 
 /*
- * @backstage/ui ("BUI") — the design system the new frontend system's own
- * page chrome is built from — is styled only by --bui-* custom properties,
- * never by the MUI theme. These carry the BRAND values from
- * theme/tokens.ts; tokens.test.ts fails if the two drift.
- *
- * The selectors mirror BUI's own (`[data-theme-mode=...]`). A bare :root is
- * not enough: wherever data-theme-mode sits below <html>, BUI's declaration
- * is the nearer ancestor and wins.
+ * BUI ignores the MUI theme; these mirror theme/tokens.ts (tokens.test.ts checks).
+ * Not just :root: BUI's own [data-theme-mode] below <html> would win.
  */
 :root,
 [data-theme-mode='light'],
 [data-theme-mode='dark'] {
-  /* Square corners; --bui-radius-full stays round for avatars and pills. */
   --bui-radius-1: 0;
   --bui-radius-2: 0;
   --bui-radius-3: 0;
@@ -56,7 +48,7 @@ button,
     monospace;
   --bui-font-weight-bold: 700;
 
-  /* The one accent, with navy text: white on amber fails AA. */
+  /* Navy text: white on amber fails AA. */
   --bui-bg-solid: #f5b335;
   --bui-bg-solid-hover: #f9c95f;
   --bui-bg-solid-pressed: #d99a1f;
@@ -84,24 +76,14 @@ button,
   --bui-card-surface: #12213b;
 }
 
-/*
- * BUI Card sets no background or border, expecting the caller to add a
- * surface; upstream's entity cards don't, so they rendered as bare text
- * beside the bordered MUI cards in the same grid. --bui-bg-inherit is what
- * the card body's scroll shadows fade to.
- */
+/* BUI Card has no surface of its own; --bui-bg-inherit is what its scroll shadows fade to. */
 [class*='bui-Card__'] {
   background-color: var(--bui-card-surface);
   border: 1px solid var(--bui-border-1);
   --bui-bg-inherit: var(--bui-card-surface);
 }
 
-/*
- * Page header (BUI PluginHeader, rendered by plugin-app for every page):
- * the flat navy bar Agora uses in black, with a hairline of amber beneath.
- * Set through the component's own variables; the fg tokens are redeclared
- * inside the bar because its title is a BUI <Text> that colours itself.
- */
+/* fg tokens redeclared here: the header title is a BUI <Text> that colours itself. */
 [class*='bui-PluginHeader__'] {
   --bui-plugin-header-background-color: #0b1629;
   --bui-plugin-header-toolbar-border-bottom: none;
