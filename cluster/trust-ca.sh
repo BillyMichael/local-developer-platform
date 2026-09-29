@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Source common formatting functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-# ============================================================================
-# EXTRACT CA CERTIFICATE
-# ============================================================================
+# --- extract ca certificate ----------------------------------------------------
 
 section "Trust Platform CA Certificate"
 
@@ -21,9 +18,7 @@ run_step "Extracting CA certificate from cluster" \
     openssl x509 -in '$CA_CERT' -noout -subject
   "
 
-# ============================================================================
-# INSTALL INTO OS TRUST STORE
-# ============================================================================
+# --- install into os trust store -----------------------------------------------
 
 case "$(uname -s)" in
   Darwin)
@@ -40,7 +35,6 @@ case "$(uname -s)" in
     ;;
 
   Linux)
-    # Check if running under WSL
     if grep -qi microsoft /proc/version 2>/dev/null; then
       CERTUTIL=$(command -v certutil.exe 2>/dev/null || wslpath -u "C:/Windows/System32/certutil.exe" 2>/dev/null || true)
       if [[ -n "$CERTUTIL" ]]; then
