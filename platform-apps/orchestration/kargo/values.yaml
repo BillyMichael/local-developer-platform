@@ -2,6 +2,13 @@ ldp:
   syncWave: wave-5
 
 kargo:
+  # Replaces controller.globalCredentials.namespaces (deprecated in 1.9, must be a list
+  # in 1.11). Also grants the controller read access to the git credential that the
+  # gitea bootstrap job replicates into this namespace.
+  global:
+    sharedResources:
+      namespace: orchestration
+      createNamespace: false
   webhooksServer:
     enabled: true
     resources:
@@ -54,7 +61,5 @@ kargo:
         memory: 256Mi
     cabundle:
       configMapName: ca
-    globalCredentials:
-      namespaces: orchestration
     argocd:
       namespace: orchestration
