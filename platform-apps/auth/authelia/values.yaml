@@ -42,6 +42,11 @@ authelia:
           policy: one_factor
 
     storage:
+      # Pinned to the once-generated authelia-generated Secret; see
+      # templates/generated-secrets.yaml for why.
+      encryption_key:
+        secret_name: authelia-generated
+        path: storage.encryption.key
       local:
         enabled: true
         path: /config/db.sqlite3
@@ -51,6 +56,9 @@ authelia:
         enabled: true
 
     session:
+      encryption_key:
+        secret_name: authelia-generated
+        path: session.encryption.key
       # chart 0.11 validates cookies[] strictly: authelia_url is derived from the domain
       # by the chart, secure was never a key, remember_me lives at session level
       remember_me: 1M
@@ -61,9 +69,18 @@ authelia:
           expiration: 1h
           inactivity: 5m
 
+    identity_validation:
+      reset_password:
+        secret:
+          secret_name: authelia-generated
+          path: identity_validation.reset_password.jwt.hmac.key
+
     identity_providers:
       oidc:
         enabled: true
+        hmac_secret:
+          secret_name: authelia-generated
+          path: identity_providers.oidc.hmac.key
 
         jwks:
           - key_id: default
@@ -301,6 +318,7 @@ authelia:
   secret:
     additionalSecrets:
       lldap-authelia-credentials: {}
+      authelia-generated: {}
       jwk-rsa:
         items:
           - key: tls.key
