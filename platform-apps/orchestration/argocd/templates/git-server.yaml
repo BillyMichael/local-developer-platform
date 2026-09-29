@@ -1,0 +1,82 @@
+{{- if .Values.platform.gitServer.enabled }}
+# Read-only git remote serving this checkout's .git, which cluster-up.sh
+# bind-mounts into every node, so Argo CD deploys the committed HEAD without a
+# push or a network. alpine/k8s has no git-http-backend, so files/git-serve.py
+# speaks the fetch half of smart HTTP over `git upload-pack`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ldp-git-server
+  namespace: {{ .Release.Namespace }}
+data:
+  git-serve.py: |
+{{ .Files.Get "files/git-serve.py" | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ldp-git
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: ldp-git
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ldp-git
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ldp-git
+    spec:
+      containers:
+        - name: git
+          image: {{ .Values.platform.gitServer.image }}
+          command: ["python3", "/opt/ldp/git-serve.py"]
+          env:
+            - name: GIT_ROOT
+              value: /repos
+            - name: PORT
+              value: "8080"
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: checkout
+              mountPath: /repos/{{ .Values.platform.gitServer.repoName }}
+              readOnly: true
+            - name: server
+              mountPath: /opt/ldp
+              readOnly: true
+      volumes:
+        - name: checkout
+          hostPath:
+            path: {{ .Values.platform.gitServer.hostPath }}
+            type: Directory   # fail loudly when the node lacks the mount
+        - name: server
+          configMap:
+            name: ldp-git-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ldp-git
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app.kubernetes.io/name: ldp-git
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}
