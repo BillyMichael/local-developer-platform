@@ -377,11 +377,15 @@ template follow three rules:
    The kubelet pulls an image only when it starts that container, so a large
    app image is worth pulling in a first init container (`command: ["node",
    "--version"]` or similar) so the pull overlaps the database start-up.
-2. **Secrets whose producer keeps writing after creation go a sync wave
-   ahead** of their consumer: `argocd.argoproj.io/sync-wave: "-1"` on `oidc.ldp`
-   Clients, whose secret is assembled in several writes. Reloader ignores a
-   secret being created, so a secret written once (a `PostgresDatabase` claim's
-   credentials, a create-once generator) needs no wave.
+2. **Secrets a pod hashes or copies at start-up must exist before the pod
+   does.** Within one chart, put the producer a sync wave ahead of the
+   consumer: `argocd.argoproj.io/sync-wave: "-1"` on `oidc.ldp` Clients and
+   generator-backed ExternalSecrets. Across charts the waves do the ordering,
+   with one exception: Authelia (wave 4) hashes every OIDC client secret in an
+   init container, and Gitea, Backstage and Perses create theirs later. Reloader
+   runs with `reloadOnCreate`, so a client secret appearing in `auth` rolls
+   Authelia and the hash is redone; name the secret in Authelia's
+   `secret.reloader.stakater.com/reload` annotation and its `hash_secret` list.
 3. **Generated secrets are generated once**: `refreshPolicy: CreatedOnce` on
    generator-backed ExternalSecrets, and pin any password a bundled subchart
    would randomise per render. Otherwise every resync rotates the value and
