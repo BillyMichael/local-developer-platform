@@ -1,0 +1,41 @@
+# Perses encrypts datasource credentials with this key; without one it uses a
+# key baked into the binary. Generated once: a new key would make anything
+# already encrypted unreadable. Delivered as PERSES_SECURITY_ENCRYPTION_KEY
+# (values.yaml envVars) from the perses-env Secret.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: perses-encryption-key
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  # AES-256: exactly 32 bytes, so ASCII only.
+  length: 32
+  digits: 8
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: perses-encryption-key
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshInterval: 24h
+  refreshPolicy: CreatedOnce
+  target:
+    name: perses-env
+    template:
+      data:
+        # The chart derives the key name from the env var name (kebab-case).
+        perses-security-encryption-key: '{{ "{{ .password }}" }}'
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: perses-encryption-key

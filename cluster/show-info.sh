@@ -46,6 +46,9 @@ printf "  │ %-12s │ %-42s │\n" "Authelia" "https://auth-127-0-0-1.nip.io"
 printf "  │ %-12s │ %-42s │\n" "Gitea"    "https://vcs-127-0-0-1.nip.io"
 printf "  │ %-12s │ %-42s │\n" "Backstage" "https://portal-127-0-0-1.nip.io"
 printf "  │ %-12s │ %-42s │\n" "kagent"   "https://agents-127-0-0-1.nip.io"
+printf "  │ %-12s │ %-42s │\n" "Perses"   "https://observability-127-0-0-1.nip.io"
+printf "  │ %-12s │ %-42s │\n" "vmui"     "https://metrics-127-0-0-1.nip.io/vmui"
+printf "  │ %-12s │ %-42s │\n" "Logs"     "https://logs-127-0-0-1.nip.io/select/vmui"
 printf "  └──────────────┴────────────────────────────────────────────┘\n\n"
 
 # --- commands table ------------------------------------------------------------

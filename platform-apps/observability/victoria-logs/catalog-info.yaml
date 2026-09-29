@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: victoria-logs
+  annotations:
+    argocd/app-name: victoria-logs
+    backstage.io/kubernetes-namespace: observability
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=victoria-logs
+  description: Log store for every pod on the cluster, queried with LogsQL from its own UI.
+  links:
+    - url: https://logs-127-0-0-1.nip.io/select/vmui
+      title: Logs UI
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform_maintainers
+  system: developer_platform
+  dependsOn:
+    - component:default/traefik
+    - component:default/cert-manager

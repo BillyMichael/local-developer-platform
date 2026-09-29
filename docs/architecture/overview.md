@@ -137,7 +137,7 @@ Each `platform-apps/<category>/` directory deploys into a namespace of the same 
 | `auth` | Authelia, LLDAP |
 | `orchestration` | ArgoCD, Crossplane, Kargo, KEDA |
 | `storage` | CloudNativePG |
-| `observability` | metrics-server |
+| `observability` | metrics-server, VictoriaMetrics, VictoriaLogs, victoria-logs-collector, Perses |
 | `vcs` | Gitea, Gitea Actions |
 | `portal` | Backstage |
 | `devtools` | kagent |

@@ -349,8 +349,12 @@ Here's a complete example adding Valkey (Redis-compatible) to the platform:
 
 ### Observability
 
-- Expose metrics endpoints where the chart offers them; the platform ships
-  only metrics-server, so nothing scrapes them until a metrics stack is added
+- Expose metrics endpoints where the chart offers them and annotate the pods
+  with `prometheus.io/scrape: "true"` and `prometheus.io/port: "<port>"`
+  (plus `prometheus.io/path` if it is not `/metrics`); VictoriaMetrics picks
+  them up on its next scrape and they show in Perses and vmui
+- Logs need nothing: victoria-logs-collector tails every container on every
+  node into VictoriaLogs
 - Add meaningful labels and annotations
 
 ### Dependencies

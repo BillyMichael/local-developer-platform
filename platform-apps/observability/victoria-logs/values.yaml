@@ -1,0 +1,33 @@
+# Pod logs: one VictoriaLogs process on local disk, a week kept, with its own
+# query UI (LogsQL). victoria-logs-collector (next to this app) ships them in.
+ldp:
+  syncWave: wave-6
+
+victoria-logs-single:
+  server:
+    retentionPeriod: 7d
+    persistentVolume:
+      enabled: true
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+
+    # ponytail: no auth in front of the logs UI (loopback only, one team).
+    ingress:
+      enabled: true
+      annotations:
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        cert-manager.io/cluster-issuer: ca-issuer
+      hosts:
+        - name: logs-127-0-0-1.nip.io
+          path:
+            - /
+          port: http
+      tls:
+        - hosts:
+            - logs-127-0-0-1.nip.io
+          secretName: victoria-logs-tls

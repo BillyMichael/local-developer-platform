@@ -1,0 +1,22 @@
+# vlagent on every node, tailing /var/log/pods straight from the node's disk and
+# pushing to VictoriaLogs. The previous collector (Alloy) streamed every log
+# line through the API server, which starved etcd on a laptop VM.
+ldp:
+  syncWave: wave-6
+
+victoria-logs-collector:
+  remoteWrite:
+    - url: http://victoria-logs-victoria-logs-single-server.observability.svc:9428
+
+  # Control-plane logs too (kind taints that node).
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 128Mi

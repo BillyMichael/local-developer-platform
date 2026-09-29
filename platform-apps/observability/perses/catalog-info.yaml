@@ -1,0 +1,22 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: perses
+  annotations:
+    argocd/app-name: perses
+    backstage.io/kubernetes-namespace: observability
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=perses
+  description: Dashboards over the cluster's metrics, signed in through Authelia.
+  links:
+    - url: https://observability-127-0-0-1.nip.io
+      title: Perses
+spec:
+  type: website
+  lifecycle: production
+  owner: group:default/platform_maintainers
+  system: developer_platform
+  dependsOn:
+    - component:default/traefik
+    - component:default/cert-manager
+    - component:default/authelia
+    - component:default/victoria-metrics

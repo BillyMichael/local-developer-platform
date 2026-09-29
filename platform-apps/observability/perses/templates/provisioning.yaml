@@ -1,0 +1,307 @@
+# Provisioned into Perses on every pass (config.provisioning): the datasource,
+# the platform project and its dashboards. Edit here, not in the UI; the UI copy
+# is overwritten within a minute.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: perses-provisioning
+  namespace: {{ .Release.Namespace }}
+data:
+  datasource.yaml: |
+    kind: GlobalDatasource
+    metadata:
+      name: victoria-metrics
+    spec:
+      default: true
+      display:
+        name: VictoriaMetrics
+      plugin:
+        kind: PrometheusDatasource
+        spec:
+          # Queried by the Perses server, so the browser never needs to reach
+          # VictoriaMetrics itself.
+          proxy:
+            kind: HTTPProxy
+            spec:
+              url: http://victoria-metrics-victoria-metrics-single-server.observability.svc:8428
+
+  project.yaml: |
+    kind: Project
+    metadata:
+      name: platform
+    spec:
+      display:
+        name: Platform
+        description: The local developer platform's own health.
+
+  cluster-overview.yaml: |
+    kind: Dashboard
+    metadata:
+      name: cluster-overview
+      project: platform
+    spec:
+      display:
+        name: Cluster overview
+        description: CPU, memory and network by namespace, pods per node, and what the metrics and logs stores are ingesting.
+      duration: 1h
+      refreshInterval: 30s
+      panels:
+        cpu-by-namespace:
+          kind: Panel
+          spec:
+            display:
+              name: CPU by namespace
+              description: Cores in use, summed over the namespace's containers.
+            plugin:
+              kind: TimeSeriesChart
+              spec:
+                legend:
+                  position: right
+                yAxis:
+                  format:
+                    unit: decimal
+                    decimalPlaces: 2
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: sum by (namespace) (rate(container_cpu_usage_seconds_total{container!="",container!="POD"}[5m]))
+                      seriesNameFormat: "{{ `{{namespace}}` }}"
+        memory-by-namespace:
+          kind: Panel
+          spec:
+            display:
+              name: Memory by namespace
+              description: Working set, summed over the namespace's containers.
+            plugin:
+              kind: TimeSeriesChart
+              spec:
+                legend:
+                  position: right
+                yAxis:
+                  format:
+                    unit: bytes
+                    shortValues: true
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: sum by (namespace) (container_memory_working_set_bytes{container!="",container!="POD"})
+                      seriesNameFormat: "{{ `{{namespace}}` }}"
+        cpu-by-node:
+          kind: Panel
+          spec:
+            display:
+              name: CPU by node
+              description: Cores in use on each kind node, everything included.
+            plugin:
+              kind: TimeSeriesChart
+              spec:
+                legend:
+                  position: bottom
+                yAxis:
+                  format:
+                    unit: decimal
+                    decimalPlaces: 2
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: sum by (node) (rate(container_cpu_usage_seconds_total{id="/"}[5m]))
+                      seriesNameFormat: "{{ `{{node}}` }}"
+        memory-by-node:
+          kind: Panel
+          spec:
+            display:
+              name: Memory by node
+              description: Working set of each kind node's root cgroup.
+            plugin:
+              kind: TimeSeriesChart
+              spec:
+                legend:
+                  position: bottom
+                yAxis:
+                  format:
+                    unit: bytes
+                    shortValues: true
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: sum by (node) (container_memory_working_set_bytes{id="/"})
+                      seriesNameFormat: "{{ `{{node}}` }}"
+        network-by-namespace:
+          kind: Panel
+          spec:
+            display:
+              name: Network receive by namespace
+            plugin:
+              kind: TimeSeriesChart
+              spec:
+                legend:
+                  position: right
+                yAxis:
+                  format:
+                    unit: bytes/sec
+                    shortValues: true
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: sum by (namespace) (rate(container_network_receive_bytes_total{pod!=""}[5m]))
+                      seriesNameFormat: "{{ `{{namespace}}` }}"
+        pods-by-node:
+          kind: Panel
+          spec:
+            display:
+              name: Running pods by node
+            plugin:
+              kind: TimeSeriesChart
+              spec:
+                legend:
+                  position: bottom
+                yAxis:
+                  format:
+                    unit: decimal
+                    decimalPlaces: 0
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: sum by (node) (kubelet_running_pods)
+                      seriesNameFormat: "{{ `{{node}}` }}"
+        metrics-ingest:
+          kind: Panel
+          spec:
+            display:
+              name: Metrics ingested per second
+              description: Samples VictoriaMetrics accepts from its scrapes. Active time series is the number to watch on a laptop.
+            plugin:
+              kind: TimeSeriesChart
+              spec:
+                legend:
+                  position: bottom
+                yAxis:
+                  format:
+                    unit: decimal
+                    shortValues: true
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: sum(rate(vm_rows_inserted_total[5m]))
+                      seriesNameFormat: samples/s
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: vm_cache_entries{type="storage/hour_metric_ids"}
+                      seriesNameFormat: active series
+        logs-ingest:
+          kind: Panel
+          spec:
+            display:
+              name: Log lines ingested per second
+              description: Lines VictoriaLogs accepts from the collectors.
+            plugin:
+              kind: TimeSeriesChart
+              spec:
+                legend:
+                  position: bottom
+                yAxis:
+                  format:
+                    unit: decimal
+                    shortValues: true
+            queries:
+              - kind: TimeSeriesQuery
+                spec:
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: sum(rate(vl_rows_ingested_total[5m]))
+                      seriesNameFormat: lines/s
+      layouts:
+        - kind: Grid
+          spec:
+            display:
+              title: Workloads
+              collapse:
+                open: true
+            items:
+              - x: 0
+                y: 0
+                width: 12
+                height: 7
+                content:
+                  $ref: "#/spec/panels/cpu-by-namespace"
+              - x: 12
+                y: 0
+                width: 12
+                height: 7
+                content:
+                  $ref: "#/spec/panels/memory-by-namespace"
+              - x: 0
+                y: 7
+                width: 12
+                height: 6
+                content:
+                  $ref: "#/spec/panels/network-by-namespace"
+              - x: 12
+                y: 7
+                width: 12
+                height: 6
+                content:
+                  $ref: "#/spec/panels/pods-by-node"
+        - kind: Grid
+          spec:
+            display:
+              title: Nodes
+              collapse:
+                open: true
+            items:
+              - x: 0
+                y: 0
+                width: 12
+                height: 6
+                content:
+                  $ref: "#/spec/panels/cpu-by-node"
+              - x: 12
+                y: 0
+                width: 12
+                height: 6
+                content:
+                  $ref: "#/spec/panels/memory-by-node"
+        - kind: Grid
+          spec:
+            display:
+              title: Observability stores
+              collapse:
+                open: true
+            items:
+              - x: 0
+                y: 0
+                width: 12
+                height: 6
+                content:
+                  $ref: "#/spec/panels/metrics-ingest"
+              - x: 12
+                y: 0
+                width: 12
+                height: 6
+                content:
+                  $ref: "#/spec/panels/logs-ingest"

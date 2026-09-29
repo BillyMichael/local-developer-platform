@@ -413,7 +413,8 @@ run_step "Enabling ApplicationSets" "${argocd_helm[@]}"
 #   3 traefik, trust-manager, lldap, reloader, kubernetes-replicator, argocd
 #   4 authelia, cloudnative-pg, keda
 #   5 gitea, kargo
-#   6 backstage, gitea-actions, kagent
+#   6 backstage, gitea-actions, kagent, victoria-metrics, victoria-logs,
+#     victoria-logs-collector, perses
 #   7 tenant-appsets
 # The waits are sized for a laptop VM: cold image pulls through a proxy and
 # operator start-up take several times longer than on an idle machine.
@@ -464,12 +465,16 @@ wait_for 900 \
 
 # --- [11/11] wave 6 -----------------------------------------------------------
 
-step 11 $TOTAL_STEPS "Wave 6: Developer Portal & Tenants"
+step 11 $TOTAL_STEPS "Wave 6: Developer Portal, Observability & Tenants"
 
-# A cold node pulls Postgres and Backstage's image in sequence here.
+# A cold node pulls Postgres and Backstage's image in sequence here. The
+# observability apps are single small processes and come up alongside.
 wait_for 900 \
   "Backstage" "kubectl --context '$CONTEXT_NAME' -n portal wait --for=condition=Ready pod -l app.kubernetes.io/name=backstage --timeout=1s" \
   "kagent"    "kubectl --context '$CONTEXT_NAME' -n devtools wait --for=condition=Available deployment/kagent-controller --timeout=1s" \
+  "VictoriaMetrics" "kubectl --context '$CONTEXT_NAME' -n observability rollout status statefulset/victoria-metrics-victoria-metrics-single-server --timeout=1s" \
+  "VictoriaLogs"    "kubectl --context '$CONTEXT_NAME' -n observability rollout status statefulset/victoria-logs-victoria-logs-single-server --timeout=1s" \
+  "Perses"          "kubectl --context '$CONTEXT_NAME' -n observability rollout status statefulset/perses --timeout=1s" \
   "tenant ApplicationSets" "kubectl --context '$CONTEXT_NAME' -n '$ARGOCD_NS' get applicationset tenant-bootstrap tenant-apps"
 
 # --- done ---------------------------------------------------------------------

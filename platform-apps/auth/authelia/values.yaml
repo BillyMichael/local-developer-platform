@@ -174,10 +174,26 @@ authelia:
             client_secret:
               path: /hashed-secrets/gitea-password
 
+          - client_id: perses
+            client_name: Perses
+            public: false
+            authorization_policy: one_factor
+            consent_mode: implicit
+            redirect_uris:
+              - https://observability-127-0-0-1.nip.io/api/auth/providers/oidc/authelia/callback
+            scopes: [openid, profile, email]
+            grant_types: [authorization_code]
+            response_types: [code]
+            token_endpoint_auth_method: client_secret_basic
+            access_token_signed_response_alg: none
+            userinfo_signed_response_alg: none
+            client_secret:
+              path: /hashed-secrets/perses-password
+
   pod:
     kind: Deployment
     annotations:
-      secret.reloader.stakater.com/reload: "argocd-oidc-client-secret,backstage-oidc-client-secret,gitea-oidc-client-secret"
+      secret.reloader.stakater.com/reload: "argocd-oidc-client-secret,backstage-oidc-client-secret,gitea-oidc-client-secret,perses-oidc-client-secret"
 
     resources:
       requests:
@@ -202,6 +218,13 @@ authelia:
       - name: secret-gitea-oidc-client-secret
         secret:
           secretName: gitea-oidc-client-secret
+          optional: true
+          items:
+            - key: password
+              path: password
+      - name: secret-perses-oidc-client-secret
+        secret:
+          secretName: perses-oidc-client-secret
           optional: true
           items:
             - key: password
@@ -249,6 +272,7 @@ authelia:
             hash_secret argocd
             hash_secret backstage
             hash_secret gitea
+            hash_secret perses
 
             echo "Done"
         volumeMounts:
@@ -260,6 +284,9 @@ authelia:
             readOnly: true
           - name: secret-gitea-oidc-client-secret
             mountPath: /secrets/gitea-oidc-client-secret
+            readOnly: true
+          - name: secret-perses-oidc-client-secret
+            mountPath: /secrets/perses-oidc-client-secret
             readOnly: true
           - name: secret-jwk-rsa
             mountPath: /secrets/jwk-rsa

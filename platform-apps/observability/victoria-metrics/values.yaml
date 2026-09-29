@@ -1,0 +1,128 @@
+# Metrics for the whole cluster in one process: VictoriaMetrics scrapes the
+# kubelets itself (no operator, no vmagent), stores a week on local disk and
+# serves the Prometheus query API. Perses (next to this app) draws the
+# dashboards; vmui here is for ad hoc queries and the cardinality explorer.
+ldp:
+  # Last wave with the rest of observability: nothing else needs it to be up.
+  syncWave: wave-6
+
+victoria-metrics-single:
+  server:
+    retentionPeriod: 7d
+    persistentVolume:
+      enabled: true
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 384Mi
+
+    # ponytail: no auth in front of vmui (loopback only, one team), the same
+    # trade-off as the kagent UI. Perses fronts the same data behind Authelia.
+    ingress:
+      enabled: true
+      annotations:
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        cert-manager.io/cluster-issuer: ca-issuer
+      hosts:
+        - name: metrics-127-0-0-1.nip.io
+          path:
+            - /
+          port: http
+      tls:
+        - hosts:
+            - metrics-127-0-0-1.nip.io
+          secretName: victoria-metrics-tls
+
+    scrape:
+      enabled: true
+      # Replaces the chart's default config: that one also scrapes the API
+      # server, which on the previous stack was 47k series of the control plane
+      # describing itself and the single biggest load on the laptop.
+      config:
+        global:
+          scrape_interval: 30s
+        scrape_configs:
+          - job_name: victoriametrics
+            static_configs:
+              - targets: ["localhost:8428"]
+
+          - job_name: victoria-logs
+            static_configs:
+              - targets: ["victoria-logs-victoria-logs-single-server.observability.svc:9428"]
+
+          # Container CPU, memory and network from each kubelet's cAdvisor.
+          - job_name: kubernetes-nodes-cadvisor
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              # kind's kubelets serve self-signed certificates.
+              insecure_skip_verify: true
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_sd_configs:
+              - role: node
+            metrics_path: /metrics/cadvisor
+            honor_timestamps: false
+            relabel_configs:
+              - action: labelmap
+                regex: __meta_kubernetes_node_label_(.+)
+              - source_labels: [__meta_kubernetes_node_name]
+                target_label: node
+            metric_relabel_configs:
+              # Per-cgroup filesystem, blkio and spec series are the bulk of
+              # cAdvisor's output and nothing on the platform reads them.
+              - action: drop
+                source_labels: [__name__]
+                regex: container_(fs|blkio|spec|tasks_state|memory_failures_total|network_(tcp|udp)_usage_total|file_descriptors|sockets|threads|threads_max|ulimits_soft|processes|last_seen|start_time_seconds).*
+
+          # kubelet's own metrics: running pods and containers per node.
+          - job_name: kubernetes-nodes
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              insecure_skip_verify: true
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_sd_configs:
+              - role: node
+            relabel_configs:
+              - action: labelmap
+                regex: __meta_kubernetes_node_label_(.+)
+              - source_labels: [__meta_kubernetes_node_name]
+                target_label: node
+            metric_relabel_configs:
+              - action: keep
+                source_labels: [__name__]
+                regex: kubelet_(running_pods|running_containers|node_name|pleg_relist_duration_seconds_(sum|count)|volume_stats_(capacity|used)_bytes)|up
+
+          # Any pod that asks: prometheus.io/scrape, prometheus.io/port and
+          # (optionally) prometheus.io/path annotations, as platform and tenant
+          # charts add them.
+          - job_name: kubernetes-pods
+            kubernetes_sd_configs:
+              - role: pod
+            relabel_configs:
+              - action: drop
+                source_labels: [__meta_kubernetes_pod_container_init]
+                regex: "true"
+              - action: keep
+                source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                regex: "true"
+              - action: keep_if_equal
+                source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port, __meta_kubernetes_pod_container_port_number]
+              - action: replace
+                source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                target_label: __metrics_path__
+                regex: (.+)
+              - action: replace
+                source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                regex: ([^:]+)(?::\d+)?;(\d+)
+                replacement: $1:$2
+                target_label: __address__
+              - action: labelmap
+                regex: __meta_kubernetes_pod_label_(.+)
+              - source_labels: [__meta_kubernetes_namespace]
+                target_label: namespace
+              - source_labels: [__meta_kubernetes_pod_name]
+                target_label: pod

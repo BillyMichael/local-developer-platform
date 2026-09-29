@@ -1,0 +1,7 @@
+apiVersion: v2
+name: perses
+version: 1.0.0
+dependencies:
+  - name: perses
+    version: 0.23.2
+    repository: https://perses.github.io/helm-charts

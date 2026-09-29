@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: victoria-logs-collector
+  annotations:
+    argocd/app-name: victoria-logs-collector
+    backstage.io/kubernetes-namespace: observability
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/instance=victoria-logs-collector
+  description: Per-node log shipper (vlagent) that tails container logs into VictoriaLogs.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform_maintainers
+  system: developer_platform
+  dependsOn:
+    - component:default/victoria-logs

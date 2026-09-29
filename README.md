@@ -3,7 +3,8 @@
 A reproducible internal developer platform on a local [kind](https://kind.sigs.k8s.io/)
 cluster: Traefik, cert-manager, External Secrets, Authelia and LLDAP for
 sign-in, Gitea with Actions, CloudNativePG, ArgoCD, Crossplane, Kargo, KEDA,
-Backstage and kagent, all deployed by ArgoCD from this checkout.
+Backstage, kagent, and VictoriaMetrics, VictoriaLogs and Perses for metrics,
+logs and dashboards, all deployed by ArgoCD from this checkout.
 
 Full documentation: [ldp.billymichael.uk](https://ldp.billymichael.uk/).
 
