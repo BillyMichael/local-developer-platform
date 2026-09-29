@@ -30,8 +30,8 @@ spec:
       name: '{{ `{{ index .path.segments 2 }}` }}'
       labels:
         # Progressive syncs match on labels (not annotations)
-        # Each app declares ldp.syncWave in its values.yaml; defaults to wave-7 (last)
-        ldp.dev/sync-wave: '{{ `{{ dig "ldp" "syncWave" "wave-7" . }}` }}'
+        # Each app declares ldp.syncWave in its values.yaml; defaults to the last wave
+        ldp.dev/sync-wave: '{{ `{{ dig "ldp" "syncWave" "wave-` }}{{ .Values.platform.syncWaves }}{{ `" . }}` }}'
     spec:
       project: default
       source:
