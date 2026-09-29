@@ -105,6 +105,23 @@ argo-cd:
       # Read-only account for Backstage; token minted by templates/job-backstage-token.yaml.
       accounts.backstage: apiKey
       resource.customizations: |
+        # Argo CD 3.x reports an ApplicationSet as Progressing for as long as its
+        # RollingSync runs. This chart's PostSync hooks make the sync wait for
+        # wave-0 health first, and the platform ApplicationSet rolls out the
+        # argocd Application itself, so the two waited on each other for ever on
+        # a fresh cluster. Its rollout is not this resource's health.
+        argoproj.io/ApplicationSet:
+          health.lua: |
+            hs = { status = "Healthy", message = "Rollout progress is tracked by the Applications, not here." }
+            if obj.status ~= nil and obj.status.conditions ~= nil then
+              for _, c in ipairs(obj.status.conditions) do
+                if c.type == "ErrorOccurred" and c.status == "True" then
+                  hs.status = "Degraded"
+                  hs.message = c.message
+                end
+              end
+            end
+            return hs
         "*.crossplane.io/*": &crossplane-health
           health.lua: |
             health_status = {
