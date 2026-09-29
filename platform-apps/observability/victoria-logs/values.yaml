@@ -9,12 +9,14 @@ victoria-logs-single:
     persistentVolume:
       enabled: true
       size: 2Gi
+    # The first start ingests every existing log on both nodes at once (the
+    # collectors tail from the beginning); at 256Mi that burst was OOM-killed.
     resources:
       requests:
         cpu: 50m
         memory: 128Mi
       limits:
-        memory: 256Mi
+        memory: 512Mi
 
     # ponytail: no auth in front of the logs UI (loopback only, one team).
     ingress:
