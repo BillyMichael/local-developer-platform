@@ -26,6 +26,10 @@ spec:
         revision: {{ .Values.platform.targetRevision }}
         files:
           - path: "platform-apps/**/values.yaml"
+          {{- range .Values.platform.exclude }}
+          - path: "platform-apps/{{ . }}/values.yaml"
+            exclude: true
+          {{- end }}
         requeueAfterSeconds: 10
   template:
     metadata:
@@ -38,6 +42,10 @@ spec:
         repoURL: {{ .Values.platform.repoURL }}
         targetRevision: {{ .Values.platform.targetRevision }}
         path: '{{ `{{ .path.path }}` }}'
+        helm:
+          ignoreMissingValueFiles: true
+          valueFiles:
+            - values-{{ .Values.platform.environment }}.yaml
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{ `{{ index .path.segments 1 }}` }}'
