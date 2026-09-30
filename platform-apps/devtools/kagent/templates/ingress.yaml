@@ -11,10 +11,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - agents-127-0-0-1.nip.io
+        - {{ printf .Values.ldp.hostPattern "agents" }}
       secretName: kagent-ui-tls
   rules:
-    - host: agents-127-0-0-1.nip.io
+    - host: {{ printf .Values.ldp.hostPattern "agents" }}
       http:
         paths:
           - path: /
