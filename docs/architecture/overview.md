@@ -125,6 +125,11 @@ To track a shared remote instead, point `platform.repoURL` and
 and `platform-apps/orchestration/tenant-appsets/values.yaml` at it and set
 `platform.gitServer.enabled` to `false`.
 
+A fork deploying elsewhere can stay mergeable by only adding files: set
+`platform.environment` (e.g. `vps`) and each app's `values-vps.yaml` is
+layered over its `values.yaml`; list unwanted apps in `platform.exclude`
+(e.g. `vcs/gitea`).
+
 ## Namespace Organization
 
 Each `platform-apps/<category>/` directory deploys into a namespace of the same name:

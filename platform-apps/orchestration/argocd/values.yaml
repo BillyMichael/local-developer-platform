@@ -14,6 +14,10 @@ platform:
     repoName: ldp.git
   # Rolling-sync steps; apps without ldp.syncWave default to the last one.
   syncWaves: 6
+  # Layers values-<environment>.yaml over each app's values.yaml where one exists.
+  environment: local
+  # Apps to skip, as <category>/<app>, e.g. vcs/gitea.
+  exclude: []
   applicationSets:
     enabled: true
   claims:
