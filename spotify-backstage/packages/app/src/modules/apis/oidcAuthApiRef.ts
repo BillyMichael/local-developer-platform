@@ -7,7 +7,7 @@ import {
   createApiRef,
 } from '@backstage/core-plugin-api';
 
-/** Matches the `oidc` provider in the backend and auth.providers config. */
+// Matches the `oidc` provider in the backend and auth.providers config.
 export const oidcAuthApiRef: ApiRef<
   OpenIdConnectApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
 > = createApiRef({

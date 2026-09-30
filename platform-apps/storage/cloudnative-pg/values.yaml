@@ -9,8 +9,5 @@ cloudnative-pg:
       memory: 64Mi
     limits:
       memory: 128Mi
-  crds:
-    create: true
   serviceAccount:
-    create: true
     name: cloudnative-pg

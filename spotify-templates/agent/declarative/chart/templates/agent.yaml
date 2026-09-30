@@ -1,6 +1,5 @@
 ---
-# API key: an empty stub that kubernetes-replicator fills from the platform copy.
-# ArgoCD leaves the replicated data alone because it is not part of the desired manifest.
+# Empty stub kubernetes-replicator fills; ArgoCD ignores the data as it isn't in the manifest.
 apiVersion: v1
 kind: Secret
 metadata:

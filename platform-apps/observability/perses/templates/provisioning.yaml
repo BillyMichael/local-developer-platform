@@ -1,6 +1,4 @@
-# Provisioned into Perses on every pass (config.provisioning): the datasource,
-# the platform project and its dashboards. Edit here, not in the UI; the UI copy
-# is overwritten within a minute.
+# Edit here, not in the UI: provisioning overwrites the UI copy every pass
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -18,8 +16,6 @@ data:
       plugin:
         kind: PrometheusDatasource
         spec:
-          # Queried by the Perses server, so the browser never needs to reach
-          # VictoriaMetrics itself.
           proxy:
             kind: HTTPProxy
             spec:

@@ -1,20 +1,14 @@
-"""The asynchronous path: Gitea webhook -> RabbitMQ -> dispatcher -> the agent's own A2A server.
+"""Gitea webhook -> RabbitMQ -> dispatcher -> the agent's own A2A server (`agent receive`).
 
-One cheap always-on process (`agent receive`) does both halves:
-
-- **Receiver.** Gitea calls `POST /webhook/gitea` when a pull request opens or gets new
-  commits. It checks the HMAC signature, keeps only the events the agent cares about,
-  publishes a job and returns 202. It never runs a graph: reviewing takes minutes and Gitea
-  times a delivery out in seconds.
-- **Dispatcher.** Consumes the queue and relays each job as one A2A message to the agent's
-  Service. Runs therefore go through kagent's executor, checkpointer and task store, and
-  show up in the kagent UI next to interactive sessions — one code path, not two.
+The receiver checks the HMAC signature, keeps only the events the agent cares about, and only
+enqueues (Gitea times a delivery out in seconds). The dispatcher relays each job as one A2A
+message to the agent's Service, so runs go through kagent's executor, checkpointer and task
+store and show up in the kagent UI like chat turns.
 
 Delivery is at-least-once. A failed relay is republished with its attempt number bumped and
 dead-lettered to `jobs.dead` after MAX_ATTEMPTS; a dispatcher that dies mid-run leaves its
-messages unacked, and RabbitMQ redelivers them (the quorum queue's delivery limit bounds
-that path too). KEDA scales the agent pods on the queue's ready + unacked count
-(chart/templates/queue.yaml).
+messages unacked and RabbitMQ redelivers them (the quorum queue's delivery limit bounds that
+path). KEDA scales the agent pods on ready + unacked (chart/templates/queue.yaml).
 """
 
 from __future__ import annotations
@@ -92,7 +86,6 @@ def extract(payload: dict[str, Any], branch_prefix: str = "") -> dict[str, Any] 
 
 
 def prompt_for(job: dict[str, Any]) -> str:
-    """The user message the agent receives for a queued job."""
     return (
         f'Pull request #{job["number"]} "{job["title"]}" in {job["repository"]} was {job["action"]}.\n'
         f"URL: {job['url']}\nBranch: {job['branch']} at commit {job['head']}\n\n"
@@ -129,8 +122,6 @@ def _text_of(parts) -> str:
 
 
 class Dispatcher:
-    """Consumes jobs and relays each one to the agent as an A2A message."""
-
     def __init__(self, url: str, *, timeout: float, user_id: str) -> None:
         self.url = url
         self.timeout = timeout
@@ -299,12 +290,7 @@ def build_app() -> FastAPI:
 
 
 def trigger() -> None:
-    """The CronJob's role: send AGENT_TRIGGER_PROMPT as one A2A message and exit.
-
-    The run happens in the agent's own pods, exactly like a chat turn, and shows up in the
-    kagent UI as a session from `cron@<agent>`. Exits non-zero unless the run completed. No
-    retries: the next tick is the retry, and the CronJob's `Forbid` policy stops overlaps.
-    """
+    """The CronJob's role: send AGENT_TRIGGER_PROMPT as one A2A message; non-zero unless it completed."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     prompt = os.getenv("AGENT_TRIGGER_PROMPT", "").strip()
     if not prompt:

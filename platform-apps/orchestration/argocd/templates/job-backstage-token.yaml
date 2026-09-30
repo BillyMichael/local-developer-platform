@@ -1,5 +1,3 @@
-# Mints an API token for the `backstage` account and publishes it as
-# argocd-backstage-token, replicated to the portal namespace.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -7,7 +5,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -16,7 +13,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 rules:
   # `kubectl rollout status` needs list as well as get and watch.
   - apiGroups: ["apps"]
@@ -39,7 +35,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 subjects:
   - kind: ServiceAccount
     name: argocd-backstage-token
@@ -56,7 +51,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   template:
     spec:

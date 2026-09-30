@@ -3,7 +3,6 @@ import { BRAND, monoFontFamily } from './tokens';
 
 const isLight = (theme: Theme) => theme.palette.type === 'light';
 
-/* Flat card: a border at rest, a lift only on hover. */
 export const flatCardHoverStyles = (theme: Theme) =>
   ({
     borderColor: isLight(theme) ? BRAND.slate : BRAND.darkTextSecondary,
@@ -25,7 +24,6 @@ export const flatCardStyles = (theme: Theme) =>
     '&:hover': flatCardHoverStyles(theme),
   } as const);
 
-/* Bare monochrome glyph for decorative card icons — never the accent. */
 export const iconChipStyles = (theme: Theme, size = 32) =>
   ({
     display: 'flex',
@@ -36,7 +34,6 @@ export const iconChipStyles = (theme: Theme, size = 32) =>
     },
   } as const);
 
-/* Small uppercase mono eyebrow above headings. */
 export const overlineStyles = {
   fontFamily: monoFontFamily,
   fontSize: 12,
@@ -45,12 +42,7 @@ export const overlineStyles = {
   textTransform: 'uppercase' as const,
 };
 
-/*
- * Circuit traces for the hero and sign-in backdrop: orthogonal paths with
- * 16px corners entering from the right edge in navy tints, exactly one in
- * amber, masked out before they reach the copy. Spread into a positioned,
- * overflow-hidden container on a navy surface.
- */
+// Spread into a positioned, overflow-hidden container on a navy surface.
 export const tracesStyles = {
   '&::after': {
     content: '""',

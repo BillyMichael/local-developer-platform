@@ -4,7 +4,6 @@ ldp:
   serverSideApply: true
 
 keda:
-  # The platform runs on a laptop: trim the chart's 1 CPU / 1000Mi limits
   resources:
     operator:
       requests: { cpu: 20m, memory: 64Mi }

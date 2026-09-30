@@ -32,7 +32,6 @@ const oidcAuthApi = ApiBlueprint.make({
     }),
 });
 
-// plugin-app already provides the SCM integrations and SCM auth APIs.
 export const apisModule = createFrontendModule({
   pluginId: 'app',
   extensions: [oidcAuthApi],

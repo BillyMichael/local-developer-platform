@@ -1,5 +1,4 @@
-# API key: an empty stub that kubernetes-replicator fills from the platform copy.
-# ArgoCD leaves the replicated data alone because it is not part of the desired manifest.
+# Empty stub kubernetes-replicator fills; ArgoCD ignores the data as it isn't in the manifest.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -8,8 +7,7 @@ metadata:
     replicator.v1.mittwald.de/replicate-from: devtools/kagent-anthropic
 type: Opaque
 ---
-# BYO agent: the kagent controller turns this into a Deployment and Service (both named
-# after the release, port 8080) and mounts the generated agent card at /config.
+# kagent generates a Deployment and Service (release name, port 8080) from this.
 apiVersion: kagent.dev/v1alpha2
 kind: Agent
 metadata:
@@ -21,8 +19,7 @@ spec:
     deployment:
       image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
       imagePullPolicy: {{ .Values.image.pullPolicy }}
-      # No `replicas`: unset, the controller creates 1 and then leaves the count alone,
-      # which is what lets KEDA scale this Deployment. Setting it makes the two fight.
+      # No `replicas`: setting it makes the controller fight KEDA.
       resources:
         {{- toYaml .Values.resources | nindent 8 }}
       env:

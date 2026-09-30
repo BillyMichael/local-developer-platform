@@ -8,27 +8,20 @@ BASH=$(command -v bash)
 STUBS=$(mktemp -d)
 trap 'rm -rf "$STUBS"' EXIT
 
-# stub <name> <info_exit_code> <operating_system>
+# stub <name> <info_exit_code>
 stub() {
   cat > "$STUBS/$1" <<STUB
 #!$BASH
-[ "\$1" = "info" ] || exit 0
-case " \$* " in
-  *--format*OperatingSystem*) echo "$3" ;;
-  *--format*MemTotal*)        echo "$(( 4 * 1024 * 1024 * 1024 ))" ;;
-  *--format*Rootless*)        echo "$3" ;;
-esac
 exit $2
 STUB
   chmod +x "$STUBS/$1"
 }
 
-# run <expected_CE> <expected_provider> <expected_rc> -- stubs to create
+# run <desc> <expected_CE> <expected_provider> <expected_rc> <KIND_EXPERIMENTAL_PROVIDER>
 run() {
   local desc="$1" want_ce="$2" want_prov="$3" want_rc="$4" env_prov="$5"
   local out rc
-  # Stubs only -- no real /usr/bin, so a real docker/podman on the host
-  # cannot leak in and mask the engine we are pretending to have.
+  # Stubs only on PATH so a real docker/podman cannot leak in.
   out=$(PATH="$STUBS" KIND_EXPERIMENTAL_PROVIDER="$env_prov" \
     "$BASH" -c 'source '"$SCRIPT_DIR"'/common.sh
              detect_container_engine
@@ -48,29 +41,25 @@ run() {
 
 fails=0
 
-rm -f "$STUBS"/*; stub docker 0 "Ubuntu 24.04"
-run "docker engine only -> docker"        docker ""       0 "" || fails=1
+rm -f "$STUBS"/*; stub docker 0
+run "docker only -> docker"               docker ""       0 "" || fails=1
 
-rm -f "$STUBS"/*; stub docker 0 "Docker Desktop"
-run "docker desktop -> docker"            docker ""       0 "" || fails=1
-
-rm -f "$STUBS"/*; stub podman 0 "false"
+rm -f "$STUBS"/*; stub podman 0
 run "podman only -> podman"               podman podman   0 "" || fails=1
 
-rm -f "$STUBS"/*; stub docker 0 "Ubuntu 24.04"; stub podman 0 "false"
+rm -f "$STUBS"/*; stub docker 0; stub podman 0
 run "both -> docker wins"                 docker ""       0 "" || fails=1
 
-rm -f "$STUBS"/*; stub docker 0 "Ubuntu 24.04"; stub podman 0 "false"
+rm -f "$STUBS"/*; stub docker 0; stub podman 0
 run "both, env=podman -> podman honoured"  podman podman  0 "podman" || fails=1
 
-# Docker installed but daemon down: falls through to podman.
-rm -f "$STUBS"/*; stub docker 1 ""; stub podman 0 "false"
+rm -f "$STUBS"/*; stub docker 1; stub podman 0
 run "docker daemon down -> podman"        podman podman   0 "" || fails=1
 
 rm -f "$STUBS"/*
 run "no engine -> exit 1"                 ""     ""       1 "" || fails=1
 
-rm -f "$STUBS"/*; stub docker 0 "Ubuntu 24.04"
+rm -f "$STUBS"/*; stub docker 0
 run "env=podman but absent -> exit 1"     ""     ""       1 "podman" || fails=1
 
 [ "$fails" -eq 0 ] && echo "all passed"

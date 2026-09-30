@@ -1,7 +1,4 @@
-{{- /*
-  Rendered by function-go-templating, not Helm: the composition pulls this file
-  in with .Files.Get, which does not template it.
-*/ -}}
+{{- /* Rendered by function-go-templating, not Helm: the composition pulls this in with .Files.Get, which does not template it. */ -}}
 {{- $xr := getCompositeResource . }}
 {{- $name := $xr.metadata.name }}
 {{- $spec := $xr.spec }}
@@ -22,7 +19,6 @@ spec:
   length: {{ $spec.passwordLength }}
   symbols: {{ $spec.passwordSymbols }}
   symbolCharacters: ""
-  noUpper: false
   allowRepeat: true
 ---
 apiVersion: external-secrets.io/v1

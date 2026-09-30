@@ -1,6 +1,4 @@
-# Test, build and push the image to Gitea's registry, then pin chart/values.yaml to the new
-# tag so ArgoCD rolls it out. The pin commit only touches chart/, which is ignored below,
-# so it does not trigger another build.
+# The tag-pin commit only touches chart/, ignored below, so it doesn't retrigger the build.
 name: build
 
 on:

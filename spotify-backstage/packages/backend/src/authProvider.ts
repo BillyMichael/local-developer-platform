@@ -6,15 +6,7 @@ import {
 import { oidcAuthenticator } from '@backstage/plugin-auth-backend-module-oidc-provider';
 import { DEFAULT_NAMESPACE } from '@backstage/catalog-model';
 
-/**
- * The platform OIDC provider (Authelia over LLDAP). Signs the user in as
- * user:default/<preferred_username> and resolves their ownership from the
- * catalog, so the token carries the LDAP groups (group:default/...) the
- * permission policy checks. Accounts the LDAP import skips, such as admin,
- * fall back to a bare user identity with no group memberships.
- */
 export const oidcAuthProviderModule = createBackendModule({
-  // Must be "auth": the plugin this module extends.
   pluginId: 'auth',
   moduleId: 'oidc-auth-provider',
   register(reg) {
@@ -26,6 +18,7 @@ export const oidcAuthProviderModule = createBackendModule({
           providerId: 'oidc',
           factory: createOAuthProviderFactory({
             authenticator: oidcAuthenticator,
+            // Accounts the LDAP import skips (e.g. admin) fall back to a bare identity with no groups.
             async signInResolver(info, ctx) {
               const userinfo = info?.result.fullProfile.userinfo;
               const name = (userinfo?.preferred_username ??

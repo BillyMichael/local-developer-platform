@@ -1,5 +1,3 @@
-# Pod logs: one VictoriaLogs process on local disk, a week kept, with its own
-# query UI (LogsQL). victoria-logs-collector (next to this app) ships them in.
 ldp:
   syncWave: wave-6
 
@@ -7,10 +5,8 @@ victoria-logs-single:
   server:
     retentionPeriod: 7d
     persistentVolume:
-      enabled: true
       size: 2Gi
-    # The first start ingests every existing log on both nodes at once (the
-    # collectors tail from the beginning); at 256Mi that burst was OOM-killed.
+    # first start ingests every existing log at once; 256Mi was OOM-killed
     resources:
       requests:
         cpu: 50m

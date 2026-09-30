@@ -5,8 +5,6 @@ dependencies:
   - name: victoria-metrics-single
     version: 0.48.0
     repository: https://victoriametrics.github.io/helm-charts/
-  # Kubernetes object state (restarts, phases, replicas) that cAdvisor and the
-  # kubelet do not report.
   - name: kube-state-metrics
     version: 8.6.0
     repository: https://prometheus-community.github.io/helm-charts

@@ -1,7 +1,4 @@
-{{- /*
-  Rendered by function-go-templating, not Helm: the composition pulls this file
-  in with .Files.Get, which does not template it.
-*/ -}}
+{{- /* Rendered by function-go-templating, not Helm: the composition pulls this in with .Files.Get, which does not template it. */ -}}
 {{- $xr := getCompositeResource . }}
 {{- $name := $xr.metadata.name }}
 {{- $spec := $xr.spec }}
@@ -24,7 +21,6 @@ spec:
   storage:
     size: {{ $spec.storageSize }}
   {{- with $spec.labels }}
-  # CloudNativePG copies these onto the instance pods and services
   inheritedMetadata:
     labels:
       {{- toYaml . | nindent 6 }}

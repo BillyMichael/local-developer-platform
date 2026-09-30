@@ -1,6 +1,3 @@
-# Read-only cluster access for the Backstage Kubernetes plugin, which uses the
-# pod's own service-account token (kubernetes.clusterLocatorMethods in
-# app-config.yaml).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

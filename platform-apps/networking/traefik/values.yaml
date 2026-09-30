@@ -9,50 +9,23 @@ traefik:
     limits:
       memory: 256Mi
 
-  providers:
-    kubernetesCRD:
-      allowExternalNameServices: false
-      allowCrossNamespace: false
-    kubernetesIngress:
-      allowExternalNameServices: false
-      publishedService:
-        enabled: true
-
   deployment:
     kind: DaemonSet
-
-  tlsStore:
-    default:
-      defaultCertificate:
-        secretName: default-tls
-
-  ingressRoute:
-    dashboard:
-      enabled: false
 
   ports:
     web:
       nodePort: 30080
     websecure:
       nodePort: 30443
-    traefik:
-      nodePort: 30900
 
   service:
     # chart >= 40 reads the Service type from service.spec, not service.type
     spec:
       type: NodePort
 
-  additionalArguments:
-    - --api.insecure=false
-    - --log.level=INFO
-
   nodeSelector:
     ingress-ready: "true"
   tolerations:
     - key: node-role.kubernetes.io/control-plane
-      operator: Exists
-      effect: NoSchedule
-    - key: node-role.kubernetes.io/master
       operator: Exists
       effect: NoSchedule

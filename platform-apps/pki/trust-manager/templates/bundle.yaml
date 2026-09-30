@@ -7,11 +7,9 @@ spec:
   - secret:
       name: "root-ca"
       key: "tls.crt"
-  # Public roots too: consumers point SSL_CERT_FILE at this bundle (Gitea, Actions jobs),
-  # which replaces the system store, so without them nothing can reach the internet
+  # SSL_CERT_FILE consumers use this bundle instead of the system store
   - useDefaultCAs: true
-  # A TLS-inspecting proxy CA, when cluster-up.sh found one on the host. A
-  # selector (not a name) so the bundle still reconciles when there is none.
+  # host proxy CA from cluster-up.sh; a selector so the bundle reconciles when there is none
   - configMap:
       selector:
         matchLabels:

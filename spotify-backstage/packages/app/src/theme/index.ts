@@ -1,11 +1,4 @@
-export {
-  amberAlpha,
-  BRAND,
-  fontFamily,
-  hexAlpha,
-  monoFontFamily,
-  STATUS,
-} from './tokens';
+export { amberAlpha, BRAND, fontFamily, STATUS } from './tokens';
 export {
   flatCardHoverStyles,
   flatCardStyles,

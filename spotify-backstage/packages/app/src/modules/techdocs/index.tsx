@@ -4,15 +4,12 @@ import { ReportIssue } from '@backstage/plugin-techdocs-module-addons-contrib';
 import { Mermaid } from 'backstage-plugin-techdocs-addon-mermaid';
 import { BRAND, fontFamily } from '../../theme';
 
-// Addons attach to the techdocs addons API, so each reaches both the docs
-// reader and the entity Docs tab.
 const reportIssue = AddonBlueprint.make({
   name: 'report-issue',
   params: { name: 'ReportIssue', location: 'Content', component: ReportIssue },
 });
 
-// Registered here rather than via the package's own module, which passes no
-// theme config and leaves every diagram on mermaid's default palette.
+// Not the package's own module: it passes no theme, leaving mermaid's default palette.
 const themeVariables = (dark: boolean) => ({
   fontFamily,
   primaryColor: dark ? BRAND.darkSurface : BRAND.white,

@@ -1,4 +1,4 @@
-# Composes a CloudNativePG Cluster from files/postgres.yaml.gotmpl; RBAC in rbac.yaml.
+# Composes a CloudNativePG Cluster from files/postgres.yaml.gotmpl (kept out of templates/ so Helm never parses it); RBAC in rbac.yaml.
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:

@@ -1,6 +1,5 @@
-# Postgres from the platform's storage.ldp composition (CloudNativePG).
-# Connection details land in the Secret {{ .Release.Name }}-db-app and the
-# primary is served at {{ .Release.Name }}-db-rw.
+# CloudNativePG via the platform's storage.ldp composition. Credentials: Secret
+# {{ .Release.Name }}-db-app; primary: {{ .Release.Name }}-db-rw.
 apiVersion: storage.ldp/v1alpha1
 kind: PostgresDatabase
 metadata:

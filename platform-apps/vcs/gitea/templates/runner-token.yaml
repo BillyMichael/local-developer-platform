@@ -1,6 +1,5 @@
 ---
-# Runner registration token shared by Gitea and gitea-actions. Generated once
-# (refreshInterval 0); Gitea requires >= 32 characters.
+# Shared with gitea-actions; Gitea requires >= 32 characters.
 apiVersion: generators.external-secrets.io/v1alpha1
 kind: Password
 metadata:

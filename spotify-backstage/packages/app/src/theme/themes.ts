@@ -14,8 +14,7 @@ import {
 
 type Mode = 'light' | 'dark';
 
-/* Flat navy for every page header — genPageTheme's wave shapes paint a
-   translucent swoosh over the header whatever colours it's given. */
+// Not genPageTheme: its wave shapes paint a swoosh whatever the colours.
 const flatPageTheme = {
   colors: [BRAND.navyDeep, BRAND.navyDeep],
   shape: 'none',
@@ -37,7 +36,6 @@ const pageTheme = Object.fromEntries(
   ].map(id => [id, flatPageTheme]),
 );
 
-/* Display headings light, titles bold. */
 const typography: BackstageTypography = {
   htmlFontSize: 16,
   fontFamily,
@@ -56,8 +54,6 @@ const components = (mode: Mode) => {
   const hover = light ? 'rgba(27,45,79,0.06)' : 'rgba(255,255,255,0.08)';
 
   return {
-    // Flat at rest with a border only; the lift appears on hover, matching
-    // flatCardStyles so plain MuiCards and hand-rolled cards read as one.
     MuiCard: {
       styleOverrides: {
         root: {
@@ -69,8 +65,7 @@ const components = (mode: Mode) => {
         },
       },
     },
-    // Radius and elevation live on `rounded` / `elevationN`, not `root`, so
-    // root-only overrides lose to MUI's defaults on a plain <Paper>.
+    // Root-only overrides lose to MUI's `rounded` / `elevationN` defaults.
     MuiPaper: {
       styleOverrides: {
         root: { borderRadius: BRAND.radius, boxShadow: 'none' },
@@ -84,7 +79,6 @@ const components = (mode: Mode) => {
     MuiButton: {
       styleOverrides: {
         root: { borderRadius: BRAND.radius, textTransform: 'none' as const },
-        // Amber with navy text: the one primary action per view.
         containedPrimary: {
           backgroundColor: BRAND.amber,
           color: BRAND.navyDeep,
@@ -92,7 +86,6 @@ const components = (mode: Mode) => {
           '&:hover': { backgroundColor: BRAND.amberHover },
           '&:active': { backgroundColor: BRAND.amberActive },
         },
-        // Secondary actions stay neutral so amber stays singular.
         textPrimary: {
           fontWeight: 600,
           color: fg,
@@ -106,8 +99,7 @@ const components = (mode: Mode) => {
         },
       },
     },
-    // MUI v4 marks keyboard focus with Mui-focusVisible rather than the
-    // native pseudo-class, and its own outline: 0 beats a plain CSS rule.
+    // MUI v4 uses Mui-focusVisible, and its outline: 0 beats global.css's :focus-visible.
     MuiButtonBase: {
       styleOverrides: {
         root: {
@@ -142,7 +134,6 @@ const components = (mode: Mode) => {
         h2: { letterSpacing: '-0.005em' },
       },
     },
-    // Alerts are chrome, not status semantics: tinted rather than solid.
     MuiAlert: {
       styleOverrides: {
         root: { borderRadius: BRAND.radius, alignItems: 'center' },
@@ -165,8 +156,7 @@ const components = (mode: Mode) => {
         },
       },
     } as any,
-    // Classic <Header>, still rendered by some plugin pages: the same flat
-    // navy bar as BUI's PluginHeader, with a hairline of amber beneath.
+    // Classic <Header>, still rendered by some plugin pages.
     BackstageHeader: {
       styleOverrides: {
         header: {
@@ -191,7 +181,6 @@ const components = (mode: Mode) => {
         },
       },
     } as any,
-    // The stock grey smear reads as an off-brand box beside plain filters.
     CatalogReactUserListPicker: {
       styleOverrides: {
         root: { backgroundColor: 'transparent', padding: '8px 0' },
@@ -214,17 +203,14 @@ const navigation = {
 export const ldpLightTheme = createUnifiedTheme({
   palette: {
     ...palettes.light,
-    // amberText keeps tabs, checkboxes and small interactive text at AA on
-    // white; bright amber is kept for large surfaces (buttons, indicators).
+    // Bright amber fails AA for small text on white.
     primary: { main: BRAND.amberText },
     secondary: { main: BRAND.blue },
-    // Links are navy, not amber — a page's one amber element is its action.
     link: BRAND.navy,
     linkHover: BRAND.blue,
     action: { selected: amberAlpha(0.14) } as any,
     background: { default: BRAND.mist, paper: BRAND.white },
-    // Plugins build their rules from `divider`; left unset it is a
-    // translucent black that sits apart from the grey chrome.
+    // Plugins build their rules from `divider`; unset it's translucent black.
     divider: BRAND.mist,
     text: { primary: BRAND.ink, secondary: BRAND.slate } as any,
     errorBackground: STATUS.error,

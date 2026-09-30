@@ -1,5 +1,4 @@
-# Namespaced (unlike the oidc.ldp kinds) so a database lives beside its app.
-# CloudNativePG publishes <name>-app (connection secret) and <name>-rw (service).
+# CloudNativePG publishes <name>-app (connection secret) and <name>-rw (service)
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:

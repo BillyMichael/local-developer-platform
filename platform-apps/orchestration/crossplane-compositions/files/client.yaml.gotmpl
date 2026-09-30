@@ -1,7 +1,4 @@
-{{- /*
-  Rendered by function-go-templating, not Helm: the composition pulls this file
-  in with .Files.Get, which does not template it.
-*/ -}}
+{{- /* Rendered by function-go-templating, not Helm: the composition pulls this in with .Files.Get, which does not template it. */ -}}
 {{- $xr := getCompositeResource . }}
 {{- $name := $xr.metadata.name }}
 {{- $spec := $xr.spec }}
@@ -22,7 +19,6 @@ spec:
   digits: {{ $spec.digits }}
   symbols: {{ $spec.symbols }}
   symbolCharacters: {{ $spec.symbolCharacters | quote }}
-  noUpper: false
   allowRepeat: true
 ---
 apiVersion: external-secrets.io/v1
@@ -35,8 +31,7 @@ metadata:
     gotemplating.fn.crossplane.io/ready: {{ if eq (getResourceCondition "Ready" $secret).Status "True" }}"True"{{ else }}"False"{{ end }}
 spec:
   refreshInterval: 24h
-  # A generator value is new on every refresh; without this the client secret
-  # rotated on each re-apply and Reloader restarted Authelia and the consumer.
+  # else the generator rotates the secret on every refresh and Reloader restarts Authelia
   refreshPolicy: CreatedOnce
   target:
     name: {{ $name }}-oidc-client-secret

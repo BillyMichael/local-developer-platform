@@ -1,16 +1,12 @@
 app:
   title: Backstage | Local Developer Portal
-  # Scopes the plugins' own extensions (new frontend system). Features are
-  # listed in packages/app/src/App.tsx.
   extensions:
-    # Only on entities with a README beside catalog-info.yaml, and in the
-    # overview's side rail rather than above everything else.
+    # Only where a README exists, in the side rail.
     - entity-card:readme:
         config:
           hideIfNotFound: true
           type: info
-    # Relationship cards only where the entity declares the relationship,
-    # instead of an empty-state card on every leaf component.
+    # Relationship cards only where declared, not an empty card on every entity.
     - entity-card:catalog/depends-on-components:
         config:
           filter: { spec.dependsOn: { $exists: true } }
@@ -23,17 +19,13 @@ app:
     - entity-card:api-docs/consumed-apis:
         config:
           filter: { spec.consumesApis: { $exists: true } }
-    # Subcomponents declare the relation on themselves, so the parent has
-    # nothing to filter on; nothing in LDP uses them.
+    # Subcomponents declare the relation on the child, so there's nothing to filter on.
     - entity-card:catalog/has-subcomponents: false
-    # Upstream ships the entity Docs tab unfiltered; only show it where
-    # the entity actually publishes TechDocs.
+    # Upstream shows these on every entity; scope them to entities that use them.
     - entity-content:techdocs:
         config:
           filter:
             metadata.annotations.backstage.io/techdocs-ref: { $exists: true }
-    # Roadie ships the Argo CD cards on every component and its tab on every
-    # entity; show them only where an Argo CD Application is declared.
     - entity-card:argocd/overviewCard:
         config:
           filter:
@@ -53,8 +45,7 @@ app:
 organization:
   name: Local Developer Portal
 
-# Enforces packages/backend/src/permissionPolicy.ts; without this the
-# permission backend allows everything and the policy never runs.
+# Without this the permission backend allows everything and permissionPolicy.ts never runs.
 permission:
   enabled: true
 

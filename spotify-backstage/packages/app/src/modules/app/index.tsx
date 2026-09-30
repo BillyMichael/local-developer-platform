@@ -5,15 +5,13 @@ import { darkTheme, lightTheme } from './themes';
 import { signInPage } from './signIn';
 import { nav } from './nav';
 
-// The signals plugin's alpha entry registers only its API; the display that
-// holds the connection open is mounted here. plugin-app already supplies the
-// alert display and OAuth request dialog.
+// The signals alpha plugin registers only its API; this holds the connection open.
 const signalsDisplay = AppRootElementBlueprint.make({
   name: 'signals-display',
   params: { element: <SignalsDisplay /> },
 });
 
-// pluginId 'app': the theme, sign-in and nav blueprints are restricted to it.
+// Theme, sign-in and nav blueprints are restricted to pluginId 'app'.
 export const appModule = createFrontendModule({
   pluginId: 'app',
   extensions: [lightTheme, darkTheme, signInPage, nav, signalsDisplay],

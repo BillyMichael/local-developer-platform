@@ -1,12 +1,6 @@
-# Default goal so `make` runs the cluster
 .DEFAULT_GOAL := up
 
 .PHONY: up down restart kubeconfig info preflight status trust-ca help _banner
-
-
-# ------------------------------------------------------------------------------
-# Cluster Lifecycle
-# ------------------------------------------------------------------------------
 
 _banner:
 	@bash -c 'source cluster/common.sh; banner'
@@ -18,11 +12,6 @@ down: _banner ## Delete the kind cluster
 	@bash cluster/cluster-down.sh
 
 restart: down up ## Restart the cluster
-
-
-# ------------------------------------------------------------------------------
-# Utilities
-# ------------------------------------------------------------------------------
 
 kubeconfig: ## Export updated kubeconfig
 	@kind export kubeconfig --name $${CLUSTER_NAME:-ldp} >/dev/null
@@ -39,11 +28,6 @@ trust-ca: ## Trust the platform CA certificate (eliminates TLS warnings)
 status: ## Show platform health status
 	@pods=$$(kubectl --context kind-$${CLUSTER_NAME:-ldp} get pods -A --no-headers 2>/dev/null) || { echo "Cluster not running"; exit 0; }; \
 		echo "$$pods" | awk '$$4 != "Running" && $$4 != "Completed" && $$4 != "Succeeded"' | grep . || echo "All pods healthy"
-
-
-# ------------------------------------------------------------------------------
-# Help
-# ------------------------------------------------------------------------------
 
 help: ## Show this help
 	@printf "\nLocal Development Platform Make Commands\n"

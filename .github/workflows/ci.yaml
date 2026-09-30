@@ -35,7 +35,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # Preinstalled on ubuntu-latest. -x follows the `source common.sh` lines.
       - run: shellcheck --severity=warning --external-sources cluster/*.sh
 
   helm:

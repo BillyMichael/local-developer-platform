@@ -55,13 +55,10 @@ const SidebarLogo = () => {
 };
 
 const LdpNav = ({ navItems }: NavContentComponentProps) => {
-  // The menu is curated by hand, so discovered items are only taken where
-  // this sidebar places them; anything else a plugin registers gets no entry
-  // until it is added here.
   const nav = navItems.withComponent(({ title, icon, href }) => (
     <SidebarItem icon={() => icon} to={href} text={title} />
   ));
-  // NotificationsSidebarItem below is the manual equivalent with the badge.
+  // Dropped: NotificationsSidebarItem below is the same entry with the badge.
   nav.take('page:notifications');
 
   return (
@@ -117,8 +114,7 @@ const LdpNav = ({ navItems }: NavContentComponentProps) => {
   );
 };
 
-// Unnamed, so it takes plugin-app's own `nav-content:app` id and replaces
-// the default sidebar instead of competing with it for the singleton input.
+// Unnamed, so it takes plugin-app's `nav-content:app` id and replaces the default.
 export const nav = NavContentBlueprint.make({
   params: { component: props => <LdpNav {...props} /> },
 });

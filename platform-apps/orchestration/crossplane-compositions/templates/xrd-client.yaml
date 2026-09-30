@@ -1,7 +1,5 @@
-# Cluster-scoped so the composition can place the generated secret in the auth
-# namespace (where Authelia reads it) and replicate it out to the consumer. A
-# namespaced XR can only compose into its own namespace. No claims: in
-# Crossplane v2 platform charts create the Client directly.
+# Cluster-scoped: a namespaced XR can only compose into its own namespace, and the secret is born in auth.
+# No claims: in Crossplane v2 platform charts create the Client directly.
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:

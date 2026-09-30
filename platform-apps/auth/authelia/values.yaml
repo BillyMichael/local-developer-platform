@@ -9,12 +9,9 @@ authelia:
       cert-manager.io/cluster-issuer: ca-issuer
     tls:
       enabled: true
-      secret: authelia-tls
 
   configMap:
     theme: dark
-    log:
-      level: info
 
     ntp:
       disable_startup_check: true
@@ -42,14 +39,11 @@ authelia:
           policy: one_factor
 
     storage:
-      # Pinned to the once-generated authelia-generated Secret; see
-      # templates/generated-secrets.yaml for why.
       encryption_key:
         secret_name: authelia-generated
         path: storage.encryption.key
       local:
         enabled: true
-        path: /config/db.sqlite3
 
     notifier:
       filesystem:
@@ -59,9 +53,8 @@ authelia:
       encryption_key:
         secret_name: authelia-generated
         path: session.encryption.key
-      # chart 0.11 validates cookies[] strictly: authelia_url is derived from the domain
-      # by the chart, secure was never a key, remember_me lives at session level
-      remember_me: 1M
+      # chart 0.11 validates cookies[] strictly: authelia_url is derived from the domain, secure is not a key,
+      # remember_me lives at session level (default 1M)
       cookies:
         - name: authelia_session
           domain: auth-127-0-0-1.nip.io
@@ -91,12 +84,6 @@ authelia:
             certificate_chain:
               path: /secrets/jwk-rsa/tls.crt
 
-        lifespans:
-          access_token: 1h
-          authorize_code: 1m
-          id_token: 1h
-          refresh_token: 90m
-
         cors:
           endpoints: [authorization, token, revocation, introspection]
           allowed_origins:
@@ -109,22 +96,14 @@ authelia:
           default:
             id_token: [groups, email, preferred_username, name]
 
-        enable_client_debug_messages: false
-
         clients:
           - client_id: argocd
             client_name: Argo CD
-            public: false
             authorization_policy: one_factor
             consent_mode: implicit
             redirect_uris:
               - https://cd-127-0-0-1.nip.io/auth/callback
             scopes: [openid, groups, email]
-            grant_types: [authorization_code]
-            response_types: [code]
-            token_endpoint_auth_method: client_secret_basic
-            access_token_signed_response_alg: none
-            userinfo_signed_response_alg: none
             client_secret:
               path: /hashed-secrets/argocd-password
 
@@ -139,14 +118,9 @@ authelia:
               - https://cd-127-0-0-1.nip.io/auth/callback
             scopes: [openid, offline_access, groups, email]
             grant_types: [authorization_code, refresh_token]
-            response_types: [code]
-            token_endpoint_auth_method: none
-            access_token_signed_response_alg: none
-            userinfo_signed_response_alg: none
 
           - client_id: backstage
             client_name: Backstage Portal
-            public: false
             authorization_policy: one_factor
             require_pkce: true
             pkce_challenge_method: S256
@@ -156,7 +130,6 @@ authelia:
               - https://portal-127-0-0-1.nip.io/api/auth/oidc/handler
             scopes: [openid, profile, email, offline_access]
             grant_types: [authorization_code, refresh_token]
-            response_types: [code]
             token_endpoint_auth_method: client_secret_post
             client_secret:
               path: /hashed-secrets/backstage-password
@@ -169,41 +142,23 @@ authelia:
             redirect_uris:
               - https://kargo-127-0-0-1.nip.io/login
             scopes: [openid, profile, offline_access, groups, email]
-            grant_types: [authorization_code]
-            response_types: [code]
-            token_endpoint_auth_method: none
-            access_token_signed_response_alg: none
-            userinfo_signed_response_alg: none
 
           - client_id: gitea
             client_name: Gitea
-            public: false
             authorization_policy: one_factor
             consent_mode: implicit
             redirect_uris:
               - https://vcs-127-0-0-1.nip.io/user/oauth2/Authelia/callback
-            scopes: [openid, profile, email, groups]
-            grant_types: [authorization_code]
-            response_types: [code]
-            token_endpoint_auth_method: client_secret_basic
-            access_token_signed_response_alg: none
-            userinfo_signed_response_alg: none
             client_secret:
               path: /hashed-secrets/gitea-password
 
           - client_id: perses
             client_name: Perses
-            public: false
             authorization_policy: one_factor
             consent_mode: implicit
             redirect_uris:
               - https://observability-127-0-0-1.nip.io/api/auth/providers/oidc/authelia/callback
             scopes: [openid, profile, email]
-            grant_types: [authorization_code]
-            response_types: [code]
-            token_endpoint_auth_method: client_secret_basic
-            access_token_signed_response_alg: none
-            userinfo_signed_response_alg: none
             client_secret:
               path: /hashed-secrets/perses-password
 
@@ -266,8 +221,7 @@ authelia:
           - |
             set -eu
 
-            # Placeholder hash that won't match any real secret.
-            # Used for clients whose secrets haven't been created yet.
+            # Clients whose secret does not exist yet get a hash nothing matches.
             PLACEHOLDER='$pbkdf2-sha512$310000$placeholder$placeholder'
 
             hash_secret() {
