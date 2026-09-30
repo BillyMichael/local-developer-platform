@@ -1,5 +1,10 @@
 ldp:
   syncWave: wave-6
+  # Host names in templates/; e.g. "%s.example.com" when deploying to a real domain.
+  hostPattern: "%s-127-0-0-1.nip.io"
+  ingressAnnotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: ca-issuer
 
 kagent:
   providers:

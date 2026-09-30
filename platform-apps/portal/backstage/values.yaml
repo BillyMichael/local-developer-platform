@@ -1,5 +1,7 @@
 ldp:
   syncWave: wave-6
+  # Host names in templates/; e.g. "%s.example.com" when deploying to a real domain.
+  hostPattern: "%s-127-0-0-1.nip.io"
 
 backstage:
   ingress:
@@ -78,6 +80,7 @@ backstage:
           secretKeyRef:
             name: gitea-admin-token
             key: token
+            optional: true
       - name: LLDAP_BIND_PASSWORD
         valueFrom:
           secretKeyRef:
