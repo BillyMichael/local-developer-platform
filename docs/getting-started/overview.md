@@ -13,23 +13,15 @@ present. Set `KIND_EXPERIMENTAL_PROVIDER=podman` to force Podman.
 
 ## Engine setup
 
-- **Memory.** Give the engine's VM 12GB+ (4+ CPUs). On a 16GB laptop leave
-  the rest to the host: a 16GB VM makes macOS swap the VM itself. Docker
-  Desktop: *Settings → Resources*. Podman:
-  `podman machine stop && podman machine set --memory 12288 && podman machine start`.
-  `make up` stops when memory is short; `LDP_SKIP_RESOURCE_CHECK=1` overrides that.
-- **File sharing.** The platform is deployed from this checkout, mounted into
-  the kind nodes (see [GitOps flow](../architecture/overview.md#gitops-flow)).
-  Docker Desktop and Podman machine share your home directory by default; a
-  checkout elsewhere needs adding to the engine's file sharing.
-- **Rootless Podman.** Binding ports 80/443 needs
-  `sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80`, or use rootful
-  Podman (`sudo systemctl start podman.socket`,
-  `export CONTAINER_HOST=unix:///run/podman/podman.sock`).
-- **TLS-inspecting proxies.** Behind Netskope, Zscaler or similar, `make up`
-  detects the re-signing CA on the path to github.com and trusts it on the
-  nodes, in Argo CD, in Crossplane and in the platform trust bundle. If
-  detection misses it, point `LDP_EXTRA_CA_FILE` at the CA's PEM file.
+- **Resources:** at least 12GB memory and 4 CPUs
+  (`LDP_SKIP_RESOURCE_CHECK=1` skips the check).
+- **File sharing:** the checkout must be in a shared directory (home is
+  shared by default).
+- **Rootless Podman:** run
+  `sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80` to allow ports 80
+  and 443.
+- **Corporate proxy:** if `make up` can't detect its CA, set
+  `LDP_EXTRA_CA_FILE` to the CA's PEM file.
 
 ## Quick Start
 
