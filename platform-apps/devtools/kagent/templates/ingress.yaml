@@ -6,8 +6,7 @@ metadata:
   name: kagent-ui
   namespace: {{ .Release.Namespace }}
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    cert-manager.io/cluster-issuer: ca-issuer
+    {{- toYaml .Values.ldp.ingressAnnotations | nindent 4 }}
 spec:
   tls:
     - hosts:
