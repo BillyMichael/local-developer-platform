@@ -7,6 +7,6 @@ appVersion: "0.1.0"
 dependencies:
   # Job queue for webhook-triggered runs; only deployed with queue.enabled
   - name: rabbitmq
-    version: 0.21.29
+    version: 0.21.31
     repository: oci://registry-1.docker.io/cloudpirates
     condition: queue.enabled
